@@ -1,5 +1,8 @@
 package com.example.capstone.domain.place.dto.response;
 
+import java.util.List;
+
+
 public record NearbyPlaceResponse(
         String id,
         String name,
@@ -13,3 +16,4 @@ public record NearbyPlaceResponse(
         String placeUrl,
         String provider
 ) {}
+

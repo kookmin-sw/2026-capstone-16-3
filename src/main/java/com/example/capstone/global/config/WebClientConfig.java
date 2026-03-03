@@ -16,10 +16,14 @@ public class WebClientConfig {
     }
 
     @Bean(name = "kakaoLocalWebClient")
-    public WebClient kakaoLocalWebClient(WebClient.Builder builder, @Value("${kakao.local.rest-api-key}") String restApiKey) {
+    public WebClient kakaoLocalWebClient(
+            WebClient.Builder builder,
+            @Value("${kakao.local.base-url:https://dapi.kakao.com}") String baseUrl,
+            @Value("${kakao.local.rest-api-key}") String restApiKey
+    ) {
         return builder
-                .baseUrl(restApiKey)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK" + restApiKey)
+                .baseUrl(baseUrl)
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK " + restApiKey) // ✅ 공백 포함
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .build();
     }

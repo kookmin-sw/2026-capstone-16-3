@@ -18,6 +18,7 @@ import java.net.URI;
 @Component
 public class KakaoLocalClient {
 
+    private static final int MAX_PAGE = 45;
     private final WebClient webClient;
 
     public KakaoLocalClient(
@@ -28,14 +29,19 @@ public class KakaoLocalClient {
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK " + restApiKey)
                 .filter(ExchangeFilterFunction.ofRequestProcessor(req -> {
-                    log.info("[KAKAO REQ] {} {}", req.method(), req.url());  // ✅ 여기
+                    log.info("[KAKAO REQ] {} {}", req.method(), req.url());
                     return Mono.just(req);
                 }))
                 .build();
     }
 
     public Mono<KakaoCategorySearchResponse> searchCategory(
-            String categoryCode, double lat, double lng, int radiusM, int size, int page
+            String categoryCode,
+            double lat,
+            double lng,
+            int radiusM,
+            int size,
+            int page
     ) {
         return webClient.get()
                 .uri(b -> buildCategoryUri(b, categoryCode, lat, lng, radiusM, size, page))
@@ -59,7 +65,11 @@ public class KakaoLocalClient {
             int size,
             int page
     ) {
-        return b.path("/v2/local/search/category.json")
+        int radius = Math.min(Math.max(radiusM, 0), 3000);
+        int safeSize = Math.min(Math.max(size, 1), 15);
+        int safePage = Math.min(Math.max(page, 1), 45);
+
+        URI uri = b.path("/v2/local/search/category.json")
                 .queryParam("category_group_code", code)
                 .queryParam("x", lng) // x=경도
                 .queryParam("y", lat) // y=위도
@@ -68,5 +78,8 @@ public class KakaoLocalClient {
                 .queryParam("size", Math.min(Math.max(size, 1), 15))
                 .queryParam("page", Math.min(Math.max(page, 1), 45))
                 .build();
+
+        log.info("[KAKAO REQ] uri={}", uri);
+        return uri;
     }
 }
