@@ -56,6 +56,20 @@ public class KakaoLocalClient {
                 .bodyToMono(KakaoCategorySearchResponse.class);
     }
 
+    public Mono<KakaoCategorySearchResponse> searchKeyword(
+            String query,
+            double lat,
+            double lng,
+            int radiusM,
+            int size,
+            int page
+    ) {
+        return webClient.get()
+                .uri(b -> buildKeywordUri(b, query, lat, lng, radiusM, size, page))
+                .retrieve()
+                .bodyToMono(KakaoCategorySearchResponse.class);
+    }
+
     private URI buildCategoryUri(
             UriBuilder b,
             String code,
@@ -81,5 +95,29 @@ public class KakaoLocalClient {
 
         log.info("[KAKAO REQ] uri={}", uri);
         return uri;
+    }
+
+    private URI buildKeywordUri(
+            UriBuilder b,
+            String query,
+            double lat,
+            double lng,
+            int radiusM,
+            int size,
+            int page
+    ) {
+        return b.path("/v2/local/search/keyword.json")
+                .queryParam("query", query)
+                .queryParam("x", lng)
+                .queryParam("y", lat)
+                .queryParam("radius", clamp(radiusM, 0, 3000))
+                .queryParam("sort", "distance")
+                .queryParam("size", clamp(size, 1, 15))
+                .queryParam("page", clamp(page, 1, 45))
+                .build();
+    }
+
+    private static int clamp(int v, int min, int max) {
+        return Math.min(Math.max(v, min), max);
     }
 }

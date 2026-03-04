@@ -1,7 +1,10 @@
 package com.example.capstone.domain.place.service;
 
 import com.example.capstone.domain.place.dto.response.NearbyPlaceResponse;
+import com.example.capstone.domain.place.dto.response.PlaceSearchPageResponse;
+import com.example.capstone.domain.place.dto.response.PlaceDetailResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCategorySearchResponse;
+import com.example.capstone.global.exception.BusinessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -16,13 +19,15 @@ import java.util.Map;
 @Service
 public class PlaceService {
 
-    private static final Logger log = LoggerFactory.getLogger(PlaceService.class);
-    private static final int MAX_PAGE = 45;
-
     private final KakaoLocalClient kakaoLocalClient;
+    private final PlaceCache placeCache;
 
-    public PlaceService(KakaoLocalClient kakaoLocalClient) {
+    private static final int MAX_PAGE = 45;
+    private static final Logger log = LoggerFactory.getLogger(PlaceService.class);
+
+    public PlaceService(KakaoLocalClient kakaoLocalClient, PlaceCache placeCache) {
         this.kakaoLocalClient = kakaoLocalClient;
+        this.placeCache = placeCache;
     }
 
     /**
@@ -45,7 +50,7 @@ public class PlaceService {
                 .distinct()
                 .flatMap(code -> fetchAllPagesByCategory(code, lat, lng, radiusM, sizePerCategory))
                 .flatMapIterable(resp -> resp.documents() == null ? List.of() : resp.documents())
-                .map(this::toNearbyPlace)
+                .map(doc -> toNearbyPlace(doc, lat, lng))
                 .collectList()
                 .blockOptional()
                 .orElse(List.of());
@@ -58,10 +63,11 @@ public class PlaceService {
             }
         }
 
-        // ✅ 거리 보정 + 반경 필터 + 정렬 안정성(distance 같으면 id tie-break)
+        // 거리(distance)가 null이면 직접 계산
         List<NearbyPlaceResponse> ranked = dedup.values().stream()
                 .map(p -> p.distanceM() == null ? withDistance(p, lat, lng) : p)
                 .filter(p -> p.distanceM() != null && p.distanceM() <= radiusM)
+                // 거리(distance)가 같으면 id로 tie-break
                 .sorted(
                         Comparator.comparingLong(NearbyPlaceResponse::distanceM)
                                 .thenComparing(NearbyPlaceResponse::id)
@@ -73,6 +79,96 @@ public class PlaceService {
             return ranked.subList(0, maxItems);
         }
         return ranked;
+    }
+
+    public PlaceSearchPageResponse searchPlaces(
+            String query,
+            double lat,
+            double lng,
+            int radiusM,
+            int page,
+            int size
+    ) {
+        if (query == null || query.isBlank()) {
+            throw new BusinessException("BAD_REQUEST", "query is required");
+        }
+
+        int kakaoPage = Math.max(page, 0) + 1;          // 0-based -> 1-based
+        int kakaoSize = Math.min(Math.max(size, 1), 15); // Kakao limit
+
+        KakaoCategorySearchResponse resp = kakaoLocalClient.searchKeyword(
+                        query.trim(), lat, lng, radiusM, kakaoSize, kakaoPage
+                )
+                .doOnSubscribe(s -> log.info("Kakao keyword start query='{}', page={}, size={}, lat={}, lng={}, radius={}",
+                        query, kakaoPage, kakaoSize, lat, lng, radiusM))
+                .doOnError(e -> log.error("Kakao keyword fail query='{}'", query, e))
+                .block();
+
+        if (resp == null) {
+            return new PlaceSearchPageResponse(List.of(), page, kakaoSize, 0, 0);
+        }
+
+        long pageable = resp.meta() == null ? 0 : resp.meta().pageableCount();
+        int totalPages = (int) Math.ceil(pageable / (double) kakaoSize);
+
+        List<PlaceSearchPageResponse.Item> items =
+                (resp.documents() == null ? List.<KakaoCategorySearchResponse.KakaoPlaceDocument>of() : resp.documents())
+                        .stream()
+                        .map(this::toSearchItem) // 여기서 캐시 적재됨
+                        .toList();
+
+        return new PlaceSearchPageResponse(items, page, kakaoSize, pageable, totalPages);
+    }
+
+    public PlaceDetailResponse getPlaceDetail(String placeId) {
+        if (placeId == null || placeId.isBlank()) {
+            throw new BusinessException("BAD_REQUEST", "placeId is required");
+        }
+
+        KakaoCategorySearchResponse.KakaoPlaceDocument doc = placeCache.get(placeId)
+                .orElseThrow(() -> new BusinessException("PLACE_NOT_FOUND", "place not found in cache: " + placeId));
+
+        double placeLng = Double.parseDouble(doc.x());
+        double placeLat = Double.parseDouble(doc.y());
+        Long dist = (doc.distance() == null || doc.distance().isBlank()) ? null : Long.parseLong(doc.distance());
+
+        return new PlaceDetailResponse(
+                placeId,
+                doc.placeName(),
+                doc.categoryName(),
+                doc.addressName(),
+                doc.roadAddressName(),
+                placeLat,
+                placeLng,
+                dist,
+                doc.phone(),
+                doc.placeUrl(),
+                null, // openingHours: Kakao Local REST에서 제공되지 않음
+                new PlaceDetailResponse.Extra("KAKAO", doc)
+        );
+    }
+
+    private PlaceSearchPageResponse.Item toSearchItem(KakaoCategorySearchResponse.KakaoPlaceDocument d) {
+        String placeId = toExternalPlaceId("KAKAO", d.id());
+        placeCache.put(placeId, d);
+
+        double placeLng = Double.parseDouble(d.x());
+        double placeLat = Double.parseDouble(d.y());
+        Long dist = (d.distance() == null || d.distance().isBlank()) ? null : Long.parseLong(d.distance());
+
+        return new PlaceSearchPageResponse.Item(
+                placeId,
+                d.placeName(),
+                d.categoryName(),
+                d.addressName(),
+                d.roadAddressName(),
+                placeLat,
+                placeLng,
+                dist,
+                d.phone(),
+                d.placeUrl(),
+                "KAKAO"
+        );
     }
 
     private Flux<KakaoCategorySearchResponse> fetchAllPagesByCategory(
@@ -104,10 +200,16 @@ public class PlaceService {
                 .takeUntil(resp -> resp.meta() != null && resp.meta().isEnd());
     }
 
-    private NearbyPlaceResponse toNearbyPlace(KakaoCategorySearchResponse.KakaoPlaceDocument d) {
+    private NearbyPlaceResponse toNearbyPlace(
+            KakaoCategorySearchResponse.KakaoPlaceDocument d,
+            double originLat,
+            double originLng
+    ) {
         double placeLng = Double.parseDouble(d.x());
         double placeLat = Double.parseDouble(d.y());
         Long dist = (d.distance() == null || d.distance().isBlank()) ? null : Long.parseLong(d.distance());
+
+        Integer directionClock = toDirectionClock(originLat, originLng, placeLat, placeLng);
 
         return new NearbyPlaceResponse(
                 d.id(),
@@ -115,10 +217,12 @@ public class PlaceService {
                 placeLat,
                 placeLng,
                 dist,
+                directionClock,
                 d.categoryName(),
                 d.roadAddressName(),
                 d.addressName(),
                 d.phone(),
+                null,
                 d.placeUrl(),
                 "KAKAO"
         );
@@ -126,10 +230,12 @@ public class PlaceService {
 
     private NearbyPlaceResponse withDistance(NearbyPlaceResponse p, double originLat, double originLng) {
         long d = haversineMeters(originLat, originLng, p.lat(), p.lng());
+        Integer directionClock = p.directionClock() != null ? p.directionClock() : toDirectionClock(originLat, originLng, p.lat(), p.lng());
         return new NearbyPlaceResponse(
                 p.id(), p.name(), p.lat(), p.lng(), d,
+                directionClock,
                 p.category(), p.roadAddress(), p.jibunAddress(),
-                p.phone(), p.placeUrl(), p.provider()
+                p.phone(), p.openNow(), p.placeUrl(), p.provider()
         );
     }
 
@@ -142,5 +248,32 @@ public class PlaceService {
                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return (long) (R * c);
+    }
+
+    private static String toExternalPlaceId(String provider, String externalId) {
+        return "ext:" + provider + ":" + externalId;
+    }
+
+    private static Integer toDirectionClock(double originLat, double originLng, double targetLat, double targetLng) {
+        double bearing = bearingDegrees(originLat, originLng, targetLat, targetLng);
+
+        // 0도=북(12시), 90도=동(3시) ... 30도 단위로 반올림
+        return (int) Math.floor((bearing + 15.0) / 30.0) % 12;
+    }
+
+    private static double bearingDegrees(double lat1, double lon1, double lat2, double lon2) {
+        double phi1 = Math.toRadians(lat1);
+        double phi2 = Math.toRadians(lat2);
+        double dLon = Math.toRadians(lon2 - lon1);
+
+        double y = Math.sin(dLon) * Math.cos(phi2);
+        double x = Math.cos(phi1) * Math.sin(phi2)
+                - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLon);
+
+        double theta = Math.atan2(y, x);
+        double deg = Math.toDegrees(theta);
+
+        // 0~360 정규화
+        return (deg + 360.0) % 360.0;
     }
 }

@@ -2,6 +2,8 @@ package com.example.capstone.domain.place.controller;
 
 import com.example.capstone.domain.place.dto.response.NearbyPlacePageResponse;
 import com.example.capstone.domain.place.dto.response.NearbyPlaceResponse;
+import com.example.capstone.domain.place.dto.response.PlaceSearchPageResponse;
+import com.example.capstone.domain.place.dto.response.PlaceDetailResponse;
 import com.example.capstone.domain.place.service.PlaceService;
 import com.example.capstone.global.api.ApiResponse;
 import jakarta.validation.constraints.Max;
@@ -26,7 +28,6 @@ public class PlaceController {
     /**
      * 예)
      * /api/places/nearby?lat=37.5665&lng=126.9780&radius=3000&code=CS2&page=1&size=30
-     *
      * - 카테고리는 한 번에 하나만 조회한다.
      * - 호환을 위해 codes 파라미터도 받되, 콤마로 여러 개가 오면 400 처리한다.
      */
@@ -74,5 +75,32 @@ public class PlaceController {
         boolean hasNext = to < total;
 
         return ApiResponse.ok(new NearbyPlacePageResponse(items, page, size, total, hasNext));
+    }
+
+    @GetMapping("/search")
+    public ApiResponse<PlaceSearchPageResponse> search(
+            @RequestParam String query,
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "3000") @Min(0) @Max(3000) int radius,
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(30) int size
+    ) {
+        PlaceSearchPageResponse result = placeService.searchPlaces(
+                query, lat, lng, radius, page, size
+        );
+        return ApiResponse.ok(result);
+    }
+
+    /**
+     * (신규) 장소 상세 조회
+     * GET /api/places/{placeId}
+     * - placeId 예: ext:KAKAO:123456
+     * - 현재는 캐시 기반으로 조회(검색/nearby로 한번이라도 조회된 항목)
+     */
+    @GetMapping("/{placeId}")
+    public ApiResponse<PlaceDetailResponse> detail(@PathVariable String placeId) {
+        PlaceDetailResponse result = placeService.getPlaceDetail(placeId);
+        return ApiResponse.ok(result);
     }
 }
