@@ -4,11 +4,13 @@ import com.example.capstone.domain.auth.dto.request.ReissueRequest;
 import com.example.capstone.domain.auth.dto.response.LoginResponse;
 import com.example.capstone.domain.auth.service.AuthService;
 import com.example.capstone.global.api.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "[AUTH]")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
