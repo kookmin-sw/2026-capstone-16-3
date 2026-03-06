@@ -6,6 +6,7 @@ import com.example.capstone.domain.auth.service.AuthService;
 import com.example.capstone.global.api.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,5 +24,11 @@ public class AuthController {
     @PostMapping("/reissue")
     public ApiResponse<LoginResponse> reissue(@Valid @RequestBody ReissueRequest request) {
         return ApiResponse.ok(authService.reissue(request.refreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@AuthenticationPrincipal Long userId) {
+        authService.logout(userId);
+        return ApiResponse.ok();
     }
 }
