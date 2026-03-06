@@ -51,6 +51,18 @@ public class JwtProvider {
     }
 
     /** 토큰 유효성 검사 (서명/만료 포함) */
+//    public boolean validateToken(String token) {
+//        try {
+//            Jwts.parserBuilder()
+//                    .setSigningKey(key)
+//                    .build()
+//                    .parseClaimsJws(token);
+//            return true;
+//        } catch (JwtException | IllegalArgumentException e) {
+//            return false;
+//        }
+//    }
+
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder()
@@ -58,7 +70,9 @@ public class JwtProvider {
                     .build()
                     .parseClaimsJws(token);
             return true;
+
         } catch (JwtException | IllegalArgumentException e) {
+            e.printStackTrace(); // 🔥 이거 추가
             return false;
         }
     }
