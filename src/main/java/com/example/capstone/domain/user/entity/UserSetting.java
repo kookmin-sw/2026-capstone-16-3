@@ -36,4 +36,24 @@ public class UserSetting extends BaseEntity {
     @Builder.Default
     @Column(name = "voice_guidance_enabled", nullable = false)
     private Boolean voiceGuidanceEnabled = true;
+
+    public void update(
+            Integer guidanceFrequency,
+            Integer sentenceLength,
+            Integer vibrationStrength,
+            Boolean voiceGuidanceEnabled
+    ) {
+        if (guidanceFrequency != null) {
+            this.guidanceFrequency = guidanceFrequency;
+        }
+        if (sentenceLength != null) {
+            this.sentenceLength = sentenceLength;
+        }
+        if (vibrationStrength != null) {
+            this.vibrationStrength = vibrationStrength;
+        }
+        if (voiceGuidanceEnabled != null) {
+            this.voiceGuidanceEnabled = voiceGuidanceEnabled;
+        }
+    }
 }
