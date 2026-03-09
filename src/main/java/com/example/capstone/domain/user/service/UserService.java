@@ -2,8 +2,9 @@ package com.example.capstone.domain.user.service;
 
 import com.example.capstone.domain.user.dto.response.ProfileResponse;
 import com.example.capstone.domain.user.entity.User;
+import com.example.capstone.domain.user.exception.UserErrorCode;
+import com.example.capstone.domain.user.exception.UserException;
 import com.example.capstone.domain.user.repository.UserRepository;
-import com.example.capstone.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +16,7 @@ public class UserService {
 
     public ProfileResponse getMyProfile(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
 
         return new ProfileResponse(
                 user.getId(),
