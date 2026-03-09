@@ -6,9 +6,11 @@ import com.example.capstone.domain.auth.dto.response.LoginResponse;
 import com.example.capstone.domain.auth.entity.RefreshToken;
 import com.example.capstone.domain.auth.repository.RefreshTokenRepository;
 import com.example.capstone.domain.user.entity.User;
+import com.example.capstone.domain.user.entity.UserSetting;
 import com.example.capstone.domain.user.exception.UserErrorCode;
 import com.example.capstone.domain.user.exception.UserException;
 import com.example.capstone.domain.user.repository.UserRepository;
+import com.example.capstone.domain.user.repository.UserSettingRepository;
 import com.example.capstone.global.exception.BusinessException;
 import com.example.capstone.global.security.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class AuthService {
 
     private final KakaoOAuthClient kakaoOAuthClient;
     private final UserRepository userRepository;
+    private final UserSettingRepository userSettingRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtProvider jwtProvider;
 
@@ -39,12 +42,7 @@ public class AuthService {
         String nickname = extractNickname(userInfo);
 
         User user = userRepository.findByKakaoUserId(kakaoUserId)
-                .orElseGet(() -> userRepository.save(
-                        User.builder()
-                                .kakaoUserId(kakaoUserId)
-                                .nickname(nickname)
-                                .build()
-                ));
+                .orElseGet(() -> createUserWithDefaultSetting(kakaoUserId, nickname));
 
         String accessJwt = jwtProvider.createAccessToken(user.getId());
         String refreshJwt = jwtProvider.createRefreshToken(user.getId());
@@ -137,5 +135,22 @@ public class AuthService {
         return date.toInstant()
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime();
+    }
+
+    private User createUserWithDefaultSetting(String kakaoUserId, String nickname) {
+        User user = userRepository.save(
+                User.builder()
+                        .kakaoUserId(kakaoUserId)
+                        .nickname(nickname)
+                        .build()
+        );
+
+        UserSetting userSetting = UserSetting.builder()
+                .user(user)
+                .build();
+
+        userSettingRepository.save(userSetting);
+
+        return user;
     }
 }
