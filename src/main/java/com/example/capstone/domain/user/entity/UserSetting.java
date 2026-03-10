@@ -21,15 +21,39 @@ public class UserSetting extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
+    @Builder.Default
     @Column(name = "guidance_frequency", nullable = false)
-    private Integer guidanceFrequency;
+    private Integer guidanceFrequency = 50;
 
+    @Builder.Default
     @Column(name = "sentence_length", nullable = false)
-    private Integer sentenceLength;
+    private Integer sentenceLength = 50;
 
+    @Builder.Default
     @Column(name = "vibration_strength", nullable = false)
-    private Integer vibrationStrength;
+    private Integer vibrationStrength = 50;
 
+    @Builder.Default
     @Column(name = "voice_guidance_enabled", nullable = false)
-    private Boolean voiceGuidanceEnabled;
+    private Boolean voiceGuidanceEnabled = true;
+
+    public void update(
+            Integer guidanceFrequency,
+            Integer sentenceLength,
+            Integer vibrationStrength,
+            Boolean voiceGuidanceEnabled
+    ) {
+        if (guidanceFrequency != null) {
+            this.guidanceFrequency = guidanceFrequency;
+        }
+        if (sentenceLength != null) {
+            this.sentenceLength = sentenceLength;
+        }
+        if (vibrationStrength != null) {
+            this.vibrationStrength = vibrationStrength;
+        }
+        if (voiceGuidanceEnabled != null) {
+            this.voiceGuidanceEnabled = voiceGuidanceEnabled;
+        }
+    }
 }
