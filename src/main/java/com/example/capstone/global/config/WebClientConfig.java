@@ -27,7 +27,7 @@ public class WebClientConfig {
     public WebClient fastApiWebClient(
             @Value("${ai.fastapi.base-url}") String baseUrl,
             @Value("${ai.fastapi.connect-timeout-millis}") int connectTimeoutMillis,
-            @Value("${ai.fastapi.read-timeout-seconds}}") int readTimeoutSeconds
+            @Value("${ai.fastapi.read-timeout-seconds}") int readTimeoutSeconds
     ) {
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis)
