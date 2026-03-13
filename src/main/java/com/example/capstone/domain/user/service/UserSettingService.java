@@ -5,7 +5,6 @@ import com.example.capstone.domain.user.dto.response.UserSettingResponse;
 import com.example.capstone.domain.user.entity.UserSetting;
 import com.example.capstone.domain.user.exception.UserErrorCode;
 import com.example.capstone.domain.user.exception.UserException;
-import com.example.capstone.domain.user.repository.UserRepository;
 import com.example.capstone.domain.user.repository.UserSettingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,7 +23,6 @@ public class UserSettingService {
                 .orElseThrow(() -> new UserException(UserErrorCode.USER_SETTING_NOT_FOUND));
 
         return new UserSettingResponse(
-                setting.getGuidanceFrequency(),
                 setting.getSentenceLength(),
                 setting.getVibrationStrength(),
                 setting.getVoiceGuidanceEnabled()
@@ -38,14 +36,12 @@ public class UserSettingService {
                 .orElseThrow(() -> new UserException(UserErrorCode.USER_SETTING_NOT_FOUND));
 
         setting.update(
-                request.guidanceFrequency(),
                 request.sentenceLength(),
                 request.vibrationStrength(),
                 request.voiceGuidanceEnabled()
         );
 
         return new UserSettingResponse(
-                setting.getGuidanceFrequency(),
                 setting.getSentenceLength(),
                 setting.getVibrationStrength(),
                 setting.getVoiceGuidanceEnabled()

@@ -22,10 +22,6 @@ public class UserSetting extends BaseEntity {
     private User user;
 
     @Builder.Default
-    @Column(name = "guidance_frequency", nullable = false)
-    private Integer guidanceFrequency = 50;
-
-    @Builder.Default
     @Column(name = "sentence_length", nullable = false)
     private Integer sentenceLength = 50;
 
@@ -38,14 +34,10 @@ public class UserSetting extends BaseEntity {
     private Boolean voiceGuidanceEnabled = true;
 
     public void update(
-            Integer guidanceFrequency,
             Integer sentenceLength,
             Integer vibrationStrength,
             Boolean voiceGuidanceEnabled
     ) {
-        if (guidanceFrequency != null) {
-            this.guidanceFrequency = guidanceFrequency;
-        }
         if (sentenceLength != null) {
             this.sentenceLength = sentenceLength;
         }
