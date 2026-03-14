@@ -8,6 +8,7 @@ import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -18,6 +19,7 @@ import java.util.Objects;
 
 @Slf4j
 @Service
+@Transactional(readOnly = true)
 public class GuideService {
 
     private final WebClient fastApiWebClient;
@@ -28,11 +30,10 @@ public class GuideService {
 
     public void sendFrame(
             MultipartFile image,
-            String capturedAt,
-            Double latitude,
-            Double longitude
+            Long userId
     ) {
         validateImage(image);
+        validateUserId(userId);
 
         try {
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
@@ -48,15 +49,7 @@ public class GuideService {
                     .filename(Objects.requireNonNullElse(image.getOriginalFilename(), "image.jpg"))
                     .contentType(resolveMediaType(image.getContentType()));
 
-            if (StringUtils.hasText(capturedAt)) {
-                builder.part("captured_at", capturedAt);
-            }
-            if (latitude != null) {
-                builder.part("latitude", latitude.toString());
-            }
-            if (longitude != null) {
-                builder.part("longitude", longitude.toString());
-            }
+            builder.part("user_id", userId.toString());
 
             fastApiWebClient.post()
                     .uri("/analyze")
@@ -68,13 +61,13 @@ public class GuideService {
 
         } catch (WebClientResponseException e) {
             log.error("FastAPI 응답 오류 status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString(), e);
-            throw new RuntimeException("AI 서버 응답 처리 중 오류가 발생했습니다.");
+            throw new GuideException(GuideErrorCode.FASTAPI_RESPONSE_ERROR);
         } catch (IOException e) {
             log.error("이미지 읽기 실패", e);
-            throw new RuntimeException("이미지 처리 중 오류가 발생했습니다.");
+            throw new GuideException(GuideErrorCode.IMAGE_PROCESSING_FAILED);
         } catch (Exception e) {
             log.error("FastAPI 호출 실패", e);
-            throw new RuntimeException("AI 서버 호출 중 오류가 발생했습니다.");
+            throw new GuideException(GuideErrorCode.FASTAPI_REQUEST_FAILED);
         }
     }
 
@@ -104,6 +97,12 @@ public class GuideService {
                     : MediaType.IMAGE_JPEG;
         } catch (Exception e) {
             return MediaType.IMAGE_JPEG;
+        }
+    }
+
+    private void validateUserId(Long userId) {
+        if (userId == null) {
+            throw new GuideException(GuideErrorCode.USER_NOT_AUTHENTICATED);
         }
     }
 }
