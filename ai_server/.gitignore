@@ -1,0 +1,18 @@
+logs/
+*.log
+
+# 빌드 결과물 제외
+/build/
+*.o
+*.class
+
+# 환경 설정 파일 제외
+.env
+config/local.json
+.DS_Store
+**/.DS_Store
+
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
