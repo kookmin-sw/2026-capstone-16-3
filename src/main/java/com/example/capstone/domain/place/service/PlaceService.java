@@ -1,7 +1,7 @@
 package com.example.capstone.domain.place.service;
 
-import com.example.capstone.domain.place.dto.response.NearbyPlaceResponse;
-import com.example.capstone.domain.place.dto.response.PlaceSearchPageResponse;
+import com.example.capstone.domain.place.dto.response.PlacePageResponse;
+import com.example.capstone.domain.place.dto.response.PlaceResponse;
 import com.example.capstone.domain.place.dto.response.PlaceDetailResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCategorySearchResponse;
 import com.example.capstone.global.exception.BusinessException;
@@ -35,7 +35,7 @@ public class PlaceService {
      * - 이 메서드는 "전체 정렬 리스트"를 만들어 반환합니다.
      * - pagination(page/size)은 Controller에서 슬라이싱해서 처리하세요.
      */
-    public List<NearbyPlaceResponse> findNearbyByCategoryCodes(
+    public List<PlaceResponse> findNearbyByCategoryCodes(
             double lat,
             double lng,
             int radiusM,
@@ -43,8 +43,7 @@ public class PlaceService {
             int sizePerCategory,
             int maxItems
     ) {
-        // (카테고리 코드별) 카카오 페이지를 끝까지(최대 45) 당겨서 합치기
-        List<NearbyPlaceResponse> merged = Flux.fromIterable(categoryCodes)
+        List<PlaceResponse> merged = Flux.fromIterable(categoryCodes)
                 .filter(c -> c != null && !c.isBlank())
                 .map(String::trim)
                 .distinct()
@@ -56,21 +55,21 @@ public class PlaceService {
                 .orElse(List.of());
 
         // id 기준 중복 제거
-        Map<String, NearbyPlaceResponse> dedup = new LinkedHashMap<>();
-        for (NearbyPlaceResponse p : merged) {
-            if (p != null && p.id() != null) {
-                dedup.putIfAbsent(p.id(), p);
+        Map<String, PlaceResponse> dedup = new LinkedHashMap<>();
+        for (PlaceResponse p : merged) {
+            if (p != null && p.placeId() != null) {
+                dedup.putIfAbsent(p.placeId(), p);
             }
         }
 
         // 거리(distance)가 null이면 직접 계산
-        List<NearbyPlaceResponse> ranked = dedup.values().stream()
+        List<PlaceResponse> ranked = dedup.values().stream()
                 .map(p -> p.distanceM() == null ? withDistance(p, lat, lng) : p)
                 .filter(p -> p.distanceM() != null && p.distanceM() <= radiusM)
                 // 거리(distance)가 같으면 id로 tie-break
                 .sorted(
-                        Comparator.comparingLong(NearbyPlaceResponse::distanceM)
-                                .thenComparing(NearbyPlaceResponse::id)
+                        Comparator.comparingLong(PlaceResponse::distanceM)
+                                .thenComparing(PlaceResponse::placeId)
                 )
                 .toList();
 
@@ -81,7 +80,7 @@ public class PlaceService {
         return ranked;
     }
 
-    public PlaceSearchPageResponse searchPlaces(
+    public PlacePageResponse searchPlaces(
             String query,
             double lat,
             double lng,
@@ -93,7 +92,7 @@ public class PlaceService {
             throw new BusinessException("BAD_REQUEST", "query is required");
         }
 
-        int kakaoPage = Math.max(page, 0) + 1;          // 0-based -> 1-based
+        int kakaoPage = Math.min(Math.max(page, 1), MAX_PAGE);
         int kakaoSize = Math.min(Math.max(size, 1), 15); // Kakao limit
 
         KakaoCategorySearchResponse resp = kakaoLocalClient.searchKeyword(
@@ -105,19 +104,19 @@ public class PlaceService {
                 .block();
 
         if (resp == null) {
-            return new PlaceSearchPageResponse(List.of(), page, kakaoSize, 0, 0);
+            return new PlacePageResponse(List.of(), page, kakaoSize, 0, false);
         }
 
-        long pageable = resp.meta() == null ? 0 : resp.meta().pageableCount();
-        int totalPages = (int) Math.ceil(pageable / (double) kakaoSize);
+        int total = resp.meta() == null ? 0 : (int) resp.meta().pageableCount();
+        boolean hasNext = resp.meta() != null && !resp.meta().isEnd();
 
-        List<PlaceSearchPageResponse.Item> items =
+        List<PlaceResponse> items =
                 (resp.documents() == null ? List.<KakaoCategorySearchResponse.KakaoPlaceDocument>of() : resp.documents())
                         .stream()
-                        .map(this::toSearchItem) // 여기서 캐시 적재됨
+                        .map(doc -> toSearchPlace(doc, lat, lng))
                         .toList();
 
-        return new PlaceSearchPageResponse(items, page, kakaoSize, pageable, totalPages);
+        return new PlacePageResponse(items, page, kakaoSize, total, hasNext);
     }
 
     public PlaceDetailResponse getPlaceDetail(String placeId) {
@@ -144,30 +143,36 @@ public class PlaceService {
                 doc.phone(),
                 doc.placeUrl(),
                 null, // openingHours: Kakao Local REST에서 제공되지 않음
-                new PlaceDetailResponse.Extra("KAKAO", doc)
+                new PlaceDetailResponse.Extra("KAKAO")
         );
     }
 
-    private PlaceSearchPageResponse.Item toSearchItem(KakaoCategorySearchResponse.KakaoPlaceDocument d) {
+    private PlaceResponse toSearchPlace(
+            KakaoCategorySearchResponse.KakaoPlaceDocument d,
+            double originLat,
+            double originLng
+    ) {
         String placeId = toExternalPlaceId("KAKAO", d.id());
         placeCache.put(placeId, d);
 
         double placeLng = Double.parseDouble(d.x());
         double placeLat = Double.parseDouble(d.y());
         Long dist = (d.distance() == null || d.distance().isBlank()) ? null : Long.parseLong(d.distance());
+        if (dist == null) {
+            dist = haversineMeters(originLat, originLng, placeLat, placeLng);
+        }
 
-        return new PlaceSearchPageResponse.Item(
+        Integer directionClock = toDirectionClock(originLat, originLng, placeLat, placeLng);
+
+        return new PlaceResponse(
                 placeId,
                 d.placeName(),
                 d.categoryName(),
-                d.addressName(),
                 d.roadAddressName(),
                 placeLat,
                 placeLng,
                 dist,
-                d.phone(),
-                d.placeUrl(),
-                "KAKAO"
+                directionClock
         );
     }
 
@@ -200,7 +205,7 @@ public class PlaceService {
                 .takeUntil(resp -> resp.meta() != null && resp.meta().isEnd());
     }
 
-    private NearbyPlaceResponse toNearbyPlace(
+    private PlaceResponse toNearbyPlace(
             KakaoCategorySearchResponse.KakaoPlaceDocument d,
             double originLat,
             double originLng
@@ -211,31 +216,33 @@ public class PlaceService {
 
         Integer directionClock = toDirectionClock(originLat, originLng, placeLat, placeLng);
 
-        return new NearbyPlaceResponse(
-                d.id(),
+        String placeId = toExternalPlaceId("KAKAO", d.id());
+        placeCache.put(placeId, d);
+
+        return new PlaceResponse(
+                placeId,
                 d.placeName(),
+                d.categoryName(),
+                d.roadAddressName(),
                 placeLat,
                 placeLng,
                 dist,
-                directionClock,
-                d.categoryName(),
-                d.roadAddressName(),
-                d.addressName(),
-                d.phone(),
-                null,
-                d.placeUrl(),
-                "KAKAO"
+                directionClock
         );
     }
 
-    private NearbyPlaceResponse withDistance(NearbyPlaceResponse p, double originLat, double originLng) {
+    private PlaceResponse withDistance(PlaceResponse p, double originLat, double originLng) {
         long d = haversineMeters(originLat, originLng, p.lat(), p.lng());
         Integer directionClock = p.directionClock() != null ? p.directionClock() : toDirectionClock(originLat, originLng, p.lat(), p.lng());
-        return new NearbyPlaceResponse(
-                p.id(), p.name(), p.lat(), p.lng(), d,
-                directionClock,
-                p.category(), p.roadAddress(), p.jibunAddress(),
-                p.phone(), p.openNow(), p.placeUrl(), p.provider()
+        return new PlaceResponse(
+                p.placeId(),
+                p.name(),
+                p.category(),
+                p.roadAddress(),
+                p.lat(),
+                p.lng(),
+                d,
+                directionClock
         );
     }
 

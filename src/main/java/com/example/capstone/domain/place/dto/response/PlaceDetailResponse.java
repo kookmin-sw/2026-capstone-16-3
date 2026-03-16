@@ -32,7 +32,6 @@ public record PlaceDetailResponse(
     }
 
     public record Extra(
-            String provider,
-            Object raw
+            String provider
     ) {}
 }
