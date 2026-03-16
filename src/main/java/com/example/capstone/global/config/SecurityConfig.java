@@ -36,7 +36,10 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/places/**").permitAll()
-                        .requestMatchers("/api/users/me/recent/**").authenticated()
+                        .requestMatchers(
+                                "/api/users/me/recent/**",
+                                "/api/users/me/favorites/**"
+                        ).authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
