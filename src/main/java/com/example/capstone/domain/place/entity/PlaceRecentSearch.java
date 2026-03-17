@@ -1,6 +1,10 @@
 package com.example.capstone.domain.place.entity;
 
+import com.example.capstone.domain.user.entity.User;
+import com.example.capstone.global.entity.BaseEntity;
 import jakarta.persistence.*;
+import lombok.*;
+
 import java.time.Instant;
 
 @Entity
@@ -9,89 +13,55 @@ import java.time.Instant;
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_place_recent_user_place",
-                        columnNames = {"user_key", "place_id"}
+                        columnNames = {"user_id", "place_id"}
                 )
         },
         indexes = {
                 @Index(
                         name = "idx_place_recent_user_searched",
-                        columnList = "user_key,searched_at"
+                        columnList = "user_id,searched_at"
                 )
         }
 )
-public class PlaceRecentSearch {
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
+public class PlaceRecentSearch extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(name = "user_key", nullable = false, length = 128)
-    private String userKey;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "place_id", nullable = false, length = 128)
-    private String placeId; // ext:KAKAO:...
+    private String placeId;
 
     @Column(name = "name", nullable = false, length = 255)
     private String name;
 
-    @Column(name = "category", length = 255)
-    private String category;
+    @Column(name = "address", length = 500)
+    private String address;
 
-    @Column(name = "distance_m")
-    private Long distanceM;
+    @Column(name = "latitude", nullable = false)
+    private Double latitude;
 
-    @Column(name = "direction_clock")
-    private Integer directionClock;
-
-    @Column(name = "road_address", length = 255)
-    private String roadAddress;
-
-    @Column(name = "jibun_address", length = 255)
-    private String jibunAddress; // ✅ 추가
+    @Column(name = "longitude", nullable = false)
+    private Double longitude;
 
     @Column(name = "searched_at", nullable = false)
     private Instant searchedAt;
 
-    protected PlaceRecentSearch() {}
-
-    public PlaceRecentSearch(
-            String userKey,
-            String placeId,
+    public void update(
             String name,
-            String category,
-            Long distanceM,
-            Integer directionClock,
-            String roadAddress,
-            String jibunAddress,
+            String address,
+            Double latitude,
+            Double longitude,
             Instant searchedAt
     ) {
-        this.userKey = userKey;
-        this.placeId = placeId;
         this.name = name;
-        this.category = category;
-        this.distanceM = distanceM;
-        this.directionClock = directionClock;
-        this.roadAddress = roadAddress;
-        this.jibunAddress = jibunAddress;
+        this.address = address;
+        this.latitude = latitude;
+        this.longitude = longitude;
         this.searchedAt = searchedAt;
     }
-
-    public void touch(Long distanceM, Integer directionClock, String roadAddress, String jibunAddress, Instant searchedAt) {
-        this.distanceM = distanceM;
-        this.directionClock = directionClock;
-        this.roadAddress = roadAddress;
-        this.jibunAddress = jibunAddress;
-        this.searchedAt = searchedAt;
-    }
-
-    public Long getId() { return id; }
-    public String getUserKey() { return userKey; }
-    public String getPlaceId() { return placeId; }
-    public String getName() { return name; }
-    public String getCategory() { return category; }
-    public Long getDistanceM() { return distanceM; }
-    public Integer getDirectionClock() { return directionClock; }
-    public String getRoadAddress() { return roadAddress; }
-    public String getJibunAddress() { return jibunAddress; }
-    public Instant getSearchedAt() { return searchedAt; }
 }

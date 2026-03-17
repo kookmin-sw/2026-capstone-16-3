@@ -1,5 +1,7 @@
 package com.example.capstone.domain.place.controller;
 
+import com.example.capstone.domain.place.dto.response.PlaceRecentDeleteAllResponse;
+import com.example.capstone.domain.place.dto.response.PlaceRecentDeleteResponse;
 import com.example.capstone.domain.place.dto.response.PlaceRecentPageResponse;
 import com.example.capstone.domain.place.service.PlaceRecentSearchService;
 import com.example.capstone.global.api.ApiResponse;
@@ -25,26 +27,26 @@ public class PlaceRecentSearchController {
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
     ) {
         return ApiResponse.ok(
-                placeRecentSearchService.getRecent(String.valueOf(userId), page, size)
+                placeRecentSearchService.getRecent(userId, page, size)
         );
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Boolean> deleteOne(
+    public ApiResponse<PlaceRecentDeleteResponse> deleteOne(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id
     ) {
         return ApiResponse.ok(
-                placeRecentSearchService.deleteOne(String.valueOf(userId), id)
+                placeRecentSearchService.deleteOne(userId, id)
         );
     }
 
     @DeleteMapping
-    public ApiResponse<Integer> deleteAll(
+    public ApiResponse<PlaceRecentDeleteAllResponse> deleteAll(
             @AuthenticationPrincipal Long userId
     ) {
         return ApiResponse.ok(
-                placeRecentSearchService.deleteAll(String.valueOf(userId))
+                placeRecentSearchService.deleteAll(userId)
         );
     }
 }

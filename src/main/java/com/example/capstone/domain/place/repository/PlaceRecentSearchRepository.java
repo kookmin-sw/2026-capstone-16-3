@@ -9,13 +9,13 @@ import java.util.Optional;
 
 public interface PlaceRecentSearchRepository extends JpaRepository<PlaceRecentSearch, Long> {
 
-    Page<PlaceRecentSearch> findByUserKeyOrderBySearchedAtDesc(String userKey, Pageable pageable);
+    Page<PlaceRecentSearch> findByUserIdOrderBySearchedAtDesc(Long userId, Pageable pageable);
 
-    Optional<PlaceRecentSearch> findByUserKeyAndPlaceId(String userKey, String placeId);
+    Optional<PlaceRecentSearch> findByUserIdAndPlaceId(Long userId, String placeId);
 
-    long countByUserKey(String userKey);
+    long countByUserId(Long userId);
 
-    int deleteByIdAndUserKey(Long id, String userKey);
+    int deleteByIdAndUserId(Long id, Long userId);
 
-    int deleteByUserKey(String userKey);
+    int deleteByUserId(Long userId);
 }

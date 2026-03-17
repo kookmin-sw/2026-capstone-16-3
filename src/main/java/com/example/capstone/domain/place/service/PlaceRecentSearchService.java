@@ -1,8 +1,13 @@
 package com.example.capstone.domain.place.service;
 
+import com.example.capstone.domain.place.dto.response.PlaceRecentDeleteAllResponse;
+import com.example.capstone.domain.place.dto.response.PlaceRecentDeleteResponse;
 import com.example.capstone.domain.place.dto.response.PlaceRecentPageResponse;
 import com.example.capstone.domain.place.entity.PlaceRecentSearch;
 import com.example.capstone.domain.place.repository.PlaceRecentSearchRepository;
+import com.example.capstone.domain.user.entity.User;
+import com.example.capstone.domain.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,36 +16,31 @@ import java.time.Instant;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class PlaceRecentSearchService {
 
     private static final int MAX_KEEP = 50;
 
     private final PlaceRecentSearchRepository repository;
-
-    public PlaceRecentSearchService(PlaceRecentSearchRepository repository) {
-        this.repository = repository;
-    }
+    private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public PlaceRecentPageResponse getRecent(String userKey, int page, int size) {
-        String normalizedUserKey = normalizeUserKey(userKey);
-
+    public PlaceRecentPageResponse getRecent(Long userId, int page, int size) {
         var pageable = PageRequest.of(
                 Math.max(page, 0),
                 Math.min(Math.max(size, 1), 100)
         );
 
-        var p = repository.findByUserKeyOrderBySearchedAtDesc(normalizedUserKey, pageable);
+        var result = repository.findByUserIdOrderBySearchedAtDesc(userId, pageable);
 
-        List<PlaceRecentPageResponse.Item> items = p.getContent().stream()
+        List<PlaceRecentPageResponse.Item> items = result.getContent().stream()
                 .map(e -> new PlaceRecentPageResponse.Item(
                         e.getId(),
                         e.getPlaceId(),
                         e.getName(),
-                        e.getCategory(),
-                        e.getDistanceM(),
-                        e.getDirectionClock(),
-                        e.getRoadAddress(),
+                        e.getAddress(),
+                        e.getLatitude(),
+                        e.getLongitude(),
                         e.getSearchedAt()
                 ))
                 .toList();
@@ -49,70 +49,78 @@ public class PlaceRecentSearchService {
                 items,
                 page,
                 size,
-                p.getTotalElements(),
-                p.getTotalPages()
+                result.getTotalElements(),
+                result.getTotalPages()
         );
     }
 
     @Transactional
     public void record(
-            String userKey,
+            Long userId,
             String placeId,
             String name,
-            String category,
-            Long distanceM,
-            Integer directionClock,
-            String roadAddress,
-            String jibunAddress
+            String address,
+            Double latitude,
+            Double longitude
     ) {
-        String normalizedUserKey = normalizeUserKey(userKey);
-
+        if (userId == null) return;
         if (placeId == null || placeId.isBlank()) return;
         if (name == null || name.isBlank()) return;
+        if (latitude == null || longitude == null) return;
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
         Instant now = Instant.now();
 
-        repository.findByUserKeyAndPlaceId(normalizedUserKey, placeId)
+        repository.findByUserIdAndPlaceId(userId, placeId)
                 .ifPresentOrElse(
-                        existing -> existing.touch(
-                                distanceM,
-                                directionClock,
-                                roadAddress,
-                                jibunAddress,
+                        existing -> existing.update(
+                                name,
+                                address,
+                                latitude,
+                                longitude,
                                 now
                         ),
-                        () -> repository.save(new PlaceRecentSearch(
-                                normalizedUserKey,
-                                placeId,
-                                name,
-                                category,
-                                distanceM,
-                                directionClock,
-                                roadAddress,
-                                jibunAddress,
-                                now
-                        ))
+                        () -> repository.save(
+                                PlaceRecentSearch.builder()
+                                        .user(user)
+                                        .placeId(placeId)
+                                        .name(name)
+                                        .address(address)
+                                        .latitude(latitude)
+                                        .longitude(longitude)
+                                        .searchedAt(now)
+                                        .build()
+                        )
                 );
 
-        // 아직 실제 정리 로직이 없으면 이 블록은 지우는 편이 낫다.
-        // long count = repository.countByUserKey(normalizedUserKey);
-        // if (count > MAX_KEEP) { ... }
+        trimIfNeeded(userId);
     }
 
     @Transactional
-    public boolean deleteOne(String userKey, Long id) {
-        if (id == null) return false;
-        String normalizedUserKey = normalizeUserKey(userKey);
-        return repository.deleteByIdAndUserKey(id, normalizedUserKey) > 0;
+    public PlaceRecentDeleteResponse deleteOne(Long userId, Long id) {
+        boolean deleted = repository.deleteByIdAndUserId(id, userId) > 0;
+        return new PlaceRecentDeleteResponse(deleted);
     }
 
     @Transactional
-    public int deleteAll(String userKey) {
-        String normalizedUserKey = normalizeUserKey(userKey);
-        return repository.deleteByUserKey(normalizedUserKey);
+    public PlaceRecentDeleteAllResponse deleteAll(Long userId) {
+        int deletedCount = repository.deleteByUserId(userId);
+        return new PlaceRecentDeleteAllResponse(deletedCount);
     }
 
-    private String normalizeUserKey(String userKey) {
-        return (userKey == null || userKey.isBlank()) ? "anonymous" : userKey;
+    private void trimIfNeeded(Long userId) {
+        long count = repository.countByUserId(userId);
+        if (count <= MAX_KEEP) {
+            return;
+        }
+
+        var overflow = repository.findByUserIdOrderBySearchedAtDesc(userId, PageRequest.of(MAX_KEEP, Integer.MAX_VALUE))
+                .getContent();
+
+        if (!overflow.isEmpty()) {
+            repository.deleteAll(overflow);
+        }
     }
 }

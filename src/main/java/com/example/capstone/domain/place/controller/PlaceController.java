@@ -113,14 +113,12 @@ public class PlaceController {
 
         if (userId != null) {
             placeRecentSearchService.record(
-                    String.valueOf(userId),
+                    userId,
                     result.placeId(),
                     result.name(),
-                    result.category(),
-                    result.distanceFromCenterM(),
-                    null,
-                    result.roadAddress(),
-                    result.address()
+                    result.address(),
+                    result.latitude(),
+                    result.longitude()
             );
         }
 
