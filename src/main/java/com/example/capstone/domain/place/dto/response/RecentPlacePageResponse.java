@@ -3,7 +3,7 @@ package com.example.capstone.domain.place.dto.response;
 import java.time.Instant;
 import java.util.List;
 
-public record PlaceRecentPageResponse(
+public record RecentPlacePageResponse(
         List<Item> items,
         int page,
         int size,

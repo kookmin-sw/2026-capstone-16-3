@@ -1,7 +1,7 @@
 package com.example.capstone.domain.user.entity;
 
 import com.example.capstone.domain.place.entity.FavoritePlace;
-import com.example.capstone.domain.place.entity.PlaceRecentSearch;
+import com.example.capstone.domain.place.entity.RecentPlace;
 import com.example.capstone.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,7 +33,7 @@ public class User extends BaseEntity {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("searchedAt DESC")
-    private List<PlaceRecentSearch> recentSearchPlaces = new ArrayList<>();
+    private List<RecentPlace> recentSearchPlaces = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FavoritePlace> favoritePlaces = new ArrayList<>();

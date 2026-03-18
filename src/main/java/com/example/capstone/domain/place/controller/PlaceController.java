@@ -3,7 +3,7 @@ package com.example.capstone.domain.place.controller;
 import com.example.capstone.domain.place.dto.response.PlacePageResponse;
 import com.example.capstone.domain.place.dto.response.PlaceDetailResponse;
 import com.example.capstone.domain.place.dto.response.PlaceResponse;
-import com.example.capstone.domain.place.service.PlaceRecentSearchService;
+import com.example.capstone.domain.place.service.RecentPlaceService;
 import com.example.capstone.domain.place.service.PlaceService;
 import com.example.capstone.global.api.ApiResponse;
 import jakarta.validation.constraints.Max;
@@ -21,14 +21,14 @@ import java.util.List;
 public class PlaceController {
 
     private final PlaceService placeService;
-    private final PlaceRecentSearchService placeRecentSearchService;
+    private final RecentPlaceService recentPlaceService;
 
     public PlaceController(
             PlaceService placeService,
-            PlaceRecentSearchService placeRecentSearchService
+            RecentPlaceService recentPlaceService
     ) {
         this.placeService = placeService;
-        this.placeRecentSearchService = placeRecentSearchService;
+        this.recentPlaceService = recentPlaceService;
     }
 
     /**
@@ -112,7 +112,7 @@ public class PlaceController {
         PlaceDetailResponse result = placeService.getPlaceDetail(placeId);
 
         if (userId != null) {
-            placeRecentSearchService.record(
+            recentPlaceService.record(
                     userId,
                     result.placeId(),
                     result.name(),

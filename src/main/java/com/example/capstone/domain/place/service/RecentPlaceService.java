@@ -1,10 +1,10 @@
 package com.example.capstone.domain.place.service;
 
-import com.example.capstone.domain.place.dto.response.PlaceRecentDeleteAllResponse;
-import com.example.capstone.domain.place.dto.response.PlaceRecentDeleteResponse;
-import com.example.capstone.domain.place.dto.response.PlaceRecentPageResponse;
-import com.example.capstone.domain.place.entity.PlaceRecentSearch;
-import com.example.capstone.domain.place.repository.PlaceRecentSearchRepository;
+import com.example.capstone.domain.place.dto.response.RecentPlaceDeleteAllResponse;
+import com.example.capstone.domain.place.dto.response.RecentPlaceDeleteResponse;
+import com.example.capstone.domain.place.dto.response.RecentPlacePageResponse;
+import com.example.capstone.domain.place.entity.RecentPlace;
+import com.example.capstone.domain.place.repository.RecentPlaceRepository;
 import com.example.capstone.domain.user.entity.User;
 import com.example.capstone.domain.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,15 +17,15 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class PlaceRecentSearchService {
+public class RecentPlaceService {
 
     private static final int MAX_KEEP = 50;
 
-    private final PlaceRecentSearchRepository repository;
+    private final RecentPlaceRepository repository;
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public PlaceRecentPageResponse getRecent(Long userId, int page, int size) {
+    public RecentPlacePageResponse getRecent(Long userId, int page, int size) {
         var pageable = PageRequest.of(
                 Math.max(page, 0),
                 Math.min(Math.max(size, 1), 100)
@@ -33,8 +33,8 @@ public class PlaceRecentSearchService {
 
         var result = repository.findByUserIdOrderBySearchedAtDesc(userId, pageable);
 
-        List<PlaceRecentPageResponse.Item> items = result.getContent().stream()
-                .map(e -> new PlaceRecentPageResponse.Item(
+        List<RecentPlacePageResponse.Item> items = result.getContent().stream()
+                .map(e -> new RecentPlacePageResponse.Item(
                         e.getId(),
                         e.getPlaceId(),
                         e.getName(),
@@ -45,7 +45,7 @@ public class PlaceRecentSearchService {
                 ))
                 .toList();
 
-        return new PlaceRecentPageResponse(
+        return new RecentPlacePageResponse(
                 items,
                 page,
                 size,
@@ -83,7 +83,7 @@ public class PlaceRecentSearchService {
                                 now
                         ),
                         () -> repository.save(
-                                PlaceRecentSearch.builder()
+                                RecentPlace.builder()
                                         .user(user)
                                         .placeId(placeId)
                                         .name(name)
@@ -99,15 +99,15 @@ public class PlaceRecentSearchService {
     }
 
     @Transactional
-    public PlaceRecentDeleteResponse deleteOne(Long userId, Long id) {
+    public RecentPlaceDeleteResponse deleteOne(Long userId, Long id) {
         boolean deleted = repository.deleteByIdAndUserId(id, userId) > 0;
-        return new PlaceRecentDeleteResponse(deleted);
+        return new RecentPlaceDeleteResponse(deleted);
     }
 
     @Transactional
-    public PlaceRecentDeleteAllResponse deleteAll(Long userId) {
+    public RecentPlaceDeleteAllResponse deleteAll(Long userId) {
         int deletedCount = repository.deleteByUserId(userId);
-        return new PlaceRecentDeleteAllResponse(deletedCount);
+        return new RecentPlaceDeleteAllResponse(deletedCount);
     }
 
     private void trimIfNeeded(Long userId) {
