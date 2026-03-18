@@ -23,7 +23,7 @@ public class RecentPlaceController {
     @GetMapping
     public ApiResponse<RecentPlacePageResponse> getRecent(
             @AuthenticationPrincipal Long userId,
-            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
     ) {
         return ApiResponse.ok(

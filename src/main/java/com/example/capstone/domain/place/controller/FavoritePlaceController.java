@@ -25,8 +25,8 @@ public class FavoritePlaceController {
     @GetMapping
     public ApiResponse<FavoritePlacePageResponse> getFavorites(
             @AuthenticationPrincipal Long userId,
-            @RequestParam(defaultValue = "0") @Min(0) int page,
-            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "15") @Min(1) @Max(50) int size
     ) {
         return ApiResponse.ok(
                 favoritePlaceService.getFavorites(userId, page, size)

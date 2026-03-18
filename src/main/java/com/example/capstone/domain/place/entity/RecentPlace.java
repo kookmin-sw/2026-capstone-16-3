@@ -45,7 +45,7 @@ public class RecentPlace extends BaseEntity {
     @Column(name = "latitude", nullable = false)
     private Double latitude;
 
-    @Column(name = "longitude", nullable = false)
+    @Column(name = "lng", nullable = false)
     private Double longitude;
 
     @Column(name = "searched_at", nullable = false)

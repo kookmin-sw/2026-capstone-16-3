@@ -31,31 +31,23 @@ public class PlaceController {
         this.recentPlaceService = recentPlaceService;
     }
 
-    /**
-     * 예)
-     * /api/places/nearby?lat=37.5665&lng=126.9780&radius=3000&code=CS2&page=1&size=30
-     * - 카테고리는 한 번에 하나만 조회한다.
-     * - 호환을 위해 codes 파라미터도 받되, 콤마로 여러 개가 오면 400 처리한다.
-     */
     @GetMapping("/nearby")
     public ApiResponse<PlacePageResponse> nearby(
             @RequestParam double lat,
             @RequestParam double lng,
             @RequestParam(defaultValue = "3000") @Min(0) @Max(3000) int radius,
 
-            @RequestParam(required = false) String code,
-            @RequestParam(required = false) String codes,
+            @RequestParam String code,
 
             @RequestParam(defaultValue = "10") @Min(1) @Max(30) int sizePerCategory,
             @RequestParam(defaultValue = "1") @Min(1) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(30) int size
     ) {
-        String raw = (code != null && !code.isBlank()) ? code : codes;
-        if (raw == null || raw.isBlank()) {
+        if (code == null || code.isBlank()) {
             throw new IllegalArgumentException("'code' is required. ex) code=CS2");
         }
 
-        List<String> parsed = Arrays.stream(raw.split(","))
+        List<String> parsed = Arrays.stream(code.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isBlank())
                 .toList();
@@ -100,8 +92,6 @@ public class PlaceController {
 
     /**
      * 장소 상세 조회
-     * GET /api/places/{placeId}
-     * - placeId 예: ext:KAKAO:123456
      * - 현재는 캐시 기반으로 조회(검색/nearby로 한번이라도 조회된 항목)
      */
     @GetMapping("/{placeId}")
@@ -117,8 +107,8 @@ public class PlaceController {
                     result.placeId(),
                     result.name(),
                     result.address(),
-                    result.latitude(),
-                    result.longitude()
+                    result.lat(),
+                    result.lng()
             );
         }
 

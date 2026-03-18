@@ -79,10 +79,6 @@ public class KakaoLocalClient {
             int size,
             int page
     ) {
-        int radius = Math.min(Math.max(radiusM, 0), 3000);
-        int safeSize = Math.min(Math.max(size, 1), 15);
-        int safePage = Math.min(Math.max(page, 1), 45);
-
         URI uri = b.path("/v2/local/search/category.json")
                 .queryParam("category_group_code", code)
                 .queryParam("x", lng) // x=경도
@@ -90,7 +86,7 @@ public class KakaoLocalClient {
                 .queryParam("radius", Math.min(Math.max(radiusM, 0), 3000))
                 .queryParam("sort", "distance")
                 .queryParam("size", Math.min(Math.max(size, 1), 15))
-                .queryParam("page", Math.min(Math.max(page, 1), 45))
+                .queryParam("page", Math.min(Math.max(page, 1), MAX_PAGE))
                 .build();
 
         log.info("[KAKAO REQ] uri={}", uri);

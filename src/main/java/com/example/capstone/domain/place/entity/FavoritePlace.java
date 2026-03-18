@@ -43,6 +43,6 @@ public class FavoritePlace extends BaseEntity {
     @Column(name = "latitude", nullable = false)
     private Double latitude;
 
-    @Column(name = "longitude", nullable = false)
+    @Column(name = "lng", nullable = false)
     private Double longitude;
 }

@@ -15,8 +15,8 @@ public record RecentPlacePageResponse(
             String placeId,
             String name,
             String address,
-            Double latitude,
-            Double longitude,
+            Double lat,
+            Double lng,
             Instant searchedAt
     ) {}
 }

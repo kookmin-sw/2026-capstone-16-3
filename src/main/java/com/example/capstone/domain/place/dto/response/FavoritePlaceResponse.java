@@ -8,8 +8,8 @@ public record FavoritePlaceResponse(
         String name,
         String alias,
         String address,
-        Double latitude,
-        Double longitude,
+        Double lat,
+        Double lng,
         Instant createdAt
 ) {
 }

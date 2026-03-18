@@ -31,8 +31,8 @@ public class FavoritePlaceService {
         User user = getUser(userId);
 
         var pageable = PageRequest.of(
-                Math.max(page, 0),
-                Math.min(Math.max(size, 1), 100)
+                Math.max(page, 1),
+                Math.min(Math.max(size, 1), MAX_FAVORITES)
         );
 
         var result = favoritePlaceRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);

@@ -27,8 +27,8 @@ public class RecentPlaceService {
     @Transactional(readOnly = true)
     public RecentPlacePageResponse getRecent(Long userId, int page, int size) {
         var pageable = PageRequest.of(
-                Math.max(page, 0),
-                Math.min(Math.max(size, 1), 100)
+                Math.max(page, 1),
+                Math.min(Math.max(size, 1), MAX_KEEP)
         );
 
         var result = repository.findByUserIdOrderBySearchedAtDesc(userId, pageable);
