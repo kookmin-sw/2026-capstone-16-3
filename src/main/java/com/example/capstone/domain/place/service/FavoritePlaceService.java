@@ -78,8 +78,8 @@ public class FavoritePlaceService {
                 .name(request.name())
                 .alias(request.alias())
                 .address(request.address())
-                .latitude(request.latitude())
-                .longitude(request.longitude())
+                .latitude(request.lat())
+                .longitude(request.lng())
                 .build();
 
         FavoritePlace saved = favoritePlaceRepository.save(favoritePlace);

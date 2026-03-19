@@ -35,13 +35,13 @@ public class PlaceController {
     public ApiResponse<PlacePageResponse> nearby(
             @RequestParam double lat,
             @RequestParam double lng,
-            @RequestParam(defaultValue = "3000") @Min(0) @Max(3000) int radius,
+            @RequestParam(defaultValue = "3000") @Min(0) @Max(20000) int radius,
 
             @RequestParam String code,
 
             @RequestParam(defaultValue = "10") @Min(1) @Max(30) int sizePerCategory,
-            @RequestParam(defaultValue = "1") @Min(1) int page,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(30) int size
+            @RequestParam(defaultValue = "1") @Min(1) @Max(45) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(15) int size
     ) {
         if (code == null || code.isBlank()) {
             throw new IllegalArgumentException("'code' is required. ex) code=CS2");
@@ -80,9 +80,9 @@ public class PlaceController {
             @RequestParam String query,
             @RequestParam double lat,
             @RequestParam double lng,
-            @RequestParam(defaultValue = "3000") @Min(0) @Max(3000) int radius,
-            @RequestParam(defaultValue = "1") @Min(1) int page,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(30) int size
+            @RequestParam(defaultValue = "3000") @Min(0) @Max(20000) int radius,
+            @RequestParam(defaultValue = "1") @Min(1) @Max(45) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(15) int size
     ) {
         PlacePageResponse result = placeService.searchPlaces(
                 query, lat, lng, radius, page, size
