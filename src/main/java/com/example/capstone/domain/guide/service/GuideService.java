@@ -30,10 +30,12 @@ public class GuideService {
 
     public void sendFrame(
             MultipartFile image,
-            Long userId
+            Long userId,
+            String capturedAt
     ) {
         validateImage(image);
         validateUserId(userId);
+        validateCapturedAt(capturedAt);
 
         try {
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
@@ -50,6 +52,7 @@ public class GuideService {
                     .contentType(resolveMediaType(image.getContentType()));
 
             builder.part("user_id", userId.toString());
+            builder.part("captured_at", capturedAt);
 
             fastApiWebClient.post()
                     .uri("/analyze")
@@ -103,6 +106,12 @@ public class GuideService {
     private void validateUserId(Long userId) {
         if (userId == null) {
             throw new GuideException(GuideErrorCode.USER_NOT_AUTHENTICATED);
+        }
+    }
+
+    private void validateCapturedAt(String capturedAt) {
+        if (!StringUtils.hasText(capturedAt)) {
+            throw new GuideException(GuideErrorCode.INVALID_CAPTURED_AT);
         }
     }
 }

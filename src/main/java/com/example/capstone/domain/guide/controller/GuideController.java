@@ -21,9 +21,10 @@ public class GuideController {
     @PostMapping(value = "/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<Void> forwardImage(
             @RequestPart("image") MultipartFile image,
+            @RequestPart("captured_at") String capturedAt,
             @AuthenticationPrincipal Long userId
     ) {
-        guideService.sendFrame(image, userId);
+        guideService.sendFrame(image, userId, capturedAt);
         return ApiResponse.ok();
     }
 

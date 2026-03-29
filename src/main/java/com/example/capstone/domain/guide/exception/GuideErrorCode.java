@@ -14,7 +14,9 @@ public enum GuideErrorCode {
 
     USER_NOT_AUTHENTICATED(HttpStatus.UNAUTHORIZED, "인증된 사용자 정보가 없습니다."),
 
-    INVALID_EVENT_MESSAGE(HttpStatus.BAD_REQUEST, "이벤트 메시지가 올바르지 않습니다.");
+    INVALID_EVENT_MESSAGE(HttpStatus.BAD_REQUEST, "이벤트 메시지가 올바르지 않습니다."),
+
+    INVALID_CAPTURED_AT(HttpStatus.NO_CONTENT, "captured_at이 없습니다.");
 
     private final HttpStatus status;
     private final String message;
