@@ -22,24 +22,34 @@ public class GuideEventService {
     public void sentEventToUser(GuideEventRequest request) {
         validateRequest(request);
 
-        GuideEventResponse message = new GuideEventResponse(
-                request.message()
+        GuideEventResponse response = new GuideEventResponse(
+                request.status(),
+                request.guideText(),
+                request.primaryObjectClass(),
+                request.clockDirection(),
+                request.distance(),
+                request.alertLevel()
         );
 
         messagingTemplate.convertAndSendToUser(
                 request.userId(),
                 "/queue/guide",
-                message
+                response
         );
 
         log.info("가이드 이벤트 전송 완료. userId={}", request.userId());
     }
 
     private void validateRequest(GuideEventRequest request) {
-        if (request.userId() == null) {
+        if (!StringUtils.hasText(request.userId())) {
             throw new GuideException(GuideErrorCode.USER_NOT_AUTHENTICATED);
         }
-        if (!StringUtils.hasText(request.message())) {
+
+        if (!StringUtils.hasText(request.status())) {
+            throw new GuideException(GuideErrorCode.INVALID_EVENT_STATUS);
+        }
+
+        if (!StringUtils.hasText(request.guideText())) {
             throw new GuideException(GuideErrorCode.INVALID_EVENT_MESSAGE);
         }
     }
