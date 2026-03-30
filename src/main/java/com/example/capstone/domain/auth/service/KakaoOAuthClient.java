@@ -2,7 +2,7 @@ package com.example.capstone.domain.auth.service;
 
 import com.example.capstone.domain.auth.dto.response.KakaoTokenResponse;
 import com.example.capstone.domain.auth.dto.response.KakaoUserResponse;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -12,10 +12,13 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Service
-@RequiredArgsConstructor
 public class KakaoOAuthClient {
 
     private final WebClient webClient;
+
+    public KakaoOAuthClient(@Qualifier("defaultWebClient") WebClient webClient) {
+        this.webClient = webClient;
+    }
 
     @Value("${kakao.client-id}") private String clientId;
     @Value("${kakao.client-secret}") private String clientSecret;
