@@ -26,6 +26,25 @@ public class WebClientConfig {
     }
 
     @Bean
+    @Qualifier("weatherWebClient")
+    public WebClient weatherWebClient(
+            @Value("${weather.base-url}") String baseUrl,
+            @Value("${weather.connect-timeout-millis}") int connectTimeoutMillis,
+            @Value("${weather.read-timeout-seconds}") int readTimeoutSeconds
+    ) {
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis)
+                .responseTimeout(Duration.ofSeconds(readTimeoutSeconds))
+                .doOnConnected(conn ->
+                        conn.addHandlerLast(new ReadTimeoutHandler(readTimeoutSeconds, TimeUnit.SECONDS)));
+
+        return WebClient.builder()
+                .baseUrl(baseUrl)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .build();
+    }
+  
+    @Bean
     @Qualifier("tmapWebClient")
     public WebClient tmapWebClient(
             @Value("${sk.tmap.base-url}") String baseUrl,
