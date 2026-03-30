@@ -1,5 +1,8 @@
 package com.example.capstone.global.config;
 
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -57,6 +60,19 @@ public class WebClientConfig {
         return WebClient.builder()
                 .baseUrl(baseUrl)
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .build();
+    }
+  
+    @Bean(name = "kakaoLocalWebClient")
+    public WebClient kakaoLocalWebClient(
+            WebClient.Builder builder,
+            @Value("${kakao.local.base-url:https://dapi.kakao.com}") String baseUrl,
+            @Value("${kakao.local.rest-api-key}") String restApiKey
+    ) {
+        return builder
+                .baseUrl(baseUrl)
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK " + restApiKey) // ✅ 공백 포함
+                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                 .build();
     }
 }
