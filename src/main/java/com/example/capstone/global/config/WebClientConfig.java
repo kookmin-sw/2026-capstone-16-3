@@ -17,7 +17,8 @@ import java.util.concurrent.TimeUnit;
 public class WebClientConfig {
 
     @Bean
-    public WebClient webClient() {
+    @Qualifier("defaultWebClient")
+    public WebClient defaultWebClient() {
         return WebClient.builder().build();
     }
 
@@ -27,6 +28,25 @@ public class WebClientConfig {
             @Value("${sk.tmap.base-url}") String baseUrl,
             @Value("${sk.tmap.connect-timeout-millis}") int connectTimeoutMillis,
             @Value("${sk.tmap.read-timeout-seconds}") int readTimeoutSeconds
+     ) {
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis)
+                .responseTimeout(Duration.ofSeconds(readTimeoutSeconds))
+                .doOnConnected(conn ->
+                        conn.addHandlerLast(new ReadTimeoutHandler(readTimeoutSeconds, TimeUnit.SECONDS)));
+
+        return WebClient.builder()
+                .baseUrl(baseUrl)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .build();
+    }
+  
+    @Bean
+    @Qualifier("fastApiWebClient")
+    public WebClient fastApiWebClient(
+            @Value("${ai.fastapi.base-url}") String baseUrl,
+            @Value("${ai.fastapi.connect-timeout-millis}") int connectTimeoutMillis,
+            @Value("${ai.fastapi.read-timeout-seconds}") int readTimeoutSeconds
     ) {
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis)
