@@ -50,7 +50,7 @@ public class WebClientConfig {
             @Value("${sk.tmap.base-url}") String baseUrl,
             @Value("${sk.tmap.connect-timeout-millis}") int connectTimeoutMillis,
             @Value("${sk.tmap.read-timeout-seconds}") int readTimeoutSeconds
-     ) {
+    ) {
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis)
                 .responseTimeout(Duration.ofSeconds(readTimeoutSeconds))
