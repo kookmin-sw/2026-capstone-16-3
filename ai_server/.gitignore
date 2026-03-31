@@ -16,3 +16,55 @@ venv/
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log
+
+# Environment variables
+.env
+
+# Python packaging / test
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Uploaded images
+uploads/
+
+# Model weights
+models/
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+
+# Jupyter / Colab
+.ipynb_checkpoints/
+
+# Ultralytics
+runs/
+
+# Mac / temp
+*.tmp
+*.swp
