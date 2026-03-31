@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from AI.app.api.health import router as health_router
-from AI.app.api.analyze import router as analyze_router
-from AI.app.services.inference import load_models
-from AI.app.core.config import YOLO_MODEL_PATH, SEG_MODEL_DIR
+from app.api.health import router as health_router
+from app.api.analyze import router as analyze_router
+from app.services.inference import load_models
+from app.core.config import YOLO_MODEL_PATH, SEG_MODEL_DIR
 
 app = FastAPI(title="AI Server")
 
