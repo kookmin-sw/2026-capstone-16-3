@@ -7,10 +7,10 @@ import numpy as np
 
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException
 
-from app.core.config import UPLOAD_DIR, BACKEND_GUIDE_EVENT_URL, AI_TIMEOUT_SECONDS
-from app.services.backend_client import send_guide_event_to_backend
-from app.services import inference
-from app.services.guide_builder import (
+from AI.app.core.config import UPLOAD_DIR, BACKEND_GUIDE_EVENT_URL, AI_TIMEOUT_SECONDS
+from AI.app.services.backend_client import send_guide_event_to_backend
+from AI.app.services import inference
+from AI.app.services.guide_builder import (
     build_scene_from_predictions,
     derive_gt,
     build_backend_payload,
