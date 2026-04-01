@@ -110,7 +110,7 @@ async def analyze_image(
             gt=gt,
         )
 
-    """# 8) 백엔드로 결과 전송
+    #8) 백엔드로 결과 전송
     try:
         backend_response = await send_guide_event_to_backend(
             payload=payload,
@@ -120,7 +120,7 @@ async def analyze_image(
         raise HTTPException(
             status_code=502,
             detail=f"백엔드 /api/guide/event 전송 실패: {str(e)}"
-        )"""
+        )
 
     return {
         "status": "forwarded",
