@@ -1,9 +1,9 @@
 package com.example.capstone.domain.place.controller;
 
 import com.example.capstone.domain.place.dto.request.FavoritePlaceCreateRequest;
-import com.example.capstone.domain.place.dto.response.FavoritePlaceCreateResponse;
-import com.example.capstone.domain.place.dto.response.FavoritePlaceDeleteResponse;
-import com.example.capstone.domain.place.dto.response.FavoritePlacePageResponse;
+import com.example.capstone.domain.place.dto.response.favorite.FavoritePlaceCreateResponse;
+import com.example.capstone.domain.place.dto.response.favorite.FavoritePlaceDeleteResponse;
+import com.example.capstone.domain.place.dto.response.favorite.FavoritePlacePageResponse;
 import com.example.capstone.domain.place.service.FavoritePlaceService;
 import com.example.capstone.global.api.ApiResponse;
 import jakarta.validation.Valid;

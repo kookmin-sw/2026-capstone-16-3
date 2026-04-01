@@ -1,4 +1,4 @@
-package com.example.capstone.domain.place.dto.response;
+package com.example.capstone.domain.place.dto.response.favorite;
 
 import java.util.List;
 

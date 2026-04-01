@@ -1,6 +1,9 @@
 package com.example.capstone.domain.place.service;
 
+import com.example.capstone.domain.place.dto.response.kakao.KakaoAddressSearchResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCategorySearchResponse;
+import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToAddressResponse;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
@@ -21,18 +24,8 @@ public class KakaoLocalClient {
     private static final int MAX_PAGE = 45;
     private final WebClient webClient;
 
-    public KakaoLocalClient(
-            @Value("${kakao.local.base-url:https://dapi.kakao.com}") String baseUrl,
-            @Value("${kakao.local.rest-api-key}") String restApiKey
-    ) {
-        this.webClient = WebClient.builder()
-                .baseUrl(baseUrl)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK " + restApiKey)
-                .filter(ExchangeFilterFunction.ofRequestProcessor(req -> {
-                    log.info("[KAKAO REQ] {} {}", req.method(), req.url());
-                    return Mono.just(req);
-                }))
-                .build();
+    public KakaoLocalClient(@Qualifier("kakaoLocalWebClient") WebClient webClient) {
+        this.webClient = webClient;
     }
 
     public Mono<KakaoCategorySearchResponse> searchCategory(
@@ -68,6 +61,41 @@ public class KakaoLocalClient {
                 .uri(b -> buildKeywordUri(b, query, lat, lng, radiusM, size, page))
                 .retrieve()
                 .bodyToMono(KakaoCategorySearchResponse.class);
+    }
+
+    public Mono<KakaoAddressSearchResponse> searchAddress(String query) {
+        return webClient.get()
+                .uri(b -> b.path("/v2/local/search/address.json")
+                        .queryParam("query", query)
+                        .queryParam("analyze_type", "similar")
+                        .build())
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, resp ->
+                        resp.bodyToMono(String.class)
+                                .flatMap(body -> {
+                                    log.error("[KAKAO ADDRESS RES] status={}, body={}", resp.statusCode(), body);
+                                    return Mono.error(new RuntimeException("Kakao address API error: " + resp.statusCode()));
+                                })
+                )
+                .bodyToMono(KakaoAddressSearchResponse.class);
+    }
+
+    public Mono<KakaoCoordToAddressResponse> coordToAddress(double lat, double lng) {
+        return webClient.get()
+                .uri(b -> b.path("/v2/local/geo/coord2address.json")
+                        .queryParam("x", lng)
+                        .queryParam("y", lat)
+                        .queryParam("input_coord", "WGS84")
+                        .build())
+                .retrieve()
+                .onStatus(HttpStatusCode::isError, resp ->
+                        resp.bodyToMono(String.class)
+                                .flatMap(body -> {
+                                    log.error("[KAKAO COORD2ADDR RES] status={}, body={}", resp.statusCode(), body);
+                                    return Mono.error(new RuntimeException("Kakao coord2address API error: " + resp.statusCode()));
+                                })
+                )
+                .bodyToMono(KakaoCoordToAddressResponse.class);
     }
 
     private URI buildCategoryUri(
