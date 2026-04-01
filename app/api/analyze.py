@@ -128,5 +128,5 @@ async def analyze_image(
         "scene_json": scene_json,
         "gt": gt,
         "ai_result": payload,
-        #"backend_response": backend_response
+        "backend_response": backend_response
     }
