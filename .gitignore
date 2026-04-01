@@ -52,12 +52,12 @@ build/
 uploads/
 
 # Model weights
-models/
-*.pt
-*.pth
-*.bin
-*.safetensors
-*.onnx
+#"""models/
+#*.pt
+#*.pth
+#*.bin
+#*.safetensors
+#*.onnx
 
 # Jupyter / Colab
 .ipynb_checkpoints/
