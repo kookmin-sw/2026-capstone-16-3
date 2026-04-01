@@ -1,0 +1,118 @@
+{
+  "architectures": [
+    "SegformerForSemanticSegmentation"
+  ],
+  "attention_probs_dropout_prob": 0.0,
+  "classifier_dropout_prob": 0.1,
+  "decoder_hidden_size": 256,
+  "depths": [
+    2,
+    2,
+    2,
+    2
+  ],
+  "downsampling_rates": [
+    1,
+    4,
+    8,
+    16
+  ],
+  "drop_path_rate": 0.1,
+  "dtype": "float32",
+  "hidden_act": "gelu",
+  "hidden_dropout_prob": 0.0,
+  "hidden_sizes": [
+    32,
+    64,
+    160,
+    256
+  ],
+  "id2label": {
+    "0": "alley",
+    "1": "alley__crosswalk",
+    "2": "alley__damaged",
+    "3": "alley__normal",
+    "4": "alley__speed_bump",
+    "5": "bike_lane",
+    "6": "braille_guide_blocks__damaged",
+    "7": "braille_guide_blocks__normal",
+    "8": "caution_zone__grating",
+    "9": "caution_zone__manhole",
+    "10": "caution_zone__repair_zone",
+    "11": "caution_zone__stairs",
+    "12": "caution_zone__tree_zone",
+    "13": "roadway__crosswalk",
+    "14": "roadway__normal",
+    "15": "sidewalk__asphalt",
+    "16": "sidewalk__blocks",
+    "17": "sidewalk__cement",
+    "18": "sidewalk__damaged",
+    "19": "sidewalk__other",
+    "20": "sidewalk__soil_stone",
+    "21": "sidewalk__urethane"
+  },
+  "image_size": 224,
+  "initializer_range": 0.02,
+  "label2id": {
+    "alley": 0,
+    "alley__crosswalk": 1,
+    "alley__damaged": 2,
+    "alley__normal": 3,
+    "alley__speed_bump": 4,
+    "bike_lane": 5,
+    "braille_guide_blocks__damaged": 6,
+    "braille_guide_blocks__normal": 7,
+    "caution_zone__grating": 8,
+    "caution_zone__manhole": 9,
+    "caution_zone__repair_zone": 10,
+    "caution_zone__stairs": 11,
+    "caution_zone__tree_zone": 12,
+    "roadway__crosswalk": 13,
+    "roadway__normal": 14,
+    "sidewalk__asphalt": 15,
+    "sidewalk__blocks": 16,
+    "sidewalk__cement": 17,
+    "sidewalk__damaged": 18,
+    "sidewalk__other": 19,
+    "sidewalk__soil_stone": 20,
+    "sidewalk__urethane": 21
+  },
+  "layer_norm_eps": 1e-06,
+  "mlp_ratios": [
+    4,
+    4,
+    4,
+    4
+  ],
+  "model_type": "segformer",
+  "num_attention_heads": [
+    1,
+    2,
+    5,
+    8
+  ],
+  "num_channels": 3,
+  "num_encoder_blocks": 4,
+  "patch_sizes": [
+    7,
+    3,
+    3,
+    3
+  ],
+  "reshape_last_stage": true,
+  "semantic_loss_ignore_index": 255,
+  "sr_ratios": [
+    8,
+    4,
+    2,
+    1
+  ],
+  "strides": [
+    4,
+    2,
+    2,
+    2
+  ],
+  "transformers_version": "5.0.0",
+  "use_cache": false
+}
