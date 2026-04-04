@@ -1,6 +1,9 @@
 package com.example.capstone.domain.crosswalk.dto.external;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -8,30 +11,31 @@ import lombok.Setter;
 @Setter
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CrosswalkApiItem {
-    private String ctprvnNm;
-    private String signguNm;
-    private String roadNm;
-    private String rdnmadr;
-    private String lnmadr;
-    private String crslkManageNo;
-    private String crslkKnd;
-    private String bcyclCrslkCmbnatYn;
-    private String highlandYn;
-    private String latitude;
-    private String longitude;
-    private String cartrkCo;
-    private String bt;
-    private String et;
-    private String tfclghtYn;
-    private String fnctngSgngnrYn;
-    private String sondSgngnrYn;
-    private String greenSgngnrTime;
-    private String redSgngnrTime;
-    private String tfcilndYn;
-    private String ftpthLowerYn;
-    private String brllBlckYn;
-    private String cnctrLghtFcltyYn;
-    private String institutionNm;
-    private String phoneNumber;
-    private String referenceDate;
+    private String ctprvnNm; // 시도명
+    private String signguNm; // 시군구명
+    private String roadNm; // 도로명
+    private String rdnmadr; // 도로명주소
+    private String lnmadr; // 지번주소
+    private String crslkManageNo; // 횡단보도관리번호
+    private Integer crslkKnd; // 횡단보도종류
+    private String bcyclCrslkCmbnatYn; // 자전거횡단도겸용여부(Y, N)
+    private String highlandYn; // 고원식적용여부(Y, N)
+    private Double latitude; // 위도
+    private Double longitude; // 경도
+    private Integer cartrkCo; // 차로수
+    private Double bt; // 횡단보도폭
+    private Double et; // 횡단보도연장
+    private String tfclghtYn; // 보행자신호등유무(Y, N)
+    private String fnctngSgngnrYn; // 보행자작동신호기유무(Y, N)
+    private String soundSgngnrYn; // 음향신호기설치여부(Y, N)
+    private Integer greenSgngnrTime; // 녹색신호시간
+    private Integer redSgngnrTime; // 적색신호시간
+    private String tfcilndYn; // 교통섬유무(Y, N)
+    private String ftpthLowerYn; // 보도턱낮춤여부(Y, N)
+    private String brllBlckYn; // 점자블록유무(Y, N)
+    private String cnctrLghtFcltyYn; // 집중조명시설유무(Y, N)
+    private String institutionNm; // 관리기관명
+    private String phoneNumber; // 관리기관전화번호
+    private String referenceDate; // 데이터기준일자(mm/dd/yyyy)
+    private String instt_code; // 제공기관코드
 }

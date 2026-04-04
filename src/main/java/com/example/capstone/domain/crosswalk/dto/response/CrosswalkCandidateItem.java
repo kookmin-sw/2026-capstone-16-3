@@ -1,12 +1,11 @@
 package com.example.capstone.domain.crosswalk.dto.response;
 
-public record CrosswalkNearbyItem(
+public record CrosswalkCandidateItem(
         String candidateId,
-        String roadName,
-        String address,
+        double distanceMeters,
         double latitude,
         double longitude,
-        double distanceMeters,
+        String roadName,
         boolean pedestrianSignal,
         boolean audioSignal,
         boolean brailleBlock,
