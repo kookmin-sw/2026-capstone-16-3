@@ -48,11 +48,11 @@ public class CrosswalkController {
 
     @GetMapping("/api/crosswalks/raw")
     public String getRawResponse(
-            @RequestParam(defaultValue = "서울특별시") String ctpvnNm,
+            @RequestParam(defaultValue = "서울특별시") String ctprvnNm,
             @RequestParam(defaultValue = "동작구") String signguNm
     ) {
         return crosswalkPublicApiService.fetchTest(
-                ctpvnNm,
+                ctprvnNm,
                 signguNm
         );
     }
