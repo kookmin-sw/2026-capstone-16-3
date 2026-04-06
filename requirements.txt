@@ -13,3 +13,4 @@ torchvision
 ultralytics
 transformers
 safetensors
+python-dotenv
