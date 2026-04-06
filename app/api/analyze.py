@@ -152,9 +152,9 @@ async def analyze_image(
         logger.exception("payload 생성 중 오류 | user_id=%s", user_id)
         raise HTTPException(status_code=500, detail=f"payload 생성 중 오류가 발생했습니다: {str(e)}")
 
-    # 8) high / medium / low만 백엔드로 전송, safe는 스킵
+    # 8) high / medium 백엔드로 전송, low, safe는 스킵
     alert_level = payload.get("alert_level")
-    should_send = alert_level in {"high", "medium", "low"}
+    should_send = alert_level in {"high", "medium"}
 
     if should_send:
         try:
