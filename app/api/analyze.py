@@ -23,7 +23,6 @@ router = APIRouter(prefix="/api", tags=["analyze"])
 @router.post("/analyze")
 async def analyze_image(
     user_id: str = Form(...),
-    frame_id: int = Form(...),
     captured_at: str = Form(...),
     image: UploadFile = File(...)
 ):
@@ -54,7 +53,7 @@ async def analyze_image(
     # 2) 파일 저장
     timestamp_str = parsed_captured_at.strftime("%Y%m%dT%H%M%S_%f")
     extension = Path(image.filename).suffix if Path(image.filename).suffix else ".jpg"
-    save_filename = f"{user_id}_{frame_id}_{timestamp_str}{extension}"
+    save_filename = f"{user_id}_{timestamp_str}{extension}"
     save_path = UPLOAD_DIR / save_filename
 
     try:
@@ -75,7 +74,7 @@ async def analyze_image(
 
     # 5) scene json / gt 생성
     try:
-        image_id = f"{user_id}_{frame_id}"
+        image_id = f"{user_id}_{captured_at}"
 
         scene_json = build_scene_from_predictions(
             image_id=image_id,
@@ -96,14 +95,12 @@ async def analyze_image(
     if processing_time_ms > int(AI_TIMEOUT_SECONDS * 1000):
         payload = build_timeout_payload(
             user_id=user_id,
-            frame_id=frame_id,
             processed_at=processed_at,
             processing_time_ms=processing_time_ms,
         )
     else:
         payload = build_backend_payload(
             user_id=user_id,
-            frame_id=frame_id,
             processed_at=processed_at,
             processing_time_ms=processing_time_ms,
             scene_json=scene_json,
@@ -111,7 +108,7 @@ async def analyze_image(
         )
 
     #8) 백엔드로 결과 전송
-    try:
+    """try:
         backend_response = await send_guide_event_to_backend(
             payload=payload,
             backend_url=BACKEND_GUIDE_EVENT_URL
@@ -121,12 +118,12 @@ async def analyze_image(
             status_code=502,
             detail=f"백엔드 /api/guide/event 전송 실패: {str(e)}"
         )
-
+"""
     return {
         "status": "forwarded",
         "saved_filename": save_filename,
         "scene_json": scene_json,
         "gt": gt,
         "ai_result": payload,
-        "backend_response": backend_response
+        #"backend_response": backend_response
     }

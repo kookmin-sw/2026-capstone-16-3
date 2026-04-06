@@ -297,7 +297,6 @@ def derive_gt(scene_json: dict) -> dict:
 # =========================================================
 def build_backend_payload(
     user_id: str,
-    frame_id: int,
     processed_at: str,
     processing_time_ms: int,
     scene_json: dict,
@@ -305,7 +304,6 @@ def build_backend_payload(
 ) -> dict:
     return {
         "user_id": user_id,
-        "frame_id": frame_id,
         "status": "success",
         "processed_at": processed_at,
         "processing_time_ms": processing_time_ms,
@@ -319,13 +317,11 @@ def build_backend_payload(
 
 def build_timeout_payload(
     user_id: str,
-    frame_id: int,
     processed_at: str,
     processing_time_ms: int,
 ) -> dict:
     return {
         "user_id": user_id,
-        "frame_id": frame_id,
         "status": "error",
         "processed_at": processed_at,
         "processing_time_ms": processing_time_ms,
