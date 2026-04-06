@@ -4,13 +4,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# app/core/config.py 기준 -> AI/ 루트
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 UPLOAD_DIR = BASE_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-# 기본값은 프로젝트 루트 기준 상대경로
 YOLO_MODEL_PATH = Path(
     os.getenv("YOLO_MODEL_PATH", str(BASE_DIR / "models" / "yolo" / "best.pt"))
 )
