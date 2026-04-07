@@ -1,6 +1,5 @@
 package com.example.capstone.domain.auth.service;
 
-import com.example.capstone.domain.auth.dto.response.KakaoTokenResponse;
 import com.example.capstone.domain.auth.dto.response.KakaoUserResponse;
 import com.example.capstone.domain.auth.dto.response.LoginResponse;
 import com.example.capstone.domain.auth.entity.RefreshToken;
@@ -34,9 +33,8 @@ public class AuthService {
     private final JwtProvider jwtProvider;
 
     @Transactional
-    public LoginResponse loginWithKakao(String code) {
-        KakaoTokenResponse token = kakaoOAuthClient.getToken(code);
-        KakaoUserResponse userInfo = kakaoOAuthClient.getUserInfo(token.access_token());
+    public LoginResponse loginWithKakaoAccessToken(String kakaoAccessToken) {
+        KakaoUserResponse userInfo = kakaoOAuthClient.getUserInfo(kakaoAccessToken);
 
         String kakaoUserId = String.valueOf(userInfo.id());
         String nickname = extractNickname(userInfo);
@@ -47,7 +45,6 @@ public class AuthService {
         String accessJwt = jwtProvider.createAccessToken(user.getId());
         String refreshJwt = jwtProvider.createRefreshToken(user.getId());
 
-        // JWT 내부 exp 기준으로 DB expiryDate 저장
         LocalDateTime refreshExpiry = toLocalDateTime(jwtProvider.getExpiration(refreshJwt));
 
         refreshTokenRepository.findByUser(user)

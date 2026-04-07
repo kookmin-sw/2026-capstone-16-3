@@ -20,34 +20,15 @@ public class KakaoOAuthClient {
         this.webClient = webClient;
     }
 
-    @Value("${kakao.client-id}") private String clientId;
-    @Value("${kakao.client-secret}") private String clientSecret;
-    @Value("${kakao.redirect-uri}") private String redirectUri;
-
-    public KakaoTokenResponse getToken(String code) {
-        return webClient.post()
-                .uri("https://kauth.kakao.com/oauth/token")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(BodyInserters
-                        .fromFormData("grant_type", "authorization_code")
-                        .with("client_id", clientId)
-                        .with("redirect_uri", redirectUri)
-                        .with("code", code)
-                        .with("client_secret", clientSecret)
-                )
-                .retrieve()
-                .onStatus(HttpStatusCode::isError, resp ->
-                        resp.bodyToMono(String.class).map(body -> new RuntimeException("Kakao token error: " + body))
-                )
-                .bodyToMono(KakaoTokenResponse.class)
-                .block();
-    }
-
-    public KakaoUserResponse getUserInfo(String accessToken) {
+    public KakaoUserResponse getUserInfo(String kakaoAccessToken) {
         return webClient.get()
                 .uri("https://kapi.kakao.com/v2/user/me")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + kakaoAccessToken)
                 .retrieve()
+                .onStatus(HttpStatusCode::isError, resp ->
+                        resp.bodyToMono(String.class)
+                                .map(body -> new RuntimeException("Kakao user info error: " + body))
+                )
                 .bodyToMono(KakaoUserResponse.class)
                 .block();
     }

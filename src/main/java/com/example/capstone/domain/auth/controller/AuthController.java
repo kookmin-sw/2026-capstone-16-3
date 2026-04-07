@@ -1,5 +1,6 @@
 package com.example.capstone.domain.auth.controller;
 
+import com.example.capstone.domain.auth.dto.request.KakaoLoginRequest;
 import com.example.capstone.domain.auth.dto.request.ReissueRequest;
 import com.example.capstone.domain.auth.dto.response.LoginResponse;
 import com.example.capstone.domain.auth.service.AuthService;
@@ -18,9 +19,9 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @GetMapping("/kakao/callback")
-    public ApiResponse<LoginResponse> kakaoCallback(@RequestParam("code") String code) {
-        return ApiResponse.ok(authService.loginWithKakao(code));
+    @PostMapping("/kakao/login")
+    public ApiResponse<LoginResponse> kakaoLogin(@Valid @RequestBody KakaoLoginRequest request) {
+        return ApiResponse.ok(authService.loginWithKakaoAccessToken(request.kakaoAccessToken()));
     }
 
     @PostMapping("/reissue")
