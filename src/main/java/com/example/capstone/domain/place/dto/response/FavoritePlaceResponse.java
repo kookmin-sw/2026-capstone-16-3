@@ -1,6 +1,6 @@
 package com.example.capstone.domain.place.dto.response;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 public record FavoritePlaceResponse(
         Long id,
@@ -10,6 +10,6 @@ public record FavoritePlaceResponse(
         String address,
         Double lat,
         Double lng,
-        Instant createdAt
+        LocalDateTime createdAt
 ) {
 }
