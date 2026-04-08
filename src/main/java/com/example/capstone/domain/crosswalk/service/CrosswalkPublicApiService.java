@@ -8,8 +8,8 @@ import com.example.capstone.global.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
@@ -24,7 +24,6 @@ import java.util.concurrent.TimeoutException;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class CrosswalkPublicApiService {
 
     @Value("${public-data.crosswalk.base-url}")
@@ -38,6 +37,14 @@ public class CrosswalkPublicApiService {
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
+
+    public CrosswalkPublicApiService(
+            @Qualifier("defaultWebClient") WebClient webClient,
+            ObjectMapper objectMapper
+    ) {
+        this.webClient = webClient;
+        this.objectMapper = objectMapper;
+    }
 
     public JsonNode fetchRawJson(String ctprvnNm, String signguNm) {
         String uri = buildUri(ctprvnNm, signguNm, 10);
@@ -104,8 +111,8 @@ public class CrosswalkPublicApiService {
 
         List<CrosswalkApiItem> items = response.getResponse().getBody().getItems();
         log.info("first item latitude={}, longitude={}",
-                items.isEmpty() ? null : items.get(0).getLatitude(),
-                items.isEmpty() ? null : items.get(0).getLongitude());
+                items.isEmpty() ? null : items.getFirst().getLatitude(),
+                items.isEmpty() ? null : items.getFirst().getLongitude());
         log.info("횡단보도 공공데이터 조회 완료 - itemCount={}", items.size());
         return items;
     }

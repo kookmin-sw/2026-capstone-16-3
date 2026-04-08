@@ -3,7 +3,7 @@ package com.example.capstone.domain.crosswalk.service;
 import com.example.capstone.domain.crosswalk.exception.CrosswalkErrorCode;
 import com.example.capstone.global.api.ErrorDetail;
 import com.example.capstone.global.exception.BusinessException;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 @Service
-@RequiredArgsConstructor
 public class CrosswalkRegionResolverService {
 
     @Value("${kakao.local.base-url}")
@@ -28,6 +27,12 @@ public class CrosswalkRegionResolverService {
     private String kakaoRestApiKey;
 
     private final WebClient webClient;
+
+    public CrosswalkRegionResolverService(
+            @Qualifier("kakaoLocalWebClient") WebClient webClient
+    ) {
+        this.webClient = webClient;
+    }
 
     public RegionInfo resolve(double latitude, double longitude) {
         String uri = kakaoLocalBaseUrl + "/v2/local/geo/coord2regioncode.json?x=" + longitude + "&y=" + latitude;
@@ -52,7 +57,7 @@ public class CrosswalkRegionResolverService {
                     errorCode.status(),
                     List.of(
                             ErrorDetail.of("uri", uri),
-                            ErrorDetail.of("httpStatus", e.getRawStatusCode()),
+                            ErrorDetail.of("httpStatus", e.getStatusCode()),
                             ErrorDetail.of("responseBody", shorten(e.getResponseBodyAsString()))
                     )
             );
