@@ -43,14 +43,14 @@ public class CrosswalkRegionResolverService {
                     .timeout(Duration.ofSeconds(5))
                     .block();
         } catch (WebClientResponseException e) {
+            CrosswalkErrorCode errorCode = e.getStatusCode().is4xxClientError()
+                    ? CrosswalkErrorCode.REGION_RESOLVE_HTTP_4XX
+                    : CrosswalkErrorCode.REGION_RESOLVE_HTTP_5XX;
+
             throw new BusinessException(
-                    e.getStatusCode().is4xxClientError()
-                            ? CrosswalkErrorCode.REGION_RESOLVE_HTTP_4XX.code()
-                            : CrosswalkErrorCode.REGION_RESOLVE_HTTP_5XX.code(),
-                    e.getStatusCode().is4xxClientError()
-                            ? CrosswalkErrorCode.REGION_RESOLVE_HTTP_4XX.message()
-                            : CrosswalkErrorCode.REGION_RESOLVE_HTTP_5XX.message(),
-                    HttpStatus.BAD_GATEWAY,
+                    errorCode.code(),
+                    errorCode.message(),
+                    errorCode.status(),
                     List.of(
                             ErrorDetail.of("uri", uri),
                             ErrorDetail.of("httpStatus", e.getRawStatusCode()),
