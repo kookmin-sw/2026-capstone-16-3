@@ -6,6 +6,7 @@ import com.example.capstone.domain.crosswalk.exception.CrosswalkErrorCode;
 import com.example.capstone.global.api.ErrorDetail;
 import com.example.capstone.global.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,7 +14,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.Exceptions;
 
@@ -39,39 +39,39 @@ public class CrosswalkPublicApiService {
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
 
-    public String fetchRawByRegion(String ctprvnNm, String signguNm) {
+    public JsonNode fetchRawJson(String ctprvnNm, String signguNm) {
         String uri = buildUri(ctprvnNm, signguNm, 10);
         return requestRawBody(uri, ctprvnNm, signguNm);
     }
 
     public List<CrosswalkApiItem> fetchByRegion(String ctprvnNm, String signguNm) {
         String uri = buildUri(ctprvnNm, signguNm, pageSize);
-        String rawBody = requestRawBody(uri, ctprvnNm, signguNm);
+        JsonNode rawBody = requestRawBody(uri, ctprvnNm, signguNm);
 
         CrosswalkApiResponse response;
         try {
-            response = objectMapper.readValue(rawBody, CrosswalkApiResponse.class);
+            response = objectMapper.treeToValue(rawBody, CrosswalkApiResponse.class);
         } catch (JsonProcessingException e) {
-            log.error("횡단보도 공공데이터 응답 파싱 실패 - uri={}, rawBody={}", maskUri(uri), shorten(rawBody), e);
+            log.error("횡단보도 공공데이터 응답 파싱 실패 - uri={}, rawBody={}", maskUri(uri), shorten(rawBody.toString()), e);
 
             throw business(
                     CrosswalkErrorCode.CROSSWALK_API_DECODING_ERROR,
                     ErrorDetail.of("uri", maskUri(uri)),
                     ErrorDetail.of("exception", e.getClass().getSimpleName()),
                     ErrorDetail.of("message", e.getOriginalMessage()),
-                    ErrorDetail.of("rawBody", shorten(rawBody))
+                    ErrorDetail.of("rawBody", shorten(rawBody.toString()))
             );
         }
 
         if (response == null
                 || response.getResponse() == null
                 || response.getResponse().getHeader() == null) {
-            log.error("횡단보도 공공데이터 응답 구조 이상 - uri={}, rawBody={}", maskUri(uri), shorten(rawBody));
+            log.error("횡단보도 공공데이터 응답 구조 이상 - uri={}, rawBody={}", maskUri(uri), shorten(rawBody.toString()));
 
             throw business(
                     CrosswalkErrorCode.INVALID_CROSSWALK_API_RESPONSE,
                     ErrorDetail.of("uri", maskUri(uri)),
-                    ErrorDetail.of("rawBody", shorten(rawBody))
+                    ErrorDetail.of("rawBody", shorten(rawBody.toString()))
             );
         }
 
@@ -92,24 +92,27 @@ public class CrosswalkPublicApiService {
                     ErrorDetail.of("uri", maskUri(uri)),
                     ErrorDetail.of("resultCode", resultCode),
                     ErrorDetail.of("resultMsg", resultMsg),
-                    ErrorDetail.of("rawBody", shorten(rawBody))
+                    ErrorDetail.of("rawBody", shorten(rawBody.toString()))
             );
         }
 
         if (response.getResponse().getBody() == null
-                || response.getResponse().getBody().getItems() == null
-                || response.getResponse().getBody().getItems().getItem() == null) {
+                || response.getResponse().getBody().getItems() == null) {
             log.info("횡단보도 공공데이터 item 없음 - ctprvnNm={}, signguNm={}", ctprvnNm, signguNm);
             return Collections.emptyList();
         }
 
-        List<CrosswalkApiItem> items = response.getResponse().getBody().getItems().getItem();
+        List<CrosswalkApiItem> items = response.getResponse().getBody().getItems();
+        log.info("first item latitude={}, longitude={}",
+                items.isEmpty() ? null : items.get(0).getLatitude(),
+                items.isEmpty() ? null : items.get(0).getLongitude());
         log.info("횡단보도 공공데이터 조회 완료 - itemCount={}", items.size());
         return items;
     }
 
-    private String requestRawBody(String uri, String ctprvnNm, String signguNm) {
-        log.info("횡단보도 공공데이터 요청 시작 - ctprvnNm={}, signguNm={}, uri={}", ctprvnNm, signguNm, maskUri(uri));
+    private JsonNode requestRawBody(String uri, String ctprvnNm, String signguNm) {
+        log.info("횡단보도 공공데이터 요청 시작 - ctprvnNm={}, signguNm={}, uri={}",
+                ctprvnNm, signguNm, maskUri(uri));
 
         String rawBody;
         try {
@@ -150,30 +153,6 @@ public class CrosswalkPublicApiService {
 
         } catch (BusinessException e) {
             throw e;
-
-        } catch (WebClientRequestException e) {
-            Throwable root = Exceptions.unwrap(e);
-
-            if (root instanceof TimeoutException) {
-                log.error("횡단보도 공공데이터 타임아웃 - uri={}", maskUri(uri), e);
-                throw business(
-                        CrosswalkErrorCode.CROSSWALK_API_TIMEOUT,
-                        ErrorDetail.of("uri", maskUri(uri)),
-                        ErrorDetail.of("exception", e.getClass().getSimpleName()),
-                        ErrorDetail.of("cause", root.getClass().getSimpleName()),
-                        ErrorDetail.of("message", root.getMessage())
-                );
-            }
-
-            log.error("횡단보도 공공데이터 연결 오류 - uri={}, message={}", maskUri(uri), e.getMessage(), e);
-            throw business(
-                    CrosswalkErrorCode.CROSSWALK_API_CONNECTION_ERROR,
-                    ErrorDetail.of("uri", maskUri(uri)),
-                    ErrorDetail.of("exception", e.getClass().getSimpleName()),
-                    ErrorDetail.of("cause", root != null ? root.getClass().getSimpleName() : null),
-                    ErrorDetail.of("message", e.getMessage())
-            );
-
         } catch (Exception e) {
             Throwable root = Exceptions.unwrap(e);
 
@@ -206,7 +185,20 @@ public class CrosswalkPublicApiService {
             );
         }
 
-        return rawBody;
+        try {
+            return objectMapper.readTree(rawBody);
+        } catch (JsonProcessingException e) {
+            log.error("횡단보도 공공데이터 raw JSON 파싱 실패 - uri={}, rawBody={}",
+                    maskUri(uri), shorten(rawBody), e);
+
+            throw business(
+                    CrosswalkErrorCode.CROSSWALK_API_DECODING_ERROR,
+                    ErrorDetail.of("uri", maskUri(uri)),
+                    ErrorDetail.of("exception", e.getClass().getSimpleName()),
+                    ErrorDetail.of("message", e.getOriginalMessage()),
+                    ErrorDetail.of("rawBody", shorten(rawBody))
+            );
+        }
     }
 
     private String buildUri(String ctprvnNm, String signguNm, int numOfRows) {

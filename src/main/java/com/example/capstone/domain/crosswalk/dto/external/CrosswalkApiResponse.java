@@ -8,14 +8,11 @@ import java.util.List;
 
 @Getter
 @Setter
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class CrosswalkApiResponse {
-
     private Response response;
 
     @Getter
     @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Response {
         private Header header;
         private Body body;
@@ -23,26 +20,18 @@ public class CrosswalkApiResponse {
 
     @Getter
     @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Header {
         private String resultCode;
         private String resultMsg;
+        private String type;
     }
 
     @Getter
     @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Body {
-        private Integer pageNo;
-        private Integer numOfRows;
-        private Integer totalCount;
-        private Items items;
-    }
-
-    @Getter
-    @Setter
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class Items {
-        private List<CrosswalkApiItem> item;
+        private List<CrosswalkApiItem> items;
+        private String totalCount;
+        private String numOfRows;
+        private String pageNo;
     }
 }
