@@ -55,7 +55,7 @@ public class GuideService {
             builder.part("captured_at", capturedAt);
 
             fastApiWebClient.post()
-                    .uri("/analyze")
+                    .uri("/api/analyze")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
                     .bodyValue(builder.build())
                     .retrieve()
