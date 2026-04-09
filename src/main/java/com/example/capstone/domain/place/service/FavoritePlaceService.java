@@ -21,6 +21,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FavoritePlaceService {
 
+    // 즐겨찾기 최대 저장 개수
     private static final int MAX_FAVORITES = 50;
 
     private final FavoritePlaceRepository favoritePlaceRepository;
@@ -30,8 +31,9 @@ public class FavoritePlaceService {
     public FavoritePlacePageResponse getFavorites(Long userId, int page, int size) {
         User user = getUser(userId);
 
+        // PageRequest.of()는 0부터 시작
         var pageable = PageRequest.of(
-                Math.max(page, 1),
+                Math.max(page, 1) - 1, // page=0이 첫 페이지
                 Math.min(Math.max(size, 1), MAX_FAVORITES)
         );
 
@@ -46,6 +48,7 @@ public class FavoritePlaceService {
                         f.getAddress(),
                         f.getLatitude(),
                         f.getLongitude(),
+                        f.getCategory(),
                         f.getCreatedAt()
                 ))
                 .toList();
@@ -80,11 +83,16 @@ public class FavoritePlaceService {
                 .address(request.address())
                 .latitude(request.lat())
                 .longitude(request.lng())
+                .category(request.category())
                 .build();
 
         FavoritePlace saved = favoritePlaceRepository.save(favoritePlace);
 
-        return new FavoritePlaceCreateResponse(true, saved.getId());
+        return new FavoritePlaceCreateResponse(
+                true,
+                saved.getId(),
+                saved.getCategory()
+        );
     }
 
     @Transactional
