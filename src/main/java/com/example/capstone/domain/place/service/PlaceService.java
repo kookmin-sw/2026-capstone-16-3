@@ -8,10 +8,15 @@ import com.example.capstone.domain.place.dto.response.ReverseGeocodeResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoAddressSearchResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCategorySearchResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToAddressResponse;
+import com.example.capstone.domain.place.exception.PlaceErrorCode;
+import com.example.capstone.domain.place.exception.PlaceException;
+import com.example.capstone.global.api.ErrorDetail;
 import com.example.capstone.global.exception.BusinessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -19,6 +24,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 
 @Service
 public class PlaceService {
@@ -27,6 +33,7 @@ public class PlaceService {
     private final PlaceCache placeCache;
 
     private static final int MAX_PAGE = 45;
+    private static final int MAX_SIZE = 15;
     private static final Logger log = LoggerFactory.getLogger(PlaceService.class);
 
     public PlaceService(KakaoLocalClient kakaoLocalClient, PlaceCache placeCache) {
@@ -91,43 +98,90 @@ public class PlaceService {
             int size
     ) {
         if (query == null || query.isBlank()) {
-            throw new BusinessException("BAD_REQUEST", "query is required");
+            throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST, "query is required");
         }
+
+        validateLatLng(lat, lng);
 
         int kakaoPage = Math.min(Math.max(page, 1), MAX_PAGE);
-        int kakaoSize = Math.min(Math.max(size, 1), 15); // Kakao limit
+        int kakaoSize = Math.min(Math.max(size, 1), MAX_SIZE); // Kakao limit
 
-        KakaoCategorySearchResponse resp = kakaoLocalClient.searchKeyword(
-                        query.trim(), lat, lng, radiusM, kakaoSize, kakaoPage
-                )
-                .doOnSubscribe(s -> log.info("Kakao keyword start query='{}', page={}, size={}, lat={}, lng={}, radius={}",
-                        query, kakaoPage, kakaoSize, lat, lng, radiusM))
-                .doOnError(e -> log.error("Kakao keyword fail query='{}'", query, e))
-                .block();
+        try {
+            KakaoCategorySearchResponse resp = kakaoLocalClient.searchKeyword(
+                            query.trim(), lat, lng, radiusM, kakaoSize, kakaoPage
+                    )
+                    .doOnSubscribe(s -> log.info("[place search] start query='{}', page={}, size={}, lat={}, lng={}, radius={}",
+                            query, kakaoPage, kakaoSize, lat, lng, radiusM))
+                    .doOnError(e -> log.error("[place search] fail query='{}'", query, e))
+                    .block();
 
-        if (resp == null) {
-            return new PlacePageResponse(List.of(), page, kakaoSize, 0, false);
+            if (resp == null) {
+                return new PlacePageResponse(List.of(), page, kakaoSize, 0, false);
+            }
+
+            int total = resp.meta() == null ? 0 : (int) resp.meta().pageableCount();
+            boolean hasNext = resp.meta() != null && !resp.meta().isEnd();
+
+            List<PlaceResponse> items =
+                    (resp.documents() == null ? List.<KakaoCategorySearchResponse.KakaoPlaceDocument>of() : resp.documents())
+                            .stream()
+                            .map(doc -> toSearchPlace(doc, lat, lng))
+                            .toList();
+
+            return new PlacePageResponse(items, page, kakaoSize, total, hasNext);
+        } catch (WebClientResponseException e) {
+            throw new PlaceException(
+                    e.getStatusCode().is4xxClientError()
+                    ? PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_4XX
+                            : PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_5XX,
+                    "카카오 장소 검색 호출 실패",
+                    List.of(
+                            new ErrorDetail("status", String.valueOf(e.getStatusCode())),
+                            new ErrorDetail("responseBody", e.getResponseBodyAsString())
+                    )
+            );
+        } catch (WebClientRequestException e) {
+            throw new PlaceException(
+                    PlaceErrorCode.PLACE_EXTERNAL_API_CONNECTION_ERROR,
+                    "카카오 장소 검색 연결 실패",
+                    List.of(
+                            new ErrorDetail("cause", e.getClass().getSimpleName()),
+                            new ErrorDetail("message", e.getMessage())
+                    )
+            );
+        } catch (PlaceException e) {
+            throw e;
+        } catch (Exception e) {
+            Throwable cause = e.getCause();
+
+            if (cause instanceof TimeoutException) {
+                throw new PlaceException(
+                        PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT,
+                        "카카오 장소 검색 응답 시간 초과"
+                );
+            }
+
+            throw new PlaceException(
+                    PlaceErrorCode.PLACE_EXTERNAL_API_ERROR,
+                    "카카오 장소 검색 처리 중 오류가 발생했습니다.",
+                    List.of(
+                            new ErrorDetail("cause", e.getClass().getSimpleName()),
+                            new ErrorDetail("message", e.getMessage())
+                    )
+            );
         }
-
-        int total = resp.meta() == null ? 0 : (int) resp.meta().pageableCount();
-        boolean hasNext = resp.meta() != null && !resp.meta().isEnd();
-
-        List<PlaceResponse> items =
-                (resp.documents() == null ? List.<KakaoCategorySearchResponse.KakaoPlaceDocument>of() : resp.documents())
-                        .stream()
-                        .map(doc -> toSearchPlace(doc, lat, lng))
-                        .toList();
-
-        return new PlacePageResponse(items, page, kakaoSize, total, hasNext);
     }
 
     public PlaceDetailResponse getPlaceDetail(String placeId) {
         if (placeId == null || placeId.isBlank()) {
-            throw new BusinessException("BAD_REQUEST", "placeId is required");
+            throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST, "placeId is required");
         }
 
         KakaoCategorySearchResponse.KakaoPlaceDocument doc = placeCache.get(placeId)
-                .orElseThrow(() -> new BusinessException("PLACE_NOT_FOUND", "place not found in cache: " + placeId));
+                .orElseThrow(() -> new PlaceException(
+                        PlaceErrorCode.PLACE_CACHE_MISS,
+                        "Place not found in cache: " + placeId
+                ));
 
         double placeLng = Double.parseDouble(doc.x());
         double placeLat = Double.parseDouble(doc.y());
@@ -304,10 +358,10 @@ public class PlaceService {
 
     private void validateLatLng(double lat, double lng) {
         if (lat < -90 || lat > 90) {
-            throw new BusinessException("BAD_REQUEST", "lat must be between -90 and 90");
+            throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE, "lat must be between -90 and 90");
         }
         if (lng < -180 || lng > 180) {
-            throw new BusinessException("BAD_REQUEST", "lng must be between -180 and 180");
+            throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE, "lng must be between -180 and 180");
         }
     }
 
