@@ -52,7 +52,12 @@ build/
 uploads/
 
 # Model weights
-models/
+models/yolo/*
+models/segformer/*
+
+!models/yolo/.gitkeep
+!models/segformer/.gitkeep
+
 *.pt
 *.pth
 *.bin
