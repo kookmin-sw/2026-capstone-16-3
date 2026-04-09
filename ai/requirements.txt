@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+python-multipart
+httpx
+
+numpy
+pillow
+opencv-python
+
+torch
+torchvision
+
+ultralytics
+transformers
+safetensors
+python-dotenv

@@ -1,0 +1,75 @@
+logs/
+*.log
+
+# 빌드 결과물 제외
+/build/
+*.o
+*.class
+
+# 환경 설정 파일 제외
+.env
+config/local.json
+.DS_Store
+**/.DS_Store
+
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log
+
+# Environment variables
+.env
+
+# Python packaging / test
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Uploaded images
+uploads/
+
+# Model weights
+models/yolo/*
+models/segformer/*
+
+!models/yolo/.gitkeep
+!models/segformer/.gitkeep
+
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
+
+# Jupyter / Colab
+.ipynb_checkpoints/
+
+# Ultralytics
+runs/
+
+# Mac / temp
+*.tmp
+*.swp
