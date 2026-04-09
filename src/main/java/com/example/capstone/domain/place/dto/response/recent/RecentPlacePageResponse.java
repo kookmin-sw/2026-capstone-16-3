@@ -1,4 +1,4 @@
-package com.example.capstone.domain.place.dto.response;
+package com.example.capstone.domain.place.dto.response.recent;
 
 import java.time.Instant;
 import java.util.List;
