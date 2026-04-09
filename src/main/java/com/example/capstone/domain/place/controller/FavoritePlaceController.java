@@ -6,6 +6,7 @@ import com.example.capstone.domain.place.dto.response.favorite.FavoritePlaceDele
 import com.example.capstone.domain.place.dto.response.favorite.FavoritePlacePageResponse;
 import com.example.capstone.domain.place.service.FavoritePlaceService;
 import com.example.capstone.global.api.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -15,6 +16,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @Validated
+@SecurityRequirement(name = "bearerAuth")
 @RestController
 @RequestMapping("/api/users/me/favorites")
 @RequiredArgsConstructor
