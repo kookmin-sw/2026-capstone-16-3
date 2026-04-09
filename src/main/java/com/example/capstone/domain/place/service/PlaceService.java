@@ -1,9 +1,13 @@
 package com.example.capstone.domain.place.service;
 
+import com.example.capstone.domain.place.dto.response.GeocodeResponse;
 import com.example.capstone.domain.place.dto.response.PlacePageResponse;
 import com.example.capstone.domain.place.dto.response.PlaceResponse;
 import com.example.capstone.domain.place.dto.response.PlaceDetailResponse;
+import com.example.capstone.domain.place.dto.response.ReverseGeocodeResponse;
+import com.example.capstone.domain.place.dto.response.kakao.KakaoAddressSearchResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCategorySearchResponse;
+import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToAddressResponse;
 import com.example.capstone.global.exception.BusinessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,9 +35,7 @@ public class PlaceService {
     }
 
     /**
-     * NOTE:
-     * - 이 메서드는 "전체 정렬 리스트"를 만들어 반환합니다.
-     * - pagination(page/size)은 Controller에서 슬라이싱해서 처리하세요.
+     * 전체 정렬 리스트 반환 -> pagination(page/size)은 Controller에서 처리
      */
     public List<PlaceResponse> findNearbyByCategoryCodes(
             double lat,
@@ -244,6 +246,77 @@ public class PlaceService {
                 d,
                 directionClock
         );
+    }
+
+    public GeocodeResponse geocode(String query) {
+        if (query == null || query.isBlank()) {
+            throw new BusinessException("BAD_REQUEST", "address query is required");
+        }
+
+        KakaoAddressSearchResponse resp = kakaoLocalClient.searchAddress(query.trim())
+                .doOnSubscribe(s -> log.info("Kakao geocode start query='{}'", query))
+                .doOnError(e -> log.error("Kakao geocode fail query='{}'", query, e))
+                .block();
+
+        if (resp == null || resp.documents() == null || resp.documents().isEmpty()) {
+            throw new BusinessException("PLACE_NOT_FOUND", "address not found");
+        }
+
+        KakaoAddressSearchResponse.Document doc = resp.documents().get(0);
+
+        double lng = parseDouble(doc.x(), "invalid kakao x");
+        double lat = parseDouble(doc.y(), "invalid kakao y");
+        String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
+
+        return new GeocodeResponse(
+                query.trim(),
+                doc.addressName(),
+                roadAddress,
+                lat,
+                lng
+        );
+    }
+
+    public ReverseGeocodeResponse reverseGeocode(double lat, double lng) {
+        validateLatLng(lat, lng);
+
+        KakaoCoordToAddressResponse resp = kakaoLocalClient.coordToAddress(lat, lng)
+                .doOnSubscribe(s -> log.info("Kakao reverse geocode start lat={}, lng={}", lat, lng))
+                .doOnError(e -> log.error("Kakao reverse geocode fail lat={}, lng={}", lat, lng, e))
+                .block();
+
+        if (resp == null || resp.documents() == null || resp.documents().isEmpty()) {
+            throw new BusinessException("PLACE_NOT_FOUND", "address not found for coordinates");
+        }
+
+        KakaoCoordToAddressResponse.Document doc = resp.documents().get(0);
+
+        String address = doc.address() != null ? doc.address().addressName() : null;
+        String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
+
+        return new ReverseGeocodeResponse(
+                address,
+                roadAddress,
+                lat,
+                lng
+        );
+    }
+
+    private void validateLatLng(double lat, double lng) {
+        if (lat < -90 || lat > 90) {
+            throw new BusinessException("BAD_REQUEST", "lat must be between -90 and 90");
+        }
+        if (lng < -180 || lng > 180) {
+            throw new BusinessException("BAD_REQUEST", "lng must be between -180 and 180");
+        }
+    }
+
+    private double parseDouble(String value, String message) {
+        try {
+            return Double.parseDouble(value);
+        } catch (Exception e) {
+            throw new BusinessException("EXTERNAL_API_ERROR", message);
+        }
     }
 
     private static long haversineMeters(double lat1, double lon1, double lat2, double lon2) {

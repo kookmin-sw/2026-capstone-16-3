@@ -3,6 +3,8 @@ package com.example.capstone.domain.place.controller;
 import com.example.capstone.domain.place.dto.response.PlacePageResponse;
 import com.example.capstone.domain.place.dto.response.PlaceDetailResponse;
 import com.example.capstone.domain.place.dto.response.PlaceResponse;
+import com.example.capstone.domain.place.dto.response.GeocodeResponse;
+import com.example.capstone.domain.place.dto.response.ReverseGeocodeResponse;
 import com.example.capstone.domain.place.service.RecentPlaceService;
 import com.example.capstone.domain.place.service.PlaceService;
 import com.example.capstone.global.api.ApiResponse;
@@ -92,7 +94,8 @@ public class PlaceController {
 
     /**
      * 장소 상세 조회
-     * - 현재는 캐시 기반으로 조회(검색/nearby로 한번이라도 조회된 항목)
+     * - 카카오 REST API에서는 상세 조회가 없음
+     * -> 캐시 기반 조회(검색/nearby로 한번이라도 조회된 항목)
      */
     @GetMapping("/{placeId}")
     public ApiResponse<PlaceDetailResponse> detail(
@@ -113,5 +116,20 @@ public class PlaceController {
         }
 
         return ApiResponse.ok(result);
+    }
+
+    @GetMapping("/geocode")
+    public ApiResponse<GeocodeResponse> geocode(
+            @RequestParam String query
+    ) {
+        return ApiResponse.ok(placeService.geocode(query));
+    }
+
+    @GetMapping("/reverse-geocode")
+    public ApiResponse<ReverseGeocodeResponse> reverseGeocode(
+            @RequestParam double lat,
+            @RequestParam double lng
+    ) {
+        return ApiResponse.ok(placeService.reverseGeocode(lat, lng));
     }
 }

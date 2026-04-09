@@ -1,8 +1,8 @@
 package com.example.capstone.domain.place.controller;
 
-import com.example.capstone.domain.place.dto.response.RecentPlaceDeleteAllResponse;
-import com.example.capstone.domain.place.dto.response.RecentPlaceDeleteResponse;
-import com.example.capstone.domain.place.dto.response.RecentPlacePageResponse;
+import com.example.capstone.domain.place.dto.response.recent.RecentPlaceDeleteAllResponse;
+import com.example.capstone.domain.place.dto.response.recent.RecentPlaceDeleteResponse;
+import com.example.capstone.domain.place.dto.response.recent.RecentPlacePageResponse;
 import com.example.capstone.domain.place.service.RecentPlaceService;
 import com.example.capstone.global.api.ApiResponse;
 import jakarta.validation.constraints.Max;

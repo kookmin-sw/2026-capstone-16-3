@@ -1,10 +1,10 @@
 package com.example.capstone.domain.place.service;
 
 import com.example.capstone.domain.place.dto.request.FavoritePlaceCreateRequest;
-import com.example.capstone.domain.place.dto.response.FavoritePlaceCreateResponse;
-import com.example.capstone.domain.place.dto.response.FavoritePlaceDeleteResponse;
-import com.example.capstone.domain.place.dto.response.FavoritePlacePageResponse;
-import com.example.capstone.domain.place.dto.response.FavoritePlaceResponse;
+import com.example.capstone.domain.place.dto.response.favorite.FavoritePlaceCreateResponse;
+import com.example.capstone.domain.place.dto.response.favorite.FavoritePlaceDeleteResponse;
+import com.example.capstone.domain.place.dto.response.favorite.FavoritePlacePageResponse;
+import com.example.capstone.domain.place.dto.response.favorite.FavoritePlaceResponse;
 import com.example.capstone.domain.place.entity.FavoritePlace;
 import com.example.capstone.domain.place.repository.FavoritePlaceRepository;
 import com.example.capstone.domain.user.entity.User;
