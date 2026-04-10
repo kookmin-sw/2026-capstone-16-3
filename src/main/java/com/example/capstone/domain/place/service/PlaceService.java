@@ -10,7 +10,6 @@ import com.example.capstone.domain.place.dto.response.kakao.KakaoCategorySearchR
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToAddressResponse;
 import com.example.capstone.domain.place.exception.PlaceErrorCode;
 import com.example.capstone.domain.place.exception.PlaceException;
-import com.example.capstone.global.api.ErrorDetail;
 import com.example.capstone.global.exception.BusinessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -54,8 +52,7 @@ public class PlaceService {
 
         if (categoryCode == null || categoryCode.isBlank()) {
             throw new PlaceException(
-                    PlaceErrorCode.PLACE_BAD_REQUEST,
-                    "categoryCode is required"
+                    PlaceErrorCode.PLACE_BAD_REQUEST
             );
         }
 
@@ -63,8 +60,7 @@ public class PlaceService {
 
         if (normalizedCode.contains(",")) {
             throw new PlaceException(
-                    PlaceErrorCode.PLACE_BAD_REQUEST,
-                    "복수 카테고리는 지원하지 않습니다."
+                    PlaceErrorCode.PLACE_BAD_REQUEST
             );
         }
 
@@ -113,7 +109,7 @@ public class PlaceService {
             int size
     ) {
         if (query == null || query.isBlank()) {
-            throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST, "query is required");
+            throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST);
         }
 
         validateLatLng(lat, lng);
@@ -148,21 +144,11 @@ public class PlaceService {
             throw new PlaceException(
                     e.getStatusCode().is4xxClientError()
                     ? PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_4XX
-                            : PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_5XX,
-                    "카카오 장소 검색 호출 실패",
-                    List.of(
-                            new ErrorDetail("status", String.valueOf(e.getStatusCode())),
-                            new ErrorDetail("responseBody", e.getResponseBodyAsString())
-                    )
+                    : PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_5XX
             );
         } catch (WebClientRequestException e) {
             throw new PlaceException(
-                    PlaceErrorCode.PLACE_EXTERNAL_API_CONNECTION_ERROR,
-                    "카카오 장소 검색 연결 실패",
-                    List.of(
-                            new ErrorDetail("cause", e.getClass().getSimpleName()),
-                            new ErrorDetail("message", e.getMessage())
-                    )
+                    PlaceErrorCode.PLACE_EXTERNAL_API_CONNECTION_ERROR
             );
         } catch (PlaceException e) {
             throw e;
@@ -171,31 +157,24 @@ public class PlaceService {
 
             if (cause instanceof TimeoutException) {
                 throw new PlaceException(
-                        PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT,
-                        "카카오 장소 검색 응답 시간 초과"
+                        PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT
                 );
             }
 
             throw new PlaceException(
-                    PlaceErrorCode.PLACE_EXTERNAL_API_ERROR,
-                    "카카오 장소 검색 처리 중 오류가 발생했습니다.",
-                    List.of(
-                            new ErrorDetail("cause", e.getClass().getSimpleName()),
-                            new ErrorDetail("message", e.getMessage())
-                    )
+                    PlaceErrorCode.PLACE_EXTERNAL_API_ERROR
             );
         }
     }
 
     public PlaceDetailResponse getPlaceDetail(String placeId) {
         if (placeId == null || placeId.isBlank()) {
-            throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST, "placeId is required");
+            throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST);
         }
 
         KakaoCategorySearchResponse.KakaoPlaceDocument doc = placeCache.get(placeId)
                 .orElseThrow(() -> new PlaceException(
-                        PlaceErrorCode.PLACE_CACHE_MISS,
-                        "Place not found in cache: " + placeId
+                        PlaceErrorCode.PLACE_CACHE_MISS
                 ));
 
         double placeLng = Double.parseDouble(doc.x());
@@ -285,40 +264,24 @@ public class PlaceService {
             return new PlaceException(
                     ex.getStatusCode().is4xxClientError()
                             ? PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_4XX
-                            : PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_5XX,
-                    message,
-                    List.of(
-                            new ErrorDetail("status", String.valueOf(ex.getStatusCode())),
-                            new ErrorDetail("responseBody", ex.getResponseBodyAsString())
-                    )
+                            : PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_5XX
             );
         }
 
         if (e instanceof WebClientRequestException ex) {
             return new PlaceException(
-                    PlaceErrorCode.PLACE_EXTERNAL_API_CONNECTION_ERROR,
-                    message,
-                    List.of(
-                            new ErrorDetail("cause", ex.getClass().getSimpleName()),
-                            new ErrorDetail("message", ex.getMessage())
-                    )
+                    PlaceErrorCode.PLACE_EXTERNAL_API_CONNECTION_ERROR
             );
         }
 
         if (e.getCause() instanceof TimeoutException) {
             return new PlaceException(
-                    PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT,
-                    message
+                    PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT
             );
         }
 
         return new PlaceException(
-                PlaceErrorCode.PLACE_EXTERNAL_API_ERROR,
-                message,
-                List.of(
-                        new ErrorDetail("cause", e.getClass().getSimpleName()),
-                        new ErrorDetail("message", e.getMessage())
-                )
+                PlaceErrorCode.PLACE_EXTERNAL_API_ERROR
         );
     }
 
@@ -419,10 +382,10 @@ public class PlaceService {
 
     private void validateLatLng(double lat, double lng) {
         if (lat < -90 || lat > 90) {
-            throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE, "lat must be between -90 and 90");
+            throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE);
         }
         if (lng < -180 || lng > 180) {
-            throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE, "lng must be between -180 and 180");
+            throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE);
         }
     }
 
