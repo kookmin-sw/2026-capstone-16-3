@@ -328,7 +328,7 @@ public class PlaceService {
 
     public GeocodeResponse geocode(String query) {
         if (query == null || query.isBlank()) {
-            throw new BusinessException("BAD_REQUEST", "address query is required");
+            throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST);
         }
 
         KakaoAddressSearchResponse resp = kakaoLocalClient.searchAddress(query.trim())
@@ -337,47 +337,68 @@ public class PlaceService {
                 .block();
 
         if (resp == null || resp.documents() == null || resp.documents().isEmpty()) {
-            throw new BusinessException("PLACE_NOT_FOUND", "address not found");
+            throw new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND);
         }
 
         KakaoAddressSearchResponse.Document doc = resp.documents().getFirst();
 
-        double lng = parseDouble(doc.x(), "invalid kakao x");
-        double lat = parseDouble(doc.y(), "invalid kakao y");
-        String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
+        try {
+            double lng = Double.parseDouble(doc.x());
+            double lat = Double.parseDouble(doc.y());
 
-        return new GeocodeResponse(
-                query.trim(),
-                doc.addressName(),
-                roadAddress,
-                lat,
-                lng
-        );
+            String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
+
+            return new GeocodeResponse(
+                    query.trim(),
+                    doc.addressName(),
+                    roadAddress,
+                    lat,
+                    lng
+            );
+        } catch (Exception e) {
+            throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR);
+        }
     }
 
     public ReverseGeocodeResponse reverseGeocode(double lat, double lng) {
         validateLatLng(lat, lng);
 
-        KakaoCoordToAddressResponse resp = kakaoLocalClient.coordToAddress(lat, lng)
-                .doOnSubscribe(s -> log.info("Kakao reverse geocode start lat={}, lng={}", lat, lng))
-                .doOnError(e -> log.error("Kakao reverse geocode fail lat={}, lng={}", lat, lng, e))
-                .block();
+        try {
+            KakaoCoordToAddressResponse resp = kakaoLocalClient.coordToAddress(lat, lng)
+                    .doOnSubscribe(s -> log.info("Kakao reverse geocode start lat={}, lng={}", lat, lng))
+                    .doOnError(e -> log.error("Kakao reverse geocode fail lat={}, lng={}", lat, lng, e))
+                    .block();
 
-        if (resp == null || resp.documents() == null || resp.documents().isEmpty()) {
-            throw new BusinessException("PLACE_NOT_FOUND", "address not found for coordinates");
+            if (resp == null || resp.documents() == null || resp.documents().isEmpty()) {
+                throw new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND);
+            }
+
+            KakaoCoordToAddressResponse.Document doc = resp.documents().getFirst();
+
+            String address = doc.address() != null ? doc.address().addressName() : null;
+            String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
+
+            return new ReverseGeocodeResponse(
+                    address,
+                    roadAddress,
+                    lat,
+                    lng
+            );
+        } catch (PlaceException e) {
+            throw e;
+        } catch (WebClientResponseException e) {
+            if (e.getStatusCode().is4xxClientError()) {
+                throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_4XX);
+            }
+            if (e.getStatusCode().is5xxServerError()) {
+                throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_5XX);
+            }
+            throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR);
+        } catch (WebClientRequestException e) {
+            throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_CONNECTION_ERROR);
+        } catch (Exception e) {
+            throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR);
         }
-
-        KakaoCoordToAddressResponse.Document doc = resp.documents().getFirst();
-
-        String address = doc.address() != null ? doc.address().addressName() : null;
-        String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
-
-        return new ReverseGeocodeResponse(
-                address,
-                roadAddress,
-                lat,
-                lng
-        );
     }
 
     private void validateLatLng(double lat, double lng) {
@@ -386,14 +407,6 @@ public class PlaceService {
         }
         if (lng < -180 || lng > 180) {
             throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE);
-        }
-    }
-
-    private double parseDouble(String value, String message) {
-        try {
-            return Double.parseDouble(value);
-        } catch (Exception e) {
-            throw new BusinessException("EXTERNAL_API_ERROR", message);
         }
     }
 

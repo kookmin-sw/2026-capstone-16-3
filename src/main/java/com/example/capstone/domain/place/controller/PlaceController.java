@@ -5,8 +5,6 @@ import com.example.capstone.domain.place.dto.response.PlaceDetailResponse;
 import com.example.capstone.domain.place.dto.response.PlaceResponse;
 import com.example.capstone.domain.place.dto.response.GeocodeResponse;
 import com.example.capstone.domain.place.dto.response.ReverseGeocodeResponse;
-import com.example.capstone.domain.place.exception.PlaceErrorCode;
-import com.example.capstone.domain.place.exception.PlaceException;
 import com.example.capstone.domain.place.service.RecentPlaceService;
 import com.example.capstone.domain.place.service.PlaceService;
 import com.example.capstone.global.api.ApiResponse;
@@ -18,7 +16,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Validated
@@ -52,21 +49,8 @@ public class PlaceController {
             @RequestParam(defaultValue = "10") @Min(1) @Max(15) int size,
             @RequestParam(defaultValue = "10") @Min(1) @Max(30) int sizePerCategory
     ) {
-        if (code == null || code.isBlank()) {
-            throw new IllegalArgumentException("'code' is required. ex) code=CS2");
-        }
-
-        String normalizedCode = code.toUpperCase().trim();
-
-        if (normalizedCode.contains(",")) {
-            throw new PlaceException(
-                    PlaceErrorCode.PLACE_BAD_REQUEST,
-                    "복수 카테고리는 지원하지 않습니다. code는 1개만 입력해야 합니다."
-            );
-        }
-
         List<PlaceResponse> all = placeService.findNearbyByCategory(
-                lat, lng, radius, normalizedCode, sizePerCategory, Integer.MAX_VALUE
+                lat, lng, radius, code, sizePerCategory, Integer.MAX_VALUE
         );
 
         int total = all.size();
