@@ -1,21 +1,14 @@
 package com.example.capstone.domain.place.exception;
 
-import com.example.capstone.global.api.ErrorDetail;
-import com.example.capstone.global.exception.BusinessException;
+import lombok.Getter;
 
-import java.util.List;
+@Getter
+public class PlaceException extends RuntimeException {
 
-public class PlaceException extends BusinessException {
+    private final PlaceErrorCode errorCode;
 
     public PlaceException(PlaceErrorCode errorCode) {
-        super(errorCode.getCode(), errorCode.getMessage());
-    }
-
-    public PlaceException(PlaceErrorCode errorCode, String message) {
-        super(errorCode.getCode(), message);
-    }
-
-    public PlaceException(PlaceErrorCode errorCode, String message, List<ErrorDetail> details) {
-        super(errorCode.getCode(), message, details);
+        super(errorCode.getMessage());
+        this.errorCode = errorCode;
     }
 }
