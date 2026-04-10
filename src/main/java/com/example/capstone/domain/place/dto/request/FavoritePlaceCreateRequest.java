@@ -1,5 +1,6 @@
 package com.example.capstone.domain.place.dto.request;
 
+import com.example.capstone.domain.place.entity.FavoritePlaceCategory;
 import jakarta.validation.constraints.*;
 
 public record FavoritePlaceCreateRequest(
@@ -25,6 +26,9 @@ public record FavoritePlaceCreateRequest(
         @NotNull
         @DecimalMin("-180.0")
         @DecimalMax("180.0")
-        Double lng
+        Double lng,
+
+        @NotNull
+        FavoritePlaceCategory category
 ) {
 }

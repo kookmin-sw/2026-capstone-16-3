@@ -33,8 +33,10 @@ public class User extends BaseEntity {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("searchedAt DESC")
+    @Builder.Default
     private List<RecentPlace> recentSearchPlaces = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<FavoritePlace> favoritePlaces = new ArrayList<>();
 }
