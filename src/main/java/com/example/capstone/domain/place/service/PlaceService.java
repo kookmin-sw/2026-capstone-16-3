@@ -10,7 +10,6 @@ import com.example.capstone.domain.place.dto.response.kakao.KakaoCategorySearchR
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToAddressResponse;
 import com.example.capstone.domain.place.exception.PlaceErrorCode;
 import com.example.capstone.domain.place.exception.PlaceException;
-import com.example.capstone.global.exception.BusinessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
