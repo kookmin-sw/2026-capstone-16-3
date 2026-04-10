@@ -26,8 +26,9 @@ public class RecentPlaceService {
 
     @Transactional(readOnly = true)
     public RecentPlacePageResponse getRecent(Long userId, int page, int size) {
+        // PageRequest.of()는 0부터 시작
         var pageable = PageRequest.of(
-                Math.max(page, 1),
+                Math.max(page, 1) - 1,
                 Math.min(Math.max(size, 1), MAX_KEEP)
         );
 
