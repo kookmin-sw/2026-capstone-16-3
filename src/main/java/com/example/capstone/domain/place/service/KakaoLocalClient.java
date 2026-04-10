@@ -4,11 +4,8 @@ import com.example.capstone.domain.place.dto.response.kakao.KakaoAddressSearchRe
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCategorySearchResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToAddressResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.util.UriBuilder;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -111,7 +108,7 @@ public class KakaoLocalClient {
                 .queryParam("category_group_code", code)
                 .queryParam("x", lng) // x=경도
                 .queryParam("y", lat) // y=위도
-                .queryParam("radius", Math.min(Math.max(radiusM, 0), 3000))
+                .queryParam("radius", Math.min(Math.max(radiusM, 0), 20000))
                 .queryParam("sort", "distance")
                 .queryParam("size", Math.min(Math.max(size, 1), 15))
                 .queryParam("page", Math.min(Math.max(page, 1), MAX_PAGE))
@@ -134,7 +131,7 @@ public class KakaoLocalClient {
                 .queryParam("query", query)
                 .queryParam("x", lng)
                 .queryParam("y", lat)
-                .queryParam("radius", clamp(radiusM, 0, 3000))
+                .queryParam("radius", clamp(radiusM, 0, 20000))
                 .queryParam("sort", "distance")
                 .queryParam("size", clamp(size, 1, 15))
                 .queryParam("page", clamp(page, 1, 45))
