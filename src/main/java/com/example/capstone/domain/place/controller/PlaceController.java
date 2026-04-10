@@ -5,6 +5,8 @@ import com.example.capstone.domain.place.dto.response.PlaceDetailResponse;
 import com.example.capstone.domain.place.dto.response.PlaceResponse;
 import com.example.capstone.domain.place.dto.response.GeocodeResponse;
 import com.example.capstone.domain.place.dto.response.ReverseGeocodeResponse;
+import com.example.capstone.domain.place.exception.PlaceErrorCode;
+import com.example.capstone.domain.place.exception.PlaceException;
 import com.example.capstone.domain.place.service.RecentPlaceService;
 import com.example.capstone.domain.place.service.PlaceService;
 import com.example.capstone.global.api.ApiResponse;
@@ -54,18 +56,17 @@ public class PlaceController {
             throw new IllegalArgumentException("'code' is required. ex) code=CS2");
         }
 
-        List<String> parsed = Arrays.stream(code.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isBlank())
-                .toList();
+        String normalizedCode = code.toUpperCase().trim();
 
-        if (parsed.size() != 1) {
-            throw new IllegalArgumentException("Only one category code is allowed. ex) code=CS2");
+        if (normalizedCode.contains(",")) {
+            throw new PlaceException(
+                    PlaceErrorCode.PLACE_BAD_REQUEST,
+                    "복수 카테고리는 지원하지 않습니다. code는 1개만 입력해야 합니다."
+            );
         }
 
-        // 서비스는 전체 정렬 리스트 생성만 책임
-        List<PlaceResponse> all = placeService.findNearbyByCategoryCodes(
-                lat, lng, radius, parsed, sizePerCategory, Integer.MAX_VALUE
+        List<PlaceResponse> all = placeService.findNearbyByCategory(
+                lat, lng, radius, normalizedCode, sizePerCategory, Integer.MAX_VALUE
         );
 
         int total = all.size();

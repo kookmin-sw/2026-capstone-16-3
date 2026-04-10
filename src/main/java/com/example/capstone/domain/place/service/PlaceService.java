@@ -41,22 +41,36 @@ public class PlaceService {
         this.placeCache = placeCache;
     }
 
-    /**
-     * 전체 정렬 리스트 반환 -> pagination(page/size)은 Controller에서 처리
-     */
-    public List<PlaceResponse> findNearbyByCategoryCodes(
+    // 전체 정렬 리스트 반환 -> pagination(page/size)은 Controller에서 처리
+    public List<PlaceResponse> findNearbyByCategory(
             double lat,
             double lng,
             int radiusM,
-            List<String> categoryCodes,
+            String categoryCode,
             int sizePerCategory,
             int maxItems
     ) {
-        List<PlaceResponse> merged = Flux.fromIterable(categoryCodes)
-                .filter(c -> c != null && !c.isBlank())
-                .map(String::trim)
-                .distinct()
-                .flatMap(code -> fetchAllPagesByCategory(code, lat, lng, radiusM, sizePerCategory))
+        validateLatLng(lat, lng);
+
+        if (categoryCode == null || categoryCode.isBlank()) {
+            throw new PlaceException(
+                    PlaceErrorCode.PLACE_BAD_REQUEST,
+                    "categoryCode is required"
+            );
+        }
+
+        String normalizedCode = categoryCode.toUpperCase().trim();
+
+        if (normalizedCode.contains(",")) {
+            throw new PlaceException(
+                    PlaceErrorCode.PLACE_BAD_REQUEST,
+                    "복수 카테고리는 지원하지 않습니다."
+            );
+        }
+
+        List<PlaceResponse> merged = fetchAllPagesByCategory(
+                normalizedCode, lat, lng, radiusM, sizePerCategory
+        )
                 .flatMapIterable(resp -> resp.documents() == null ? List.of() : resp.documents())
                 .map(doc -> toNearbyPlace(doc, lat, lng))
                 .collectList()
@@ -82,10 +96,11 @@ public class PlaceService {
                 )
                 .toList();
 
-        // (기존 호환용) maxItems 제한
+        // maxItems 제한
         if (maxItems > 0 && ranked.size() > maxItems) {
             return ranked.subList(0, maxItems);
         }
+
         return ranked;
     }
 
@@ -255,10 +270,56 @@ public class PlaceService {
                                         resp.meta() != null && resp.meta().isEnd()
                                 ))
                                 .doOnError(e -> log.error("Kakao category fail code={}, page={}", code, page, e))
-                                .onErrorResume(e -> Mono.<KakaoCategorySearchResponse>empty())
+                                .onErrorMap(e -> mapPlaceExternalApiException("카카오 카테고리 주변 조회 실패", e))
                 )
                 // is_end=true 응답을 받는 순간 이후 페이지 호출 중단
                 .takeUntil(resp -> resp.meta() != null && resp.meta().isEnd());
+    }
+
+    private Throwable mapPlaceExternalApiException(String message, Throwable e) {
+        if (e instanceof PlaceException) {
+            return e;
+        }
+
+        if (e instanceof WebClientResponseException ex) {
+            return new PlaceException(
+                    ex.getStatusCode().is4xxClientError()
+                            ? PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_4XX
+                            : PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_5XX,
+                    message,
+                    List.of(
+                            new ErrorDetail("status", String.valueOf(ex.getStatusCode())),
+                            new ErrorDetail("responseBody", ex.getResponseBodyAsString())
+                    )
+            );
+        }
+
+        if (e instanceof WebClientRequestException ex) {
+            return new PlaceException(
+                    PlaceErrorCode.PLACE_EXTERNAL_API_CONNECTION_ERROR,
+                    message,
+                    List.of(
+                            new ErrorDetail("cause", ex.getClass().getSimpleName()),
+                            new ErrorDetail("message", ex.getMessage())
+                    )
+            );
+        }
+
+        if (e.getCause() instanceof TimeoutException) {
+            return new PlaceException(
+                    PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT,
+                    message
+            );
+        }
+
+        return new PlaceException(
+                PlaceErrorCode.PLACE_EXTERNAL_API_ERROR,
+                message,
+                List.of(
+                        new ErrorDetail("cause", e.getClass().getSimpleName()),
+                        new ErrorDetail("message", e.getMessage())
+                )
+        );
     }
 
     private PlaceResponse toNearbyPlace(
