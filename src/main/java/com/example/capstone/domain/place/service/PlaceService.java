@@ -249,13 +249,13 @@ public class PlaceService {
                                         resp.meta() != null && resp.meta().isEnd()
                                 ))
                                 .doOnError(e -> log.error("Kakao category fail code={}, page={}", code, page, e))
-                                .onErrorMap(e -> mapPlaceExternalApiException("카카오 카테고리 주변 조회 실패", e))
+                                .onErrorMap(e -> mapPlaceExternalApiException(e))
                 )
                 // is_end=true 응답을 받는 순간 이후 페이지 호출 중단
                 .takeUntil(resp -> resp.meta() != null && resp.meta().isEnd());
     }
 
-    private Throwable mapPlaceExternalApiException(String message, Throwable e) {
+    private Throwable mapPlaceExternalApiException(Throwable e) {
         if (e instanceof PlaceException) {
             return e;
         }
@@ -268,7 +268,7 @@ public class PlaceService {
             );
         }
 
-        if (e instanceof WebClientRequestException ex) {
+        if (e instanceof WebClientRequestException) {
             return new PlaceException(
                     PlaceErrorCode.PLACE_EXTERNAL_API_CONNECTION_ERROR
             );
@@ -340,7 +340,7 @@ public class PlaceService {
             throw new BusinessException("PLACE_NOT_FOUND", "address not found");
         }
 
-        KakaoAddressSearchResponse.Document doc = resp.documents().get(0);
+        KakaoAddressSearchResponse.Document doc = resp.documents().getFirst();
 
         double lng = parseDouble(doc.x(), "invalid kakao x");
         double lat = parseDouble(doc.y(), "invalid kakao y");
@@ -367,7 +367,7 @@ public class PlaceService {
             throw new BusinessException("PLACE_NOT_FOUND", "address not found for coordinates");
         }
 
-        KakaoCoordToAddressResponse.Document doc = resp.documents().get(0);
+        KakaoCoordToAddressResponse.Document doc = resp.documents().getFirst();
 
         String address = doc.address() != null ? doc.address().addressName() : null;
         String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
