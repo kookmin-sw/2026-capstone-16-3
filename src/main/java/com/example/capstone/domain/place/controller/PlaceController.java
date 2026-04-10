@@ -8,6 +8,8 @@ import com.example.capstone.domain.place.dto.response.ReverseGeocodeResponse;
 import com.example.capstone.domain.place.service.RecentPlaceService;
 import com.example.capstone.domain.place.service.PlaceService;
 import com.example.capstone.global.api.ApiResponse;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +21,7 @@ import java.util.List;
 
 @Validated
 @RestController
+@Tag(name = "[장소]")
 @RequestMapping("/api/places")
 public class PlaceController {
 
@@ -35,15 +38,17 @@ public class PlaceController {
 
     @GetMapping("/nearby")
     public ApiResponse<PlacePageResponse> nearby(
+            @Parameter(description = "위도")
             @RequestParam double lat,
+            @Parameter(description = "경도")
             @RequestParam double lng,
-            @RequestParam(defaultValue = "3000") @Min(0) @Max(20000) int radius,
-
+            @Parameter(description = "카테고리 코드")
             @RequestParam String code,
-
-            @RequestParam(defaultValue = "10") @Min(1) @Max(30) int sizePerCategory,
+            @Parameter(description = "반경(m)")
+            @RequestParam(defaultValue = "3000") @Min(0) @Max(20000) int radius,
             @RequestParam(defaultValue = "1") @Min(1) @Max(45) int page,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(15) int size
+            @RequestParam(defaultValue = "10") @Min(1) @Max(15) int size,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(30) int sizePerCategory
     ) {
         if (code == null || code.isBlank()) {
             throw new IllegalArgumentException("'code' is required. ex) code=CS2");
@@ -79,9 +84,13 @@ public class PlaceController {
 
     @GetMapping("/search")
     public ApiResponse<PlacePageResponse> search(
+            @Parameter(description = "검색어")
             @RequestParam String query,
+            @Parameter(description = "위도")
             @RequestParam double lat,
+            @Parameter(description = "경도")
             @RequestParam double lng,
+            @Parameter(description = "반경(m)")
             @RequestParam(defaultValue = "3000") @Min(0) @Max(20000) int radius,
             @RequestParam(defaultValue = "1") @Min(1) @Max(45) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(15) int size
@@ -120,14 +129,17 @@ public class PlaceController {
 
     @GetMapping("/geocode")
     public ApiResponse<GeocodeResponse> geocode(
-            @RequestParam String query
+            @Parameter(description = "도로명 주소")
+            @RequestParam String roadAddress
     ) {
-        return ApiResponse.ok(placeService.geocode(query));
+        return ApiResponse.ok(placeService.geocode(roadAddress));
     }
 
     @GetMapping("/reverse-geocode")
     public ApiResponse<ReverseGeocodeResponse> reverseGeocode(
+            @Parameter(description = "위도")
             @RequestParam double lat,
+            @Parameter(description = "경도")
             @RequestParam double lng
     ) {
         return ApiResponse.ok(placeService.reverseGeocode(lat, lng));

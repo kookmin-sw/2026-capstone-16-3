@@ -5,6 +5,7 @@ import com.example.capstone.domain.place.dto.response.recent.RecentPlaceDeleteRe
 import com.example.capstone.domain.place.dto.response.recent.RecentPlacePageResponse;
 import com.example.capstone.domain.place.service.RecentPlaceService;
 import com.example.capstone.global.api.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Validated
 @RestController
+@Tag(name = "[최근 장소]")
 @RequestMapping("/api/users/me/recent")
 @RequiredArgsConstructor
 public class RecentPlaceController {
