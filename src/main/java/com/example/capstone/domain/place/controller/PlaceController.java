@@ -114,7 +114,7 @@ public class PlaceController {
 
     @GetMapping("/geocode")
     public ApiResponse<GeocodeResponse> geocode(
-            @Parameter(description = "도로명 주소")
+            @Parameter(description = "주소")
             @RequestParam String roadAddress
     ) {
         return ApiResponse.ok(placeService.geocode(roadAddress));
