@@ -48,9 +48,9 @@ public class KakaoLocalClient {
                         .queryParam("x", lng)
                         .queryParam("y", lat)
                         .queryParam("radius", clamp(radiusM, 0, MAX_RADIUS))
-                        .queryParam("sort", "distance")
-                        .queryParam("size", clamp(size, 1, MAX_SIZE))
                         .queryParam("page", clamp(page, 1, MAX_PAGE))
+                        .queryParam("size", clamp(size, 1, MAX_SIZE))
+                        .queryParam("sort", "accuracy")
                         .build(),
                 KakaoCategorySearchResponse.class,
                 "KAKAO CATEGORY"
@@ -71,9 +71,9 @@ public class KakaoLocalClient {
                         .queryParam("x", lng)
                         .queryParam("y", lat)
                         .queryParam("radius", clamp(radiusM, 0, MAX_RADIUS))
-                        .queryParam("sort", "distance")
-                        .queryParam("size", clamp(size, 1, MAX_SIZE))
                         .queryParam("page", clamp(page, 1, MAX_PAGE))
+                        .queryParam("size", clamp(size, 1, MAX_SIZE))
+                        .queryParam("sort", "accuracy")
                         .build(),
                 KakaoCategorySearchResponse.class,
                 "KAKAO KEYWORD"
