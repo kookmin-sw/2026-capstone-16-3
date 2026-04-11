@@ -1,14 +1,12 @@
 package com.example.capstone.domain.guide.exception;
 
+import com.example.capstone.global.exception.BusinessException;
 import lombok.Getter;
 
 @Getter
-public class GuideException extends RuntimeException {
-
-    private final GuideErrorCode errorCode;
+public class GuideException extends BusinessException {
 
     public GuideException(GuideErrorCode errorCode) {
-        super(errorCode.getMessage());
-        this.errorCode = errorCode;
+        super(errorCode);
     }
 }

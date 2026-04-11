@@ -42,7 +42,7 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+                .status(e.getStatus())
                 .body(ApiResponse.fail(error));
     }
 
