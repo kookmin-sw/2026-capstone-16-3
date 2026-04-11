@@ -1,10 +1,6 @@
 package com.example.capstone.domain.place.controller;
 
-import com.example.capstone.domain.place.dto.response.PlacePageResponse;
-import com.example.capstone.domain.place.dto.response.PlaceDetailResponse;
-import com.example.capstone.domain.place.dto.response.PlaceResponse;
-import com.example.capstone.domain.place.dto.response.GeocodeResponse;
-import com.example.capstone.domain.place.dto.response.ReverseGeocodeResponse;
+import com.example.capstone.domain.place.dto.response.*;
 import com.example.capstone.domain.place.service.RecentPlaceService;
 import com.example.capstone.domain.place.service.PlaceService;
 import com.example.capstone.global.api.ApiResponse;
@@ -36,39 +32,27 @@ public class PlaceController {
     }
 
     @GetMapping("/nearby")
-    public ApiResponse<PlacePageResponse> nearby(
+    public ApiResponse<SliceResponse<PlaceResponse>> nearby(
+            @Parameter(description = "카테고리 코드")
+            @RequestParam String code,
             @Parameter(description = "위도")
             @RequestParam double lat,
             @Parameter(description = "경도")
             @RequestParam double lng,
-            @Parameter(description = "카테고리 코드")
-            @RequestParam String code,
             @Parameter(description = "반경(m)")
             @RequestParam(defaultValue = "3000") @Min(0) @Max(20000) int radius,
             @RequestParam(defaultValue = "1") @Min(1) @Max(45) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(15) int size,
             @RequestParam(defaultValue = "10") @Min(1) @Max(30) int sizePerCategory
     ) {
-        List<PlaceResponse> all = placeService.findNearbyByCategory(
-                lat, lng, radius, code, sizePerCategory, Integer.MAX_VALUE
+        SliceResponse<PlaceResponse> result = placeService.searchCategory(
+                code, lat, lng, radius, page, size
         );
-
-        int total = all.size();
-        int from = (page - 1) * size;
-
-        if (from >= total) {
-            return ApiResponse.ok(new PlacePageResponse(List.of(), page, size, total, false));
-        }
-
-        int to = Math.min(from + size, total);
-        List<PlaceResponse> items = all.subList(from, to);
-        boolean hasNext = to < total;
-
-        return ApiResponse.ok(new PlacePageResponse(items, page, size, total, hasNext));
+        return ApiResponse.ok(result);
     }
 
     @GetMapping("/search")
-    public ApiResponse<PlacePageResponse> search(
+    public ApiResponse<SliceResponse<PlaceResponse>> search(
             @Parameter(description = "검색어")
             @RequestParam String query,
             @Parameter(description = "위도")
@@ -80,7 +64,7 @@ public class PlaceController {
             @RequestParam(defaultValue = "1") @Min(1) @Max(45) int page,
             @RequestParam(defaultValue = "10") @Min(1) @Max(15) int size
     ) {
-        PlacePageResponse result = placeService.searchPlaces(
+        SliceResponse<PlaceResponse> result = placeService.searchPlaces(
                 query, lat, lng, radius, page, size
         );
         return ApiResponse.ok(result);
