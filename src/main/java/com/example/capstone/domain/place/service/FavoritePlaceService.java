@@ -6,10 +6,13 @@ import com.example.capstone.domain.place.dto.response.favorite.FavoritePlaceDele
 import com.example.capstone.domain.place.dto.response.favorite.FavoritePlacePageResponse;
 import com.example.capstone.domain.place.dto.response.favorite.FavoritePlaceResponse;
 import com.example.capstone.domain.place.entity.FavoritePlace;
+import com.example.capstone.domain.place.exception.PlaceErrorCode;
+import com.example.capstone.domain.place.exception.PlaceException;
 import com.example.capstone.domain.place.repository.FavoritePlaceRepository;
 import com.example.capstone.domain.user.entity.User;
+import com.example.capstone.domain.user.exception.UserErrorCode;
+import com.example.capstone.domain.user.exception.UserException;
 import com.example.capstone.domain.user.repository.UserRepository;
-import com.example.capstone.global.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -67,12 +70,12 @@ public class FavoritePlaceService {
         User user = getUser(userId);
 
         if (favoritePlaceRepository.existsByUserIdAndPlaceId(user.getId(), request.placeId())) {
-            throw new BusinessException("FAVORITE_ALREADY_EXISTS", "이미 즐겨찾기에 등록된 장소입니다.");
+            throw new PlaceException(PlaceErrorCode.FAVORITE_ALREADY_EXISTS);
         }
 
         long count = favoritePlaceRepository.countByUserId(user.getId());
         if (count >= MAX_FAVORITES) {
-            throw new BusinessException("FAVORITE_LIMIT_EXCEEDED", "즐겨찾기는 최대 50개까지 등록할 수 있습니다.");
+            throw new PlaceException(PlaceErrorCode.FAVORITE_LIMIT_EXCEEDED);
         }
 
         FavoritePlace favoritePlace = FavoritePlace.builder()
@@ -102,7 +105,7 @@ public class FavoritePlaceService {
         boolean deleted = favoritePlaceRepository.deleteByIdAndUserId(id, userId) > 0;
 
         if (!deleted) {
-            throw new BusinessException("FAVORITE_NOT_FOUND", "해당 즐겨찾기를 찾을 수 없습니다.");
+            throw new PlaceException(PlaceErrorCode.FAVORITE_NOT_FOUND);
         }
 
         return new FavoritePlaceDeleteResponse(true);
@@ -110,6 +113,6 @@ public class FavoritePlaceService {
 
     private User getUser(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException("USER_NOT_FOUND", "사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     }
 }
