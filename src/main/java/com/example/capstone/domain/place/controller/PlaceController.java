@@ -12,8 +12,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @Validated
 @RestController
 @Tag(name = "[장소]")
@@ -42,10 +40,9 @@ public class PlaceController {
             @Parameter(description = "반경(m)")
             @RequestParam(defaultValue = "3000") @Min(0) @Max(20000) int radius,
             @RequestParam(defaultValue = "1") @Min(1) @Max(45) int page,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(15) int size,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(30) int sizePerCategory
+            @RequestParam(defaultValue = "10") @Min(1) @Max(15) int size
     ) {
-        SliceResponse<PlaceResponse> result = placeService.searchCategory(
+        SliceResponse<PlaceResponse> result = placeService.searchNearbyByCategory(
                 code, lat, lng, radius, page, size
         );
         return ApiResponse.ok(result);
@@ -99,9 +96,9 @@ public class PlaceController {
     @GetMapping("/geocode")
     public ApiResponse<GeocodeResponse> geocode(
             @Parameter(description = "주소")
-            @RequestParam String roadAddress
+            @RequestParam String address
     ) {
-        return ApiResponse.ok(placeService.geocode(roadAddress));
+        return ApiResponse.ok(placeService.geocode(address));
     }
 
     @GetMapping("/reverse-geocode")

@@ -30,7 +30,7 @@ public class PlaceService {
         this.placeCache = placeCache;
     }
 
-    public SliceResponse<PlaceResponse> searchCategory(
+    public SliceResponse<PlaceResponse> searchNearbyByCategory(
             String categoryCode,
             double lat,
             double lng,
@@ -39,6 +39,11 @@ public class PlaceService {
             int size
     ) {
         validateQuery(categoryCode);
+        String normalizedCode = categoryCode.trim().toUpperCase();
+        if (normalizedCode.contains(",")) {
+            throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST);
+        }
+
         validateLatLng(lat, lng);
 
         int kakaoPage = Math.min(Math.max(page, 1), MAX_PAGE);
@@ -46,7 +51,7 @@ public class PlaceService {
 
         try {
             KakaoCategorySearchResponse resp = kakaoLocalClient.searchCategory(
-                            categoryCode.trim(), lat, lng, radiusM, kakaoSize, kakaoPage
+                            normalizedCode, lat, lng, radiusM, kakaoSize, kakaoPage
                     )
                     .doOnSubscribe(s -> log.info("[category search] start categoryCode='{}', page={}, size={}, lat={}, lng={}, radius={}",
                             categoryCode, kakaoPage, kakaoSize, lat, lng, radiusM))
@@ -54,7 +59,7 @@ public class PlaceService {
                     .block();
 
             if (resp == null) {
-                return new SliceResponse<>(List.of(), page, kakaoSize, false, null);
+                return new SliceResponse<>(List.of(), kakaoPage, kakaoSize, false, null);
             }
 
             boolean hasNext = resp.meta() != null && !resp.meta().isEnd();
@@ -66,30 +71,10 @@ public class PlaceService {
                             .toList();
 
             return SliceResponse.of(items, page, kakaoSize, hasNext);
-        } catch (WebClientResponseException e) {
-            throw new PlaceException(
-                    e.getStatusCode().is4xxClientError()
-                            ? PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_4XX
-                            : PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_5XX
-            );
-        } catch (WebClientRequestException e) {
-            throw new PlaceException(
-                    PlaceErrorCode.PLACE_EXTERNAL_API_CONNECTION_ERROR
-            );
         } catch (PlaceException e) {
             throw e;
         } catch (Exception e) {
-            Throwable cause = e.getCause();
-
-            if (cause instanceof TimeoutException) {
-                throw new PlaceException(
-                        PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT
-                );
-            }
-
-            throw new PlaceException(
-                    PlaceErrorCode.PLACE_EXTERNAL_API_ERROR
-            );
+            throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR);
         }
     }
 

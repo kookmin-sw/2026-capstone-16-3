@@ -27,6 +27,8 @@ public class KakaoLocalClient {
     private static final int MAX_RADIUS = 20_000;
     private static final int MAX_SIZE = 15;
     private static final Duration KAKAO_TIMEOUT = Duration.ofSeconds(5);
+    private static final String SORT_DISTANCE = "distance";
+    private static final String SORT_ACCURACY = "accuracy";
 
     private final WebClient webClient;
 
@@ -50,7 +52,7 @@ public class KakaoLocalClient {
                         .queryParam("radius", clamp(radiusM, 0, MAX_RADIUS))
                         .queryParam("page", clamp(page, 1, MAX_PAGE))
                         .queryParam("size", clamp(size, 1, MAX_SIZE))
-                        .queryParam("sort", "accuracy")
+                        .queryParam("sort", SORT_DISTANCE)
                         .build(),
                 KakaoCategorySearchResponse.class,
                 "KAKAO CATEGORY"
@@ -73,7 +75,7 @@ public class KakaoLocalClient {
                         .queryParam("radius", clamp(radiusM, 0, MAX_RADIUS))
                         .queryParam("page", clamp(page, 1, MAX_PAGE))
                         .queryParam("size", clamp(size, 1, MAX_SIZE))
-                        .queryParam("sort", "accuracy")
+                        .queryParam("sort", SORT_ACCURACY)
                         .build(),
                 KakaoCategorySearchResponse.class,
                 "KAKAO KEYWORD"
