@@ -1,9 +1,9 @@
 package com.example.capstone.domain.place.service;
 
 import com.example.capstone.domain.place.dto.request.FavoritePlaceCreateRequest;
+import com.example.capstone.domain.place.dto.response.SliceResponse;
 import com.example.capstone.domain.place.dto.response.favorite.FavoritePlaceCreateResponse;
 import com.example.capstone.domain.place.dto.response.favorite.FavoritePlaceDeleteResponse;
-import com.example.capstone.domain.place.dto.response.favorite.FavoritePlacePageResponse;
 import com.example.capstone.domain.place.dto.response.favorite.FavoritePlaceResponse;
 import com.example.capstone.domain.place.entity.FavoritePlace;
 import com.example.capstone.domain.place.repository.FavoritePlaceRepository;
@@ -28,7 +28,7 @@ public class FavoritePlaceService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public FavoritePlacePageResponse getFavorites(Long userId, int page, int size) {
+    public SliceResponse<FavoritePlaceResponse> getFavorites(Long userId, int page, int size) {
         User user = getUser(userId);
 
         // PageRequest.of()는 0부터 시작
@@ -53,13 +53,7 @@ public class FavoritePlaceService {
                 ))
                 .toList();
 
-        return new FavoritePlacePageResponse(
-                items,
-                page,
-                size,
-                result.getTotalElements(),
-                result.getTotalPages()
-        );
+        return SliceResponse.of(items, page, size, result.hasNext());
     }
 
     @Transactional

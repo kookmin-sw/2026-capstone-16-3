@@ -1,8 +1,9 @@
 package com.example.capstone.domain.place.service;
 
+import com.example.capstone.domain.place.dto.response.SliceResponse;
 import com.example.capstone.domain.place.dto.response.recent.RecentPlaceDeleteAllResponse;
 import com.example.capstone.domain.place.dto.response.recent.RecentPlaceDeleteResponse;
-import com.example.capstone.domain.place.dto.response.recent.RecentPlacePageResponse;
+import com.example.capstone.domain.place.dto.response.recent.RecentPlaceResponse;
 import com.example.capstone.domain.place.entity.RecentPlace;
 import com.example.capstone.domain.place.repository.RecentPlaceRepository;
 import com.example.capstone.domain.user.entity.User;
@@ -25,7 +26,7 @@ public class RecentPlaceService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public RecentPlacePageResponse getRecent(Long userId, int page, int size) {
+    public SliceResponse<RecentPlaceResponse> getRecent(Long userId, int page, int size) {
         // PageRequest.of()는 0부터 시작
         var pageable = PageRequest.of(
                 Math.max(page, 1) - 1,
@@ -34,8 +35,8 @@ public class RecentPlaceService {
 
         var result = repository.findByUserIdOrderBySearchedAtDesc(userId, pageable);
 
-        List<RecentPlacePageResponse.Item> items = result.getContent().stream()
-                .map(e -> new RecentPlacePageResponse.Item(
+        List<RecentPlaceResponse> items = result.getContent().stream()
+                .map(e -> new RecentPlaceResponse(
                         e.getId(),
                         e.getPlaceId(),
                         e.getName(),
@@ -46,13 +47,7 @@ public class RecentPlaceService {
                 ))
                 .toList();
 
-        return new RecentPlacePageResponse(
-                items,
-                page,
-                size,
-                result.getTotalElements(),
-                result.getTotalPages()
-        );
+        return SliceResponse.of(items, page, size, result.hasNext());
     }
 
     @Transactional
