@@ -1,0 +1,55 @@
+name: 문서 개선 (Documentation Improvement)
+description: 문서 관련 문제나 개선 사항을 제안해주세요.
+title: "[DOCS] "
+labels: [documentation]
+assignees: []
+
+body:
+  - type: dropdown
+    id: doc-area
+    attributes:
+      label: 📁 문서 영역
+      options:
+        - README.md
+        - API 명세 (Server)
+        - AI 모델 / 추론 파이프라인
+        - Flutter 앱 설치 / 실행 가이드
+        - 환경 설정 (.env / Docker)
+        - 기타
+    validations:
+      required: true
+
+  - type: input
+    id: document-title
+    attributes:
+      label: 📄 대상 문서 경로
+      description: 개선이 필요한 문서의 경로를 작성해주세요.
+      placeholder: 예) README.md, server/docs/api-spec.md
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue-description
+    attributes:
+      label: ✏️ 문제점
+      description: 개선이 필요한 이유나 문제점을 구체적으로 설명해주세요.
+      placeholder: 예) AI 서버 실행 방법에 모델 파일 다운로드 절차가 누락되어 있습니다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: ✅ 개선 제안
+      description: 어떻게 수정하거나 보완하면 좋을지 제안해주세요.
+      placeholder: 예) models/ 디렉토리에 넣어야 할 파일 목록과 다운로드 경로를 README에 추가해주세요.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 💬 추가 내용
+      description: 관련 링크, 참고 자료 등 더 공유할 내용이 있다면 작성해주세요.
+    validations:
+      required: false
