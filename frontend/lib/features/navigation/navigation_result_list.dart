@@ -2,11 +2,46 @@ import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 
-class ResultList extends StatelessWidget {
+class ResultList extends StatefulWidget {
   final List<Map<String, dynamic>> results;
   final Function(Map<String, dynamic>) onTap;
+  final VoidCallback onLoadMore;
+  final bool isLoadingMore;
 
-  const ResultList({super.key, required this.results, required this.onTap});
+  const ResultList({
+    super.key,
+    required this.results,
+    required this.onTap,
+    required this.onLoadMore,
+    this.isLoadingMore = false,
+  });
+
+  @override
+  State<ResultList> createState() => _ResultListState();
+}
+
+class _ResultListState extends State<ResultList> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 80) {
+      widget.onLoadMore();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,12 +62,20 @@ class ResultList extends StatelessWidget {
       ),
       constraints: const BoxConstraints(maxHeight: 600),
       child: ListView.separated(
+        controller: _scrollController,
         shrinkWrap: true,
         physics: const BouncingScrollPhysics(),
-        itemCount: results.length,
+        itemCount: widget.results.length + (widget.isLoadingMore ? 1 : 0),
         separatorBuilder: (_, __) => const Divider(height: 1),
         itemBuilder: (context, index) {
-          final item = results[index];
+          if (index == widget.results.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final item = widget.results[index];
 
           return ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -58,7 +101,7 @@ class ResultList extends StatelessWidget {
                 color: ColorCollection.point,
               ),
             ),
-            onTap: () => onTap(item),
+            onTap: () => widget.onTap(item),
           );
         },
       ),

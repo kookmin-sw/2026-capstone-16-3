@@ -37,7 +37,8 @@ class PlaceService {
   }
 
   /// 장소 검색 API
-  static Future<List<Map<String, dynamic>>> searchPlaces({
+  /// 반환값: {'items': List<Map>, 'hasNext': bool}
+  static Future<Map<String, dynamic>> searchPlaces({
     required String query,
     required double lat,
     required double lng,
@@ -67,24 +68,29 @@ class PlaceService {
         final data = jsonDecode(response.body);
 
         if (data['success']) {
-          final items = data['data']['items'] as List;
-
-          return items.map<Map<String, dynamic>>((item) {
+          final pageData = data['data'];
+          final items = (pageData['items'] as List).map<Map<String, dynamic>>((item) {
             return {
+              'id': item['placeId'],
               'name': item['name'],
               'roadAddress': item['roadAddress'],
-              'distance': item['distanceMeters'],
-              'lat': item['latitude'],
-              'lng': item['longitude'],
+              'distance': item['distanceM'],
+              'latitude': item['lat'],
+              'longitude': item['lng'],
             };
           }).toList();
+
+          return {
+            'items': items,
+            'hasNext': pageData['hasNext'] as bool,
+          };
         }
       }
 
-      return [];
+      return {'items': <Map<String, dynamic>>[], 'hasNext': false};
     } catch (e) {
       debugPrint('🔴 [Place] searchPlaces error: $e');
-      return [];
+      return {'items': <Map<String, dynamic>>[], 'hasNext': false};
     }
   }
 
