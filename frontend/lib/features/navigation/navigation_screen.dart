@@ -86,12 +86,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
     }
 
     bool available = await speech.initialize(
-      onStatus: (status) => print('status: $status'),
-      onError: (error) => print('error: $error'),
+      onStatus: (status) => debugPrint('status: $status'),
+      onError: (error) => debugPrint('error: $error'),
     );
 
     if (!available) {
-      print("STT 사용 불가");
+      debugPrint("STT 사용 불가");
       return;
     }
 
