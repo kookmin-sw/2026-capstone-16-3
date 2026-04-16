@@ -34,6 +34,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
   String currentLocation = "현재 위치 불러오는 중...";
   String selectedLocation = "목적지를 선택해 주세요.";
   List<Map<String, dynamic>> searchResults = [];
+  bool _hasNext = false;
+  int _currentPage = 1;
+  bool _isLoadingMore = false;
   Timer? _debounce;
   Position? _currentPosition;
   bool isLoading = false;
@@ -83,12 +86,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
     }
 
     bool available = await speech.initialize(
-      onStatus: (status) => print('status: $status'),
-      onError: (error) => print('error: $error'),
+      onStatus: (status) => debugPrint('status: $status'),
+      onError: (error) => debugPrint('error: $error'),
     );
 
     if (!available) {
-      print("STT 사용 불가");
+      debugPrint("STT 사용 불가");
       return;
     }
 
@@ -175,11 +178,13 @@ class _NavigationScreenState extends State<NavigationScreen> {
     }
   }
 
-  /// 장소 검색 함수
+  /// 장소 검색 함수 (새 쿼리 입력 시 초기화)
   void searchPlaces() async {
     if (destinationController.text.trim().isEmpty) {
       setState(() {
         searchResults.clear();
+        _hasNext = false;
+        _currentPage = 1;
       });
       return;
     }
@@ -189,16 +194,21 @@ class _NavigationScreenState extends State<NavigationScreen> {
         _currentPosition = await getCurrentLocation();
       }
 
-      setState(() => isLoading = true);
+      setState(() {
+        isLoading = true;
+        _currentPage = 1;
+      });
 
-      final results = await PlaceService.searchPlaces(
+      final result = await PlaceService.searchPlaces(
         query: destinationController.text,
         lat: _currentPosition!.latitude,
         lng: _currentPosition!.longitude,
+        page: 1,
       );
 
       setState(() {
-        searchResults = results;
+        searchResults = List<Map<String, dynamic>>.from(result['items']);
+        _hasNext = result['hasNext'] as bool;
         isLoading = false;
       });
     } catch (e) {
@@ -206,6 +216,33 @@ class _NavigationScreenState extends State<NavigationScreen> {
       setState(() {
         isLoading = false;
       });
+    }
+  }
+
+  /// 추가 페이지 로드 (무한 스크롤)
+  Future<void> _loadMorePlaces() async {
+    if (!_hasNext || _isLoadingMore) return;
+
+    try {
+      setState(() => _isLoadingMore = true);
+
+      final nextPage = _currentPage + 1;
+      final result = await PlaceService.searchPlaces(
+        query: destinationController.text,
+        lat: _currentPosition!.latitude,
+        lng: _currentPosition!.longitude,
+        page: nextPage,
+      );
+
+      setState(() {
+        searchResults.addAll(List<Map<String, dynamic>>.from(result['items']));
+        _hasNext = result['hasNext'] as bool;
+        _currentPage = nextPage;
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      debugPrint('🔴 [Place] 추가 장소 로드 에러: $e');
+      setState(() => _isLoadingMore = false);
     }
   }
 
@@ -236,6 +273,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           selectedLocation = "목적지를 선택해 주세요.";
                           searchResults.clear();
                           isLoading = false;
+                          _hasNext = false;
+                          _currentPage = 1;
                         });
                       },
                       hintText: '목적지를 입력하세요.',
@@ -366,6 +405,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
                       : searchResults.isNotEmpty
                       ? ResultList(
                           results: searchResults,
+                          isLoadingMore: _isLoadingMore,
+                          onLoadMore: _loadMorePlaces,
                           onTap: (item) {
                             FocusManager.instance.primaryFocus?.unfocus();
 
