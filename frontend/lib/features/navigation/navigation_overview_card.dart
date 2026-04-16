@@ -89,43 +89,50 @@ class NavigationOverviewCard extends StatelessWidget {
             Divider(color: ColorCollection.point, thickness: 2),
             const SizedBox(height: 15),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Column(
-                  children: [
-                    Text(
-                      _formatTime(time),
-                      style: AppTextStyles.title2.copyWith(
-                        color: ColorCollection.point,
-                        fontSize: 20,
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _formatTime(time),
+                        style: AppTextStyles.title2.copyWith(
+                          color: ColorCollection.point,
+                          fontSize: 20,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '남은 시간',
-                      style: AppTextStyles.labelBold.copyWith(
-                        color: ColorCollection.point,
+                      const SizedBox(height: 8),
+                      Text(
+                        '남은 시간',
+                        style: AppTextStyles.labelBold.copyWith(
+                          color: ColorCollection.point,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                Column(
-                  children: [
-                    Text(
-                      _getStatusText(status),
-                      style: AppTextStyles.title2.copyWith(
-                        color: _getStatusColor(status),
-                        fontSize: 20,
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _getStatusText(status),
+                        style: AppTextStyles.title2.copyWith(
+                          color: _getStatusColor(status),
+                          fontSize: 20,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '경로 상태',
-                      style: AppTextStyles.labelBold.copyWith(
-                        color: ColorCollection.point,
+                      const SizedBox(height: 8),
+                      Text(
+                        '경로 상태',
+                        style: AppTextStyles.labelBold.copyWith(
+                          color: ColorCollection.point,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
