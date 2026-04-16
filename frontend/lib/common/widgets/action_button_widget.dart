@@ -67,10 +67,13 @@ class ActionButton extends StatelessWidget {
                 Icon(icon, color: iconColor, size: iconSize),
                 const SizedBox(width: 6),
               ],
-              Text(
-                label,
-                style: (textStyle ?? AppTextStyles.title2).copyWith(
-                  color: textColor,
+              Flexible(
+                child: Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  style: (textStyle ?? AppTextStyles.title2).copyWith(
+                    color: textColor,
+                  ),
                 ),
               ),
             ],
