@@ -8,6 +8,7 @@ import 'package:safepath/features/detection/detection_idle_view.dart';
 import 'package:safepath/model/detection_event.dart';
 import 'package:safepath/service/camera_service.dart';
 import 'package:safepath/service/detection_ws_service.dart';
+import 'package:safepath/service/tts_service.dart';
 
 class DetectionScreen extends StatefulWidget {
   final ValueChanged<bool>? onDetectingChanged;
@@ -68,6 +69,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
     await _wsSub?.cancel();
     _wsSub = null;
 
+    await TtsService().stop();
     await CameraService().stop();
     await DetectionWsService().disconnect();
 
@@ -90,6 +92,15 @@ class _DetectionScreenState extends State<DetectionScreen> {
       _obstacles.insert(0, event); // 최신 이벤트를 목록 맨 앞에
       if (_obstacles.length > 3) _obstacles.removeLast(); // 최근 3개 유지
     });
+
+    // high → 진행 중인 음성 중단 후 즉시 출력
+    // medium / low → 말하는 중이 아닐 때만 출력
+    if (event.guideText.isNotEmpty) {
+      TtsService().speak(
+        event.guideText,
+        interrupt: event.alertLevel == 'high',
+      );
+    }
   }
 
   @override

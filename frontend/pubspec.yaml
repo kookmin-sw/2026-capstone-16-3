@@ -44,6 +44,7 @@ dependencies:
   http_parser: ^4.0.0
   camera: ^0.11.0
   stomp_dart_client: ^2.0.0
+  flutter_tts: ^4.2.0
 
 dev_dependencies:
   flutter_test:
