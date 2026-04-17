@@ -1,8 +1,9 @@
 package com.example.capstone.domain.crosswalk.exception;
 
+import com.example.capstone.global.exception.ErrorCode;
 import org.springframework.http.HttpStatus;
 
-public enum CrosswalkErrorCode {
+public enum CrosswalkErrorCode implements ErrorCode {
 
     CROSSWALK_API_ERROR("CROSSWALK_API_ERROR", "횡단보도 공공데이터 조회에 실패했습니다.", HttpStatus.BAD_GATEWAY),
     CROSSWALK_API_TIMEOUT("CROSSWALK_API_TIMEOUT", "횡단보도 공공데이터 응답 시간이 초과되었습니다.", HttpStatus.GATEWAY_TIMEOUT),
@@ -49,15 +50,18 @@ public enum CrosswalkErrorCode {
         this.status = status;
     }
 
-    public String code() {
+    @Override
+    public String getCode() {
         return code;
     }
 
-    public String message() {
+    @Override
+    public String getMessage() {
         return message;
     }
 
-    public HttpStatus status() {
+    @Override
+    public HttpStatus getStatus() {
         return status;
     }
 

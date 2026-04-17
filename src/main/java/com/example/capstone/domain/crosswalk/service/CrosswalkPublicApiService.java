@@ -3,7 +3,6 @@ package com.example.capstone.domain.crosswalk.service;
 import com.example.capstone.domain.crosswalk.dto.external.CrosswalkApiItem;
 import com.example.capstone.domain.crosswalk.dto.external.CrosswalkApiResponse;
 import com.example.capstone.domain.crosswalk.exception.CrosswalkErrorCode;
-import com.example.capstone.global.api.ErrorDetail;
 import com.example.capstone.global.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -62,11 +61,7 @@ public class CrosswalkPublicApiService {
             log.error("횡단보도 공공데이터 응답 파싱 실패 - uri={}, rawBody={}", maskUri(uri), shorten(rawBody.toString()), e);
 
             throw business(
-                    CrosswalkErrorCode.CROSSWALK_API_DECODING_ERROR,
-                    ErrorDetail.of("uri", maskUri(uri)),
-                    ErrorDetail.of("exception", e.getClass().getSimpleName()),
-                    ErrorDetail.of("message", e.getOriginalMessage()),
-                    ErrorDetail.of("rawBody", shorten(rawBody.toString()))
+                    CrosswalkErrorCode.CROSSWALK_API_DECODING_ERROR
             );
         }
 
@@ -76,9 +71,7 @@ public class CrosswalkPublicApiService {
             log.error("횡단보도 공공데이터 응답 구조 이상 - uri={}, rawBody={}", maskUri(uri), shorten(rawBody.toString()));
 
             throw business(
-                    CrosswalkErrorCode.INVALID_CROSSWALK_API_RESPONSE,
-                    ErrorDetail.of("uri", maskUri(uri)),
-                    ErrorDetail.of("rawBody", shorten(rawBody.toString()))
+                    CrosswalkErrorCode.INVALID_CROSSWALK_API_RESPONSE
             );
         }
 
@@ -95,11 +88,7 @@ public class CrosswalkPublicApiService {
             }
 
             throw business(
-                    openApiError,
-                    ErrorDetail.of("uri", maskUri(uri)),
-                    ErrorDetail.of("resultCode", resultCode),
-                    ErrorDetail.of("resultMsg", resultMsg),
-                    ErrorDetail.of("rawBody", shorten(rawBody.toString()))
+                    openApiError
             );
         }
 
@@ -134,10 +123,7 @@ public class CrosswalkPublicApiService {
                                                 clientResponse.statusCode(), shorten(body));
 
                                         return business(
-                                                CrosswalkErrorCode.CROSSWALK_API_HTTP_4XX,
-                                                ErrorDetail.of("uri", maskUri(uri)),
-                                                ErrorDetail.of("httpStatus", clientResponse.statusCode().value()),
-                                                ErrorDetail.of("rawBody", shorten(body))
+                                                CrosswalkErrorCode.CROSSWALK_API_HTTP_4XX
                                         );
                                     }))
                     .onStatus(HttpStatusCode::is5xxServerError, clientResponse ->
@@ -148,10 +134,7 @@ public class CrosswalkPublicApiService {
                                                 clientResponse.statusCode(), shorten(body));
 
                                         return business(
-                                                CrosswalkErrorCode.CROSSWALK_API_HTTP_5XX,
-                                                ErrorDetail.of("uri", maskUri(uri)),
-                                                ErrorDetail.of("httpStatus", clientResponse.statusCode().value()),
-                                                ErrorDetail.of("rawBody", shorten(body))
+                                                CrosswalkErrorCode.CROSSWALK_API_HTTP_5XX
                                         );
                                     }))
                     .bodyToMono(String.class)
@@ -166,20 +149,13 @@ public class CrosswalkPublicApiService {
             if (root instanceof TimeoutException) {
                 log.error("횡단보도 공공데이터 타임아웃 - uri={}", maskUri(uri), e);
                 throw business(
-                        CrosswalkErrorCode.CROSSWALK_API_TIMEOUT,
-                        ErrorDetail.of("uri", maskUri(uri)),
-                        ErrorDetail.of("exception", e.getClass().getSimpleName()),
-                        ErrorDetail.of("cause", root.getClass().getSimpleName()),
-                        ErrorDetail.of("message", root.getMessage())
+                        CrosswalkErrorCode.CROSSWALK_API_TIMEOUT
                 );
             }
 
             log.error("횡단보도 공공데이터 호출 실패 - uri={}", maskUri(uri), e);
             throw business(
-                    CrosswalkErrorCode.CROSSWALK_API_ERROR,
-                    ErrorDetail.of("uri", maskUri(uri)),
-                    ErrorDetail.of("exception", e.getClass().getSimpleName()),
-                    ErrorDetail.of("message", e.getMessage())
+                    CrosswalkErrorCode.CROSSWALK_API_ERROR
             );
         }
 
@@ -187,8 +163,7 @@ public class CrosswalkPublicApiService {
 
         if (rawBody == null || rawBody.isBlank()) {
             throw business(
-                    CrosswalkErrorCode.CROSSWALK_API_EMPTY_BODY,
-                    ErrorDetail.of("uri", maskUri(uri))
+                    CrosswalkErrorCode.CROSSWALK_API_EMPTY_BODY
             );
         }
 
@@ -199,11 +174,7 @@ public class CrosswalkPublicApiService {
                     maskUri(uri), shorten(rawBody), e);
 
             throw business(
-                    CrosswalkErrorCode.CROSSWALK_API_DECODING_ERROR,
-                    ErrorDetail.of("uri", maskUri(uri)),
-                    ErrorDetail.of("exception", e.getClass().getSimpleName()),
-                    ErrorDetail.of("message", e.getOriginalMessage()),
-                    ErrorDetail.of("rawBody", shorten(rawBody))
+                    CrosswalkErrorCode.CROSSWALK_API_DECODING_ERROR
             );
         }
     }
@@ -221,13 +192,8 @@ public class CrosswalkPublicApiService {
                 .toUriString();
     }
 
-    private BusinessException business(CrosswalkErrorCode errorCode, ErrorDetail... details) {
-        return new BusinessException(
-                errorCode.code(),
-                errorCode.message(),
-                errorCode.status(),
-                List.of(details)
-        );
+    private BusinessException business(CrosswalkErrorCode errorCode) {
+        return new BusinessException(errorCode);
     }
 
     private String maskUri(String uri) {

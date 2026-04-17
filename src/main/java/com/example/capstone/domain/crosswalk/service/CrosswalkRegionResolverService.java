@@ -1,7 +1,6 @@
 package com.example.capstone.domain.crosswalk.service;
 
 import com.example.capstone.domain.crosswalk.exception.CrosswalkErrorCode;
-import com.example.capstone.global.api.ErrorDetail;
 import com.example.capstone.global.exception.BusinessException;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -51,91 +50,32 @@ public class CrosswalkRegionResolverService {
                     ? CrosswalkErrorCode.REGION_RESOLVE_HTTP_4XX
                     : CrosswalkErrorCode.REGION_RESOLVE_HTTP_5XX;
 
-            throw new BusinessException(
-                    errorCode.code(),
-                    errorCode.message(),
-                    errorCode.status(),
-                    List.of(
-                            ErrorDetail.of("uri", uri),
-                            ErrorDetail.of("httpStatus", e.getStatusCode()),
-                            ErrorDetail.of("responseBody", shorten(e.getResponseBodyAsString()))
-                    )
-            );
+            throw new BusinessException(errorCode);
         } catch (WebClientRequestException e) {
             Throwable cause = e.getCause();
             if (cause instanceof TimeoutException) {
-                throw new BusinessException(
-                        CrosswalkErrorCode.REGION_RESOLVE_TIMEOUT.code(),
-                        CrosswalkErrorCode.REGION_RESOLVE_TIMEOUT.message(),
-                        CrosswalkErrorCode.REGION_RESOLVE_TIMEOUT.status(),
-                        List.of(
-                                ErrorDetail.of("uri", uri),
-                                ErrorDetail.of("cause", cause.getClass().getSimpleName())
-                        )
-                );
+                throw new BusinessException(CrosswalkErrorCode.REGION_RESOLVE_TIMEOUT);
             }
 
-            throw new BusinessException(
-                    CrosswalkErrorCode.REGION_RESOLVE_FAILED.code(),
-                    CrosswalkErrorCode.REGION_RESOLVE_FAILED.message(),
-                    CrosswalkErrorCode.REGION_RESOLVE_FAILED.status(),
-                    List.of(
-                            ErrorDetail.of("uri", uri),
-                            ErrorDetail.of("cause", cause != null ? cause.getClass().getSimpleName() : e.getClass().getSimpleName()),
-                            ErrorDetail.of("message", e.getMessage())
-                    )
-            );
+            throw new BusinessException(CrosswalkErrorCode.REGION_RESOLVE_FAILED);
         } catch (Exception e) {
-            throw new BusinessException(
-                    CrosswalkErrorCode.REGION_RESOLVE_FAILED.code(),
-                    CrosswalkErrorCode.REGION_RESOLVE_FAILED.message(),
-                    CrosswalkErrorCode.REGION_RESOLVE_FAILED.status(),
-                    List.of(
-                            ErrorDetail.of("uri", uri),
-                            ErrorDetail.of("cause", e.getClass().getSimpleName()),
-                            ErrorDetail.of("message", e.getMessage())
-                    )
-            );
+            throw new BusinessException(CrosswalkErrorCode.REGION_RESOLVE_FAILED);
         }
 
         if (response == null || !(response.get("documents") instanceof List<?> documents) || documents.isEmpty()) {
-            throw new BusinessException(
-                    CrosswalkErrorCode.REGION_NOT_FOUND.code(),
-                    CrosswalkErrorCode.REGION_NOT_FOUND.message(),
-                    CrosswalkErrorCode.REGION_NOT_FOUND.status(),
-                    List.of(
-                            ErrorDetail.of("uri", uri),
-                            ErrorDetail.of("documents", response != null ? response.get("documents") : null)
-                    )
-            );
+            throw new BusinessException(CrosswalkErrorCode.REGION_NOT_FOUND);
         }
 
         Object first = documents.getFirst();
         if (!(first instanceof Map<?, ?> document)) {
-            throw new BusinessException(
-                    CrosswalkErrorCode.INVALID_REGION_RESPONSE.code(),
-                    CrosswalkErrorCode.INVALID_REGION_RESPONSE.message(),
-                    CrosswalkErrorCode.INVALID_REGION_RESPONSE.status(),
-                    List.of(
-                            ErrorDetail.of("uri", uri),
-                            ErrorDetail.of("firstDocumentType", first != null ? first.getClass().getName() : null)
-                    )
-            );
+            throw new BusinessException(CrosswalkErrorCode.INVALID_REGION_RESPONSE);
         }
 
         String region1DepthName = stringValue(document.get("region_1depth_name"));
         String region2DepthName = stringValue(document.get("region_2depth_name"));
 
         if (region1DepthName == null || region2DepthName == null) {
-            throw new BusinessException(
-                    CrosswalkErrorCode.INVALID_REGION_RESPONSE.code(),
-                    "행정구역 필수 값이 누락되었습니다.",
-                    CrosswalkErrorCode.INVALID_REGION_RESPONSE.status(),
-                    List.of(
-                            ErrorDetail.of("region_1depth_name", region1DepthName),
-                            ErrorDetail.of("region_2depth_name", region2DepthName)
-                    )
-            );
+            throw new BusinessException(CrosswalkErrorCode.INVALID_REGION_RESPONSE);
         }
 
         return new RegionInfo(normalizeCtprvn(region1DepthName), normalizeSigngu(region2DepthName));
@@ -151,13 +91,6 @@ public class CrosswalkRegionResolverService {
 
     private String normalizeSigngu(String value) {
         return value.trim();
-    }
-
-    private String shorten(String value) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() > 1000 ? value.substring(0, 1000) + "...(truncated)" : value;
     }
 
     public record RegionInfo(String ctprvnNm, String signguNm) {
