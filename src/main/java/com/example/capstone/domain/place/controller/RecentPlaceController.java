@@ -1,10 +1,12 @@
 package com.example.capstone.domain.place.controller;
 
-import com.example.capstone.domain.place.dto.response.RecentPlaceDeleteAllResponse;
-import com.example.capstone.domain.place.dto.response.RecentPlaceDeleteResponse;
-import com.example.capstone.domain.place.dto.response.RecentPlacePageResponse;
+import com.example.capstone.domain.place.dto.response.SliceResponse;
+import com.example.capstone.domain.place.dto.response.recent.RecentPlaceDeleteAllResponse;
+import com.example.capstone.domain.place.dto.response.recent.RecentPlaceDeleteResponse;
+import com.example.capstone.domain.place.dto.response.recent.RecentPlaceResponse;
 import com.example.capstone.domain.place.service.RecentPlaceService;
 import com.example.capstone.global.api.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Validated
 @RestController
+@Tag(name = "[최근 장소]")
 @RequestMapping("/api/users/me/recent")
 @RequiredArgsConstructor
 public class RecentPlaceController {
@@ -21,7 +24,7 @@ public class RecentPlaceController {
     private final RecentPlaceService recentPlaceService;
 
     @GetMapping
-    public ApiResponse<RecentPlacePageResponse> getRecent(
+    public ApiResponse<SliceResponse<RecentPlaceResponse>> getRecent(
             @AuthenticationPrincipal Long userId,
             @RequestParam(defaultValue = "1") @Min(1) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size
