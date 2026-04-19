@@ -28,7 +28,7 @@ public class CrosswalkPublicApiService {
     @Value("${public-data.crosswalk.base-url}")
     private String baseUrl;
 
-    @Value("${public-data.crosswalk.service-key}")
+    @Value("${public-data.crosswalk.app-key}")
     private String serviceKey;
 
     @Value("${public-data.crosswalk.default-page-size:100}")
