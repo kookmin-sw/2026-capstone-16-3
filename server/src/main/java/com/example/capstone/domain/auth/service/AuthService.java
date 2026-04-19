@@ -3,6 +3,8 @@ package com.example.capstone.domain.auth.service;
 import com.example.capstone.domain.auth.dto.response.KakaoUserResponse;
 import com.example.capstone.domain.auth.dto.response.LoginResponse;
 import com.example.capstone.domain.auth.entity.RefreshToken;
+import com.example.capstone.domain.auth.exception.AuthErrorCode;
+import com.example.capstone.domain.auth.exception.AuthException;
 import com.example.capstone.domain.auth.repository.RefreshTokenRepository;
 import com.example.capstone.domain.user.entity.User;
 import com.example.capstone.domain.user.entity.UserSetting;
@@ -10,7 +12,6 @@ import com.example.capstone.domain.user.exception.UserErrorCode;
 import com.example.capstone.domain.user.exception.UserException;
 import com.example.capstone.domain.user.repository.UserRepository;
 import com.example.capstone.domain.user.repository.UserSettingRepository;
-import com.example.capstone.global.exception.BusinessException;
 import com.example.capstone.global.security.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -72,18 +73,18 @@ public class AuthService {
     @Transactional
     public LoginResponse reissue(String refreshToken) {
         if (!jwtProvider.validateToken(refreshToken)) {
-            throw new BusinessException("AUTH_INVALID_TOKEN", "토큰이 유효하지 않습니다.");
+            throw new AuthException(AuthErrorCode.AUTH_INVALID_TOKEN);
         }
 
         if (!"REFRESH".equals(jwtProvider.getTokenType(refreshToken))) {
-            throw new BusinessException("AUTH_TOKEN_TYPE", "Refresh 토큰이 필요합니다.");
+            throw new AuthException(AuthErrorCode.AUTH_TOKEN_TYPE);
         }
 
         RefreshToken savedToken = refreshTokenRepository.findByToken(refreshToken)
-                .orElseThrow(() -> new BusinessException("AUTH_REFRESH_NOT_FOUND", "Refresh 토큰이 존재하지 않습니다."));
+                .orElseThrow(() -> new AuthException(AuthErrorCode.AUTH_REFRESH_NOT_FOUND));
 
         if (savedToken.getExpiryDate().isBefore(LocalDateTime.now())) {
-            throw new BusinessException("AUTH_REFRESH_EXPIRED", "만료된 Refresh 토큰입니다.");
+            throw new AuthException(AuthErrorCode.AUTH_REFRESH_EXPIRED);
         }
 
         User user = savedToken.getUser();

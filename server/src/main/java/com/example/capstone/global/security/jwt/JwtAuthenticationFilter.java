@@ -1,5 +1,6 @@
 package com.example.capstone.global.security.jwt;
 
+import com.example.capstone.domain.auth.exception.AuthErrorCode;
 import com.example.capstone.global.api.ApiError;
 import com.example.capstone.global.api.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,14 +39,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (token != null) {
             // 1) 토큰 유효성(서명/만료) 체크
             if (!jwtProvider.validateToken(token)) {
-                writeUnauthorized(response, "AUTH_INVALID_TOKEN", "토큰이 유효하지 않습니다.");
+                writeUnauthorized(response, AuthErrorCode.AUTH_INVALID_TOKEN);
                 return;
             }
 
             // 2) Access 토큰만 인증에 사용하도록 타입 체크
             String type = jwtProvider.getTokenType(token);
             if (!"ACCESS".equals(type)) {
-                writeUnauthorized(response, "AUTH_TOKEN_TYPE", "Access 토큰이 필요합니다.");
+                writeUnauthorized(response, AuthErrorCode.AUTH_ACCESS_TOKEN_REQUIRE);
                 return;
             }
 
@@ -75,12 +76,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         return header.substring(7);
     }
 
-    private void writeUnauthorized(HttpServletResponse response, String code, String message) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    private void writeUnauthorized(HttpServletResponse response, AuthErrorCode errorCode) throws IOException {
+        response.setStatus(errorCode.getStatus().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
 
-        ApiError error = new ApiError(code, message, null);
+        ApiError error = new ApiError(
+                errorCode.getCode(),
+                errorCode.getMessage(),
+                null
+        );
+
         ApiResponse<Void> body = ApiResponse.fail(error);
 
         response.getWriter().write(objectMapper.writeValueAsString(body));
