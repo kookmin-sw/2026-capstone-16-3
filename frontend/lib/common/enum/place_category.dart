@@ -23,6 +23,19 @@ extension PlaceCategoryExtension on PlaceCategory {
     }
   }
 
+  // BE 전송용 카테고리 값
+  String get apiValue {
+    switch (this) {
+      case PlaceCategory.home:       return 'HOME';
+      case PlaceCategory.work:       return 'WORK';
+      case PlaceCategory.school:     return 'SCHOOL';
+      case PlaceCategory.restaurant: return 'RESTAURANT_CAFE';
+      case PlaceCategory.mart:       return 'MART_CONVENIENCE';
+      case PlaceCategory.hospital:   return 'HOSPITAL_PHARMACY';
+      case PlaceCategory.etc:        return 'ETC';
+    }
+  }
+
   // 아이콘
   IconData get icon {
     switch (this) {
