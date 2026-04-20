@@ -94,6 +94,121 @@ class PlaceService {
     }
   }
 
+  /// 장소 상세 조회 API (호출 시 최근 검색 목록에 자동 저장)
+  static Future<void> getPlaceDetail({required String placeId}) async {
+    try {
+      final token = await TokenStorage().accessToken;
+
+      final uri = Uri.parse('$_baseUrl/api/places/$placeId');
+      debugPrint('🟡 [Place] 장소 상세 조회 요청: GET $uri');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      debugPrint('📥 statusCode: ${response.statusCode}');
+      debugPrint('📥 body: ${response.body}');
+    } catch (e) {
+      debugPrint('🔴 [Place] getPlaceDetail error: $e');
+    }
+  }
+
+  /// 최근 검색 장소 조회 API
+  /// 반환값: {'items': List<Map>, 'totalItems': int, 'totalPages': int}
+  static Future<Map<String, dynamic>> getRecentPlaces({
+    int page = 1,
+    int size = 20,
+  }) async {
+    try {
+      final token = await TokenStorage().accessToken;
+
+      final uri = Uri.parse('$_baseUrl/api/users/me/recent').replace(
+        queryParameters: {'page': page.toString(), 'size': size.toString()},
+      );
+      debugPrint('🟡 [Place] 최근 검색 장소 조회 요청: GET $uri');
+
+      final response = await http.get(
+        uri,
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
+      );
+
+      debugPrint('📥 statusCode: ${response.statusCode}');
+      debugPrint('📥 body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final pageData = data['data'];
+          final items = (pageData['items'] as List).map<Map<String, dynamic>>((
+            item,
+          ) {
+            return {
+              'id': item['id'],
+              'placeId': item['placeId'],
+              'name': item['name'],
+              'address': item['address'],
+              'lat': item['lat'],
+              'lng': item['lng'],
+              'searchedAt': item['searchedAt'],
+            };
+          }).toList();
+
+          return {
+            'items': items,
+            'hasNext': pageData['hasNext'] as bool,
+            'nextPage': (pageData['nextPage'] ?? 0) as int,
+          };
+        }
+      }
+
+      return {
+        'items': <Map<String, dynamic>>[],
+        'hasNext': false,
+        'nextPage': 0,
+      };
+    } catch (e) {
+      debugPrint('🔴 [Place] getRecentPlaces error: $e');
+      return {
+        'items': <Map<String, dynamic>>[],
+        'hasNext': false,
+        'nextPage': 0,
+      };
+    }
+  }
+
+  /// 최근 검색 장소 전체 삭제 API
+  static Future<bool> deleteAllRecentPlaces() async {
+    try {
+      final token = await TokenStorage().accessToken;
+
+      final uri = Uri.parse('$_baseUrl/api/users/me/recent');
+      debugPrint('🟡 [Place] 최근 검색 장소 전체 삭제 요청: DELETE $uri');
+
+      final response = await http.delete(
+        uri,
+        headers: {
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+
+      debugPrint('📥 statusCode: ${response.statusCode}');
+      debugPrint('📥 body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['success'] == true;
+      }
+
+      return false;
+    } catch (e) {
+      debugPrint('🔴 [Place] deleteAllRecentPlaces error: $e');
+      return false;
+    }
+  }
+
   /// 즐겨찾기 장소 조회 API
   /// 반환값: {'items': List<Map>, 'hasNext': bool, 'nextPage': int}
   static Future<Map<String, dynamic>> getFavorites({
@@ -169,9 +284,7 @@ class PlaceService {
 
       final response = await http.delete(
         uri,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
+        headers: {if (token != null) 'Authorization': 'Bearer $token'},
       );
 
       debugPrint('📥 statusCode: ${response.statusCode}');
