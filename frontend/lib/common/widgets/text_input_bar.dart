@@ -4,6 +4,7 @@ import 'package:safepath/common/theme/text_styles.dart';
 
 class TextInputBar extends StatelessWidget {
   final TextEditingController controller; // 텍스트 컨트롤러
+  final FocusNode? focusNode;
   final String? hintText; // 힌트 텍스트
   final bool showSearchIcon; // 검색 아이콘 표시 여부 (default : true)
   final VoidCallback? micTap; // 음성 텍스트 입력 아이콘
@@ -13,6 +14,7 @@ class TextInputBar extends StatelessWidget {
   const TextInputBar({
     super.key,
     required this.controller,
+    this.focusNode,
     this.hintText,
     this.showSearchIcon = true,
     this.micTap,
@@ -28,6 +30,7 @@ class TextInputBar extends StatelessWidget {
         Expanded(
           child: TextField(
             controller: controller,
+            focusNode: focusNode,
             style: AppTextStyles.labelRegular.copyWith(
               color: ColorCollection.point,
             ),
