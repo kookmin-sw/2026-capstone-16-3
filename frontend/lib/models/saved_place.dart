@@ -2,23 +2,26 @@ import 'package:safepath/common/enum/place_category.dart';
 
 /// 저장된 장소 데이터 처리
 class SavedPlace {
+  final int id; // 즐겨찾기 ID
   final String label; // 장소 이름
   final String location; // 주소
   final PlaceCategory category; // 카테고리
 
   const SavedPlace({
+    required this.id,
     required this.label,
     required this.location,
     required this.category,
   });
 
-  /// JSON -> Model(SavedPlace 객체) 변환
+  /// BE 응답 JSON -> Model 변환
   factory SavedPlace.fromJSON(Map<String, dynamic> json) {
     return SavedPlace(
-      label: json['label'],
-      location: json['location'],
+      id: json['id'] as int,
+      label: json['alias'] as String,
+      location: json['address'] as String,
       category: PlaceCategory.values.firstWhere(
-        (e) => e.name == json['category'],
+        (e) => e.apiValue == json['category'],
         orElse: () => PlaceCategory.etc,
       ),
     );

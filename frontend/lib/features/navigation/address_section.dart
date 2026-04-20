@@ -6,6 +6,7 @@ import 'package:safepath/features/navigation/current_place_widget.dart';
 
 class AddressSection extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode focusNode;
   final String currentLocation;
   final Function(String) onSubmitted;
   final VoidCallback onClear;
@@ -14,6 +15,7 @@ class AddressSection extends StatelessWidget {
   const AddressSection({
     super.key,
     required this.controller,
+    required this.focusNode,
     required this.currentLocation,
     required this.onSubmitted,
     required this.onClear,
@@ -35,6 +37,7 @@ class AddressSection extends StatelessWidget {
         const SizedBox(height: 15),
         TextInputBar(
           controller: controller,
+          focusNode: focusNode,
           onClear: onClear,
           hintText: '목적지를 입력하세요.',
           micTap: onMicTap,
