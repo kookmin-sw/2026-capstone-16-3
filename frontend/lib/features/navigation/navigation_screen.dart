@@ -9,7 +9,7 @@ import 'package:safepath/features/navigation/current_place_widget.dart';
 import 'package:safepath/features/navigation/more_button.dart';
 import 'package:safepath/features/navigation/navigation_result_list.dart';
 import 'package:safepath/features/navigation/saved_place_widget.dart';
-import 'package:safepath/data/saved_place_dummy.dart';
+import 'package:safepath/models/saved_place.dart';
 import 'package:safepath/routes/app_router.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:geolocator/geolocator.dart';
@@ -40,11 +40,13 @@ class _NavigationScreenState extends State<NavigationScreen> {
   Timer? _debounce;
   Position? _currentPosition;
   bool isLoading = false;
+  List<SavedPlace> _savedPlaces = [];
 
   @override
   void initState() {
     super.initState();
     speech.initialize();
+    _loadSavedPlaces();
     destinationController.addListener(() {
       setState(() {});
 
@@ -59,6 +61,18 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
     initCurrentPosition();
     loadLocation();
+  }
+
+  Future<void> _loadSavedPlaces() async {
+    try {
+      final result = await PlaceService.getFavorites();
+      final items = (result['items'] as List<Map<String, dynamic>>)
+          .map((item) => SavedPlace.fromJSON(item))
+          .toList();
+      setState(() => _savedPlaces = items);
+    } catch (e) {
+      debugPrint('🔴 [Navigation] 저장된 장소 로드 에러: $e');
+    }
   }
 
   Future<void> initCurrentPosition() async {
@@ -321,36 +335,60 @@ class _NavigationScreenState extends State<NavigationScreen> {
                               AppRouter.savedplace,
                             );
 
+                            _loadSavedPlaces();
                             if (place != null) {
                               FocusManager.instance.primaryFocus?.unfocus();
+                              _isSelecting = true;
                               setState(() {
                                 destinationController.text =
                                     (place as dynamic).label;
                                 selectedLocation = (place as dynamic).location;
                               });
+                              Future.delayed(
+                                const Duration(milliseconds: 300),
+                                () => _isSelecting = false,
+                              );
                             }
                           },
                         ),
                       ],
                     ),
                     const SizedBox(height: 25),
-                    ...savedPlaces.take(2).map((place) {
-                      return Padding(
+                    if (_savedPlaces.isEmpty)
+                      Padding(
                         padding: const EdgeInsets.only(bottom: 25),
-                        child: SavedPlaceWidget(
-                          label: place.label,
-                          location: place.location,
-                          category: place.category,
-                          onTap: () {
-                            FocusManager.instance.primaryFocus?.unfocus();
-                            setState(() {
-                              destinationController.text = place.label;
-                              selectedLocation = place.location;
-                            });
-                          },
+                        child: Center(
+                          child: Text(
+                            '저장된 장소가 없습니다',
+                            style: AppTextStyles.labelRegular.copyWith(
+                              color: ColorCollection.point,
+                            ),
+                          ),
                         ),
-                      );
-                    }).toList(),
+                      )
+                    else
+                      ..._savedPlaces.take(2).map((place) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 25),
+                          child: SavedPlaceWidget(
+                            label: place.label,
+                            location: place.location,
+                            category: place.category,
+                            onTap: () {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              _isSelecting = true;
+                              setState(() {
+                                destinationController.text = place.label;
+                                selectedLocation = place.location;
+                              });
+                              Future.delayed(
+                                const Duration(milliseconds: 300),
+                                () => _isSelecting = false,
+                              );
+                            },
+                          ),
+                        );
+                      }),
 
                     /// 최근 장소 섹션
                     Text(
