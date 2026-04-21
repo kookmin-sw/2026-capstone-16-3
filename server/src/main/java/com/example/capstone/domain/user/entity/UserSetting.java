@@ -22,8 +22,9 @@ public class UserSetting extends BaseEntity {
     private User user;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(name = "sentence_length", nullable = false)
-    private Integer sentenceLength = 50;
+    private SentenceLength sentenceLength = SentenceLength.MEDIUM;
 
     @Builder.Default
     @Column(name = "vibration_strength", nullable = false)
@@ -34,7 +35,7 @@ public class UserSetting extends BaseEntity {
     private Boolean voiceGuidanceEnabled = true;
 
     public void update(
-            Integer sentenceLength,
+            SentenceLength sentenceLength,
             Integer vibrationStrength,
             Boolean voiceGuidanceEnabled
     ) {
