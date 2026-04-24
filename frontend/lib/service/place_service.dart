@@ -26,7 +26,7 @@ class PlaceService {
         final data = jsonDecode(response.body);
 
         if (data['success']) {
-          return data['data']['roadAddress'];
+          return data['data']['roadAddress'] ?? data['data']['address'];
         }
       }
 
