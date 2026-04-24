@@ -70,6 +70,7 @@ class NavigationOverviewCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               _formatDistance(distance),
@@ -80,14 +81,14 @@ class NavigationOverviewCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '남은 거리',
+              '총 거리',
               style: AppTextStyles.labelBold.copyWith(
                 color: ColorCollection.point,
               ),
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 8),
             Divider(color: ColorCollection.point, thickness: 2),
-            const SizedBox(height: 15),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -104,7 +105,7 @@ class NavigationOverviewCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '남은 시간',
+                        '총 소요 시간',
                         style: AppTextStyles.labelBold.copyWith(
                           color: ColorCollection.point,
                         ),

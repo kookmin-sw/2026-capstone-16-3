@@ -6,12 +6,16 @@ class SavedPlace {
   final String label; // 장소 이름
   final String location; // 주소
   final PlaceCategory category; // 카테고리
+  final double? lat;
+  final double? lng;
 
   const SavedPlace({
     required this.id,
     required this.label,
     required this.location,
     required this.category,
+    this.lat,
+    this.lng,
   });
 
   /// BE 응답 JSON -> Model 변환
@@ -24,6 +28,8 @@ class SavedPlace {
         (e) => e.apiValue == json['category'],
         orElse: () => PlaceCategory.etc,
       ),
+      lat: (json['lat'] as num?)?.toDouble(),
+      lng: (json['lng'] as num?)?.toDouble(),
     );
   }
 
