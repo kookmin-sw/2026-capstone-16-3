@@ -40,7 +40,7 @@ import 'package:safepath/layout/layout.dart';
 ///
 /// ========================================================================
 class AppRouter {
-  static const String signin = '/';
+  static const String signin = '/signin';
   static const String home = '/home';
   static const String settings = '/settings';
   static const String userinfo = '/settings/userinfo';
