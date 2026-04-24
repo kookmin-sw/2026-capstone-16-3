@@ -9,6 +9,7 @@ import 'package:safepath/common/widgets/route_debug_overlay.dart';
 import 'package:safepath/features/navigation/navigation_step_card.dart';
 import 'package:safepath/features/navigation/navigation_overview_card.dart';
 import 'package:safepath/models/route_result.dart';
+import 'package:safepath/service/navigation_service.dart';
 import 'dart:ui' show DisplayFeatureType;
 import 'package:flutter/services.dart';
 
@@ -22,13 +23,26 @@ class NavigationIngScreen extends StatefulWidget {
 class _NavigationIngScreenState extends State<NavigationIngScreen> {
   RouteResult? _route;
   List<RouteStep> _pointSteps = [];
+  RouteStep? _destinationStep;
+  List<LatLng> _routePath = [];
   int _currentStepIndex = 0;
   StreamSubscription<Position>? _positionSub;
   bool _routeLoaded = false;
 
+  // 목적지 정보 (재탐색 시 사용)
+  double? _endX;
+  double? _endY;
+  String _endName = '';
+
   static const double _arrivalThresholdMeters = 10;
   bool _hasBeenOutsideThreshold = false;
   double? _debugDistance;
+
+  // 경로 이탈 감지
+  static const double _deviationThresholdMeters = 30.0;
+  static const int _deviationCountThreshold = 3;
+  int _deviationCount = 0;
+  bool _isRecalculating = false;
 
   @override
   void initState() {
@@ -43,20 +57,49 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_routeLoaded) {
-      _route = ModalRoute.of(context)?.settings.arguments as RouteResult?;
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        _route = args['route'] as RouteResult?;
+        _endX = args['endX'] as double?;
+        _endY = args['endY'] as double?;
+        _endName = (args['endName'] as String?) ?? '';
+      } else {
+        _route = args as RouteResult?;
+      }
       if (_route != null) {
-        _pointSteps = _route!.steps
-            .where(
-              (s) =>
-                  s.type == 'POINT' &&
-                  s.pointType != 'SP' &&
-                  s.pointType != 'EP',
-            )
-            .toList();
+        _loadRoute(_route!);
         _startLocationTracking();
         _routeLoaded = true;
       }
     }
+  }
+
+  void _loadRoute(RouteResult route) {
+    _pointSteps = route.steps
+        .where(
+          (s) =>
+              s.type == 'POINT' && s.pointType != 'SP' && s.pointType != 'EP',
+        )
+        .toList();
+    _destinationStep = route.steps
+        .where((s) => s.pointType == 'EP')
+        .firstOrNull;
+    _routePath = route.steps
+        .where((s) => s.type == 'LINE')
+        .expand((s) => s.path ?? <LatLng>[])
+        .toList();
+    debugPrint(
+      '📍 [Nav] 전체 step 수: ${_pointSteps.length}, path 좌표 수: ${_routePath.length}',
+    );
+    for (int i = 0; i < _pointSteps.length; i++) {
+      final s = _pointSteps[i];
+      debugPrint(
+        '  [$i] turnType=${s.turnType} (${s.latitude}, ${s.longitude}) ${s.description}',
+      );
+    }
+    debugPrint(
+      '  [목적지] (${_destinationStep?.latitude}, ${_destinationStep?.longitude})',
+    );
   }
 
   void _startLocationTracking() {
@@ -82,15 +125,83 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     );
 
     setState(() => _debugDistance = distance);
+    debugPrint(
+      '📍 [Nav] step $_currentStepIndex/${_pointSteps.length - 1} | '
+      '남은 거리: ${distance.toStringAsFixed(1)}m | '
+      '${_hasBeenOutsideThreshold ? "진행 중" : "대기 중"} | '
+      '${_pointSteps[_currentStepIndex].description}',
+    );
 
     if (distance >= _arrivalThresholdMeters) {
       _hasBeenOutsideThreshold = true;
     } else if (_hasBeenOutsideThreshold) {
-      // 멀어졌다가 다시 가까워질 때만 다음 step으로 진행
       setState(() {
         _currentStepIndex++;
         _hasBeenOutsideThreshold = false;
       });
+    }
+
+    _checkDeviation(position);
+  }
+
+  void _checkDeviation(Position position) {
+    if (_routePath.isEmpty || _isRecalculating) return;
+
+    double minDist = double.infinity;
+    for (final point in _routePath) {
+      final d = Geolocator.distanceBetween(
+        position.latitude,
+        position.longitude,
+        point.latitude,
+        point.longitude,
+      );
+      if (d < minDist) minDist = d;
+    }
+
+    if (minDist > _deviationThresholdMeters) {
+      _deviationCount++;
+      debugPrint(
+        '⚠️ [Nav] 경로 이탈: ${minDist.toStringAsFixed(1)}m ($_deviationCount/$_deviationCountThreshold회)',
+      );
+      if (_deviationCount >= _deviationCountThreshold) {
+        _recalculateRoute(position);
+      }
+    } else {
+      if (_deviationCount > 0) _deviationCount = 0;
+    }
+  }
+
+  Future<void> _recalculateRoute(Position position) async {
+    if (_isRecalculating || _endX == null || _endY == null) return;
+
+    setState(() => _isRecalculating = true);
+    _deviationCount = 0;
+    debugPrint('🔄 [Nav] 경로 재탐색 시작...');
+
+    try {
+      final result = await NavigationService.getRoute(
+        startX: position.longitude,
+        startY: position.latitude,
+        endX: _endX!,
+        endY: _endY!,
+        startName: '현재 위치',
+        endName: _endName,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _route = result;
+        _currentStepIndex = 0;
+        _hasBeenOutsideThreshold = false;
+        _debugDistance = null;
+        _isRecalculating = false;
+      });
+      _loadRoute(result);
+      debugPrint('✅ [Nav] 경로 재탐색 완료 - 새 step 수: ${_pointSteps.length}');
+    } catch (e) {
+      debugPrint('🔴 [Nav] 경로 재탐색 실패: $e');
+      if (mounted) setState(() => _isRecalculating = false);
     }
   }
 
@@ -187,7 +298,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                                       currentStep.turnType,
                                     ),
                                     instruction: currentStep.description ?? '',
-                                    distance: _route?.totalDistance ?? 0,
+                                    distance: _debugDistance?.round() ?? 0,
                                   )
                                 else if (_route != null)
                                   // 모든 step 완료
@@ -218,6 +329,36 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
               outsideThreshold: _hasBeenOutsideThreshold,
               threshold: _arrivalThresholdMeters,
             ),
+            if (_isRecalculating)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  color: ColorCollection.point.withValues(alpha: 0.9),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: ColorCollection.point,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '경로 재탐색 중...',
+                        style: AppTextStyles.labelBold.copyWith(
+                          color: ColorCollection.point,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
