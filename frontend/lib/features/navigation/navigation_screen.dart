@@ -14,6 +14,7 @@ import 'package:safepath/routes/app_router.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:geolocator/geolocator.dart';
 import 'package:safepath/service/place_service.dart';
+import 'package:safepath/service/navigation_service.dart';
 
 class NavigationScreen extends StatefulWidget {
   const NavigationScreen({super.key});
@@ -33,7 +34,11 @@ class _NavigationScreenState extends State<NavigationScreen> {
   /// 위치 변수
   String currentLocation = "현재 위치 불러오는 중...";
   String selectedLocation = "목적지를 선택해 주세요.";
+  double? _selectedLat;
+  double? _selectedLng;
+  String _selectedName = '';
   List<Map<String, dynamic>> searchResults = [];
+  bool _showSearchOverlay = false;
   bool _hasNext = false;
   int _currentPage = 1;
   bool _isLoadingMore = false;
@@ -55,7 +60,6 @@ class _NavigationScreenState extends State<NavigationScreen> {
       if (_debounce?.isActive ?? false) _debounce!.cancel();
 
       _debounce = Timer(const Duration(milliseconds: 300), () {
-        // 🔥 선택 직후에는 검색 다시 안 하도록 방지
         if (_isSelecting) return;
         searchPlaces();
       });
@@ -142,16 +146,52 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   /// 길찾기 시작 함수
-  void startNavigation() {
-    // 키보드 먼저 닫기
+  void startNavigation() async {
+    if (_currentPosition == null ||
+        _selectedLat == null ||
+        _selectedLng == null) {
+      return;
+    }
+
     FocusManager.instance.primaryFocus?.unfocus();
 
-    Navigator.pushNamed(context, AppRouter.navigationing).then((_) {
-      // 돌아왔을 때 입력값 초기화
+    setState(() => isLoading = true);
+
+    try {
+      final result = await NavigationService.getRoute(
+        startX: _currentPosition!.longitude,
+        startY: _currentPosition!.latitude,
+        endX: _selectedLng!,
+        endY: _selectedLat!,
+        startName: currentLocation,
+        endName: _selectedName,
+      );
+
+      if (!mounted) return;
+
+      await Navigator.pushNamed(
+        context,
+        AppRouter.navigationing,
+        arguments: result,
+      );
+
+      // 돌아왔을 때 입력값 초기화 및 위치 갱신
       destinationController.clear();
       FocusManager.instance.primaryFocus?.unfocus();
-      selectedLocation = "목적지를 선택해 주세요.";
-    });
+      setState(() {
+        selectedLocation = "목적지를 선택해 주세요.";
+        _selectedLat = null;
+        _selectedLng = null;
+        _selectedName = '';
+        currentLocation = "현재 위치 불러오는 중...";
+      });
+      initCurrentPosition();
+      loadLocation();
+    } catch (e) {
+      debugPrint('🔴 [Navigation] 길찾기 오류: $e');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   /// 현재 위치 위도,경도 가져오기
@@ -210,6 +250,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     if (destinationController.text.trim().isEmpty) {
       setState(() {
         searchResults.clear();
+        _showSearchOverlay = false;
         _hasNext = false;
         _currentPage = 1;
       });
@@ -223,6 +264,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
       setState(() {
         isLoading = true;
+        _showSearchOverlay = true;
         _currentPage = 1;
       });
 
@@ -291,14 +333,14 @@ class _NavigationScreenState extends State<NavigationScreen> {
                       controller: destinationController,
                       onClear: () {
                         FocusManager.instance.primaryFocus?.unfocus();
-
-                        // 검색 중 상태 초기화
                         _isSelecting = false;
+                        _debounce?.cancel();
 
                         setState(() {
                           destinationController.clear();
                           selectedLocation = "목적지를 선택해 주세요.";
                           searchResults.clear();
+                          _showSearchOverlay = false;
                           isLoading = false;
                           _hasNext = false;
                           _currentPage = 1;
@@ -352,15 +394,17 @@ class _NavigationScreenState extends State<NavigationScreen> {
                             if (place != null) {
                               FocusManager.instance.primaryFocus?.unfocus();
                               _isSelecting = true;
+                              final p = place as SavedPlace;
                               setState(() {
-                                destinationController.text =
-                                    (place as dynamic).label;
-                                selectedLocation = (place as dynamic).location;
+                                destinationController.text = p.label;
+                                selectedLocation = p.location;
+                                _selectedName = p.label;
+                                _selectedLat = p.lat;
+                                _selectedLng = p.lng;
+                                _showSearchOverlay = false;
                               });
-                              Future.delayed(
-                                const Duration(milliseconds: 300),
-                                () => _isSelecting = false,
-                              );
+                              _debounce?.cancel();
+                              _isSelecting = false;
                             }
                           },
                         ),
@@ -393,11 +437,13 @@ class _NavigationScreenState extends State<NavigationScreen> {
                               setState(() {
                                 destinationController.text = place.label;
                                 selectedLocation = place.location;
+                                _selectedName = place.label;
+                                _selectedLat = place.lat;
+                                _selectedLng = place.lng;
+                                _showSearchOverlay = false;
                               });
-                              Future.delayed(
-                                const Duration(milliseconds: 300),
-                                () => _isSelecting = false,
-                              );
+                              _debounce?.cancel();
+                              _isSelecting = false;
                             },
                           ),
                         );
@@ -454,11 +500,15 @@ class _NavigationScreenState extends State<NavigationScreen> {
                                 destinationController.text =
                                     place['name'] as String;
                                 selectedLocation = place['address'] as String;
+                                _selectedName = place['name'] as String;
+                                _selectedLat = (place['lat'] as num?)
+                                    ?.toDouble();
+                                _selectedLng = (place['lng'] as num?)
+                                    ?.toDouble();
+                                _showSearchOverlay = false;
                               });
-                              Future.delayed(
-                                const Duration(milliseconds: 300),
-                                () => _isSelecting = false,
-                              );
+                              _debounce?.cancel();
+                              _isSelecting = false;
                             },
                           ),
                         );
@@ -468,7 +518,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
               ),
 
               /// 검색 결과 overlay
-              if (destinationController.text.trim().isNotEmpty && !_isSelecting)
+              if (_showSearchOverlay && !_isSelecting)
                 Positioned(
                   top: 60,
                   left: 0,
@@ -484,7 +534,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     child: Container(color: Colors.transparent),
                   ),
                 ),
-              if (destinationController.text.trim().isNotEmpty && !_isSelecting)
+              if (_showSearchOverlay && !_isSelecting)
                 Positioned(
                   top: 50,
                   left: 0,
@@ -498,26 +548,24 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           onLoadMore: _loadMorePlaces,
                           onTap: (item) {
                             FocusManager.instance.primaryFocus?.unfocus();
-
                             _isSelecting = true;
 
                             setState(() {
                               destinationController.text = item['name'];
                               selectedLocation = item['roadAddress'];
+                              _selectedName = item['name'] as String;
+                              _selectedLat = item['latitude'] as double?;
+                              _selectedLng = item['longitude'] as double?;
                               searchResults.clear();
+                              _showSearchOverlay = false;
                             });
+
+                            _debounce?.cancel();
+                            _isSelecting = false;
 
                             PlaceService.getPlaceDetail(
                               placeId: item['id'],
                             ).then((_) => _loadRecentPlaces());
-
-                            // 잠깐 후 다시 검색 가능하도록
-                            Future.delayed(
-                              const Duration(milliseconds: 300),
-                              () {
-                                _isSelecting = false;
-                              },
-                            );
                           },
                         )
                       : Container(
