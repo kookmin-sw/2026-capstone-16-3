@@ -104,15 +104,23 @@ class AuthService {
   // ─── 로그아웃 ─────────────────────────────────────────────────────────────
 
   Future<void> signOut() async {
-    final refreshToken = await TokenStorage().refreshToken;
+    final accessToken = await TokenStorage().accessToken;
 
-    if (refreshToken != null) {
-      final uri = Uri.parse('$_baseUrl/api/auth/logout');
-      await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'refreshToken': refreshToken}),
-      );
+    if (accessToken != null) {
+      try {
+        final uri = Uri.parse('$_baseUrl/api/auth/logout');
+        debugPrint('🟡 [Auth] BE 요청: POST $uri');
+        final response = await http.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
+        );
+        debugPrint('🟡 [Auth] 로그아웃 응답: ${response.statusCode}');
+      } catch (e) {
+        debugPrint('🔴 [Auth] 로그아웃 API 실패 (로컬 토큰은 삭제): $e');
+      }
     }
 
     await TokenStorage().clear();
