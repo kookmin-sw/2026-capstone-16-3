@@ -172,7 +172,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
       await Navigator.pushNamed(
         context,
         AppRouter.navigationing,
-        arguments: result,
+        arguments: {
+          'route': result,
+          'endX': _selectedLng!,
+          'endY': _selectedLat!,
+          'endName': _selectedName,
+        },
       );
 
       // 돌아왔을 때 입력값 초기화 및 위치 갱신
