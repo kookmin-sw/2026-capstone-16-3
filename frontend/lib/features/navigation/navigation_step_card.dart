@@ -47,6 +47,19 @@ class NavigationStepCard extends StatelessWidget {
     }
   }
 
+  String _getTtsMessage(DirectionType direction, int distance, String instruction) {
+    final action = switch (direction) {
+      DirectionType.straight => '직진',
+      DirectionType.left => '좌회전',
+      DirectionType.right => '우회전',
+      DirectionType.crosswalk => '횡단보도를 이용',
+    };
+
+    if (distance <= 15) return '$action하세요';
+    if (distance <= 50) return instruction.isNotEmpty ? instruction : '잠시 후 $action하세요';
+    return '계속 직진하세요';
+  }
+
   String _formatDistance(int distance) {
     if (distance >= 1000) {
       return '${(distance / 1000).toStringAsFixed(1)}km';
@@ -88,7 +101,7 @@ class NavigationStepCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${_formatDistance(distance)} ${_getDirectionLabel(direction)}',
+                        '${_formatDistance(distance)} 후 ${_getDirectionLabel(direction)}',
                         style: AppTextStyles.title2.copyWith(
                           color: ColorCollection.point,
                           fontSize: 20,
@@ -96,10 +109,12 @@ class NavigationStepCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        '다음 안내까지',
+                        instruction,
                         style: AppTextStyles.labelRegular.copyWith(
                           color: ColorCollection.point,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -129,7 +144,7 @@ class NavigationStepCard extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        instruction,
+                        _getTtsMessage(direction, distance, instruction),
                         style: AppTextStyles.labelBold.copyWith(
                           color: ColorCollection.point,
                         ),
