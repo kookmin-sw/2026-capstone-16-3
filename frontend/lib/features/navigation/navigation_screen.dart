@@ -9,7 +9,7 @@ import 'package:safepath/features/navigation/current_place_widget.dart';
 import 'package:safepath/features/navigation/more_button.dart';
 import 'package:safepath/features/navigation/navigation_result_list.dart';
 import 'package:safepath/features/navigation/saved_place_widget.dart';
-import 'package:safepath/data/saved_place_dummy.dart';
+import 'package:safepath/models/saved_place.dart';
 import 'package:safepath/routes/app_router.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:geolocator/geolocator.dart';
@@ -40,11 +40,15 @@ class _NavigationScreenState extends State<NavigationScreen> {
   Timer? _debounce;
   Position? _currentPosition;
   bool isLoading = false;
+  List<SavedPlace> _savedPlaces = [];
+  List<Map<String, dynamic>> _recentPlaces = [];
 
   @override
   void initState() {
     super.initState();
     speech.initialize();
+    _loadSavedPlaces();
+    _loadRecentPlaces();
     destinationController.addListener(() {
       setState(() {});
 
@@ -59,6 +63,29 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
     initCurrentPosition();
     loadLocation();
+  }
+
+  Future<void> _loadRecentPlaces() async {
+    try {
+      final result = await PlaceService.getRecentPlaces();
+      setState(() {
+        _recentPlaces = List<Map<String, dynamic>>.from(result['items']);
+      });
+    } catch (e) {
+      debugPrint('🔴 [Navigation] 최근 장소 로드 에러: $e');
+    }
+  }
+
+  Future<void> _loadSavedPlaces() async {
+    try {
+      final result = await PlaceService.getFavorites();
+      final items = (result['items'] as List<Map<String, dynamic>>)
+          .map((item) => SavedPlace.fromJSON(item))
+          .toList();
+      setState(() => _savedPlaces = items);
+    } catch (e) {
+      debugPrint('🔴 [Navigation] 저장된 장소 로드 에러: $e');
+    }
   }
 
   Future<void> initCurrentPosition() async {
@@ -321,59 +348,121 @@ class _NavigationScreenState extends State<NavigationScreen> {
                               AppRouter.savedplace,
                             );
 
+                            _loadSavedPlaces();
                             if (place != null) {
                               FocusManager.instance.primaryFocus?.unfocus();
+                              _isSelecting = true;
                               setState(() {
                                 destinationController.text =
                                     (place as dynamic).label;
                                 selectedLocation = (place as dynamic).location;
                               });
+                              Future.delayed(
+                                const Duration(milliseconds: 300),
+                                () => _isSelecting = false,
+                              );
                             }
                           },
                         ),
                       ],
                     ),
                     const SizedBox(height: 25),
-                    ...savedPlaces.take(2).map((place) {
-                      return Padding(
+                    if (_savedPlaces.isEmpty)
+                      Padding(
                         padding: const EdgeInsets.only(bottom: 25),
-                        child: SavedPlaceWidget(
-                          label: place.label,
-                          location: place.location,
-                          category: place.category,
-                          onTap: () {
-                            FocusManager.instance.primaryFocus?.unfocus();
-                            setState(() {
-                              destinationController.text = place.label;
-                              selectedLocation = place.location;
-                            });
-                          },
+                        child: Center(
+                          child: Text(
+                            '저장된 장소가 없습니다',
+                            style: AppTextStyles.labelRegular.copyWith(
+                              color: ColorCollection.point,
+                            ),
+                          ),
                         ),
-                      );
-                    }).toList(),
+                      )
+                    else
+                      ..._savedPlaces.take(2).map((place) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 25),
+                          child: SavedPlaceWidget(
+                            label: place.label,
+                            location: place.location,
+                            category: place.category,
+                            onTap: () {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              _isSelecting = true;
+                              setState(() {
+                                destinationController.text = place.label;
+                                selectedLocation = place.location;
+                              });
+                              Future.delayed(
+                                const Duration(milliseconds: 300),
+                                () => _isSelecting = false,
+                              );
+                            },
+                          ),
+                        );
+                      }),
 
                     /// 최근 장소 섹션
-                    Text(
-                      '최근 장소',
-                      style: AppTextStyles.title2.copyWith(
-                        color: ColorCollection.point,
-                        fontSize: 20,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          '최근 장소',
+                          style: AppTextStyles.title2.copyWith(
+                            color: ColorCollection.point,
+                            fontSize: 20,
+                          ),
+                        ),
+                        if (_recentPlaces.isNotEmpty)
+                          _ClearButton(
+                            onTap: () async {
+                              final success =
+                                  await PlaceService.deleteAllRecentPlaces();
+                              if (success) {
+                                setState(() => _recentPlaces.clear());
+                              }
+                            },
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 25),
-                    SavedPlaceWidget(
-                      label: '회사',
-                      location: '서울특별시 성북구 솔샘로98길',
-                      onTap: () {
-                        FocusManager.instance.primaryFocus?.unfocus();
-                        setState(() {
-                          destinationController.text = '회사';
-                          selectedLocation = '서울특별시 성북구 솔샘로98길';
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 25),
+                    if (_recentPlaces.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 25),
+                        child: Center(
+                          child: Text(
+                            '최근 검색한 장소가 없습니다',
+                            style: AppTextStyles.labelRegular.copyWith(
+                              color: ColorCollection.point,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      ..._recentPlaces.take(4).map((place) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 25),
+                          child: SavedPlaceWidget(
+                            label: place['name'] as String,
+                            location: place['address'] as String,
+                            onTap: () {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              _isSelecting = true;
+                              setState(() {
+                                destinationController.text =
+                                    place['name'] as String;
+                                selectedLocation = place['address'] as String;
+                              });
+                              Future.delayed(
+                                const Duration(milliseconds: 300),
+                                () => _isSelecting = false,
+                              );
+                            },
+                          ),
+                        );
+                      }),
                   ],
                 ),
               ),
@@ -418,6 +507,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
                               searchResults.clear();
                             });
 
+                            PlaceService.getPlaceDetail(
+                              placeId: item['id'],
+                            ).then((_) => _loadRecentPlaces());
+
                             // 잠깐 후 다시 검색 가능하도록
                             Future.delayed(
                               const Duration(milliseconds: 300),
@@ -448,6 +541,47 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           ),
                         ),
                 ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ClearButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ClearButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: ColorCollection.point.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: ColorCollection.point, width: 1),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.delete_outline_rounded,
+                size: 18,
+                color: ColorCollection.point,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '전체 삭제',
+                style: AppTextStyles.labelRegular.copyWith(
+                  color: ColorCollection.point,
+                ),
+              ),
             ],
           ),
         ),

@@ -10,7 +10,6 @@ import 'package:safepath/features/navigation/address_section.dart';
 import 'package:safepath/features/navigation/category_section.dart';
 import 'package:safepath/features/navigation/place_name_section.dart';
 import 'package:safepath/features/navigation/navigation_result_list.dart';
-import 'package:safepath/models/saved_place.dart';
 import 'package:safepath/service/place_service.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
@@ -24,6 +23,7 @@ class AddPlaceScreen extends StatefulWidget {
 class _AddPlaceScreenState extends State<AddPlaceScreen> {
   final TextEditingController destinationController = TextEditingController();
   final TextEditingController placeNameController = TextEditingController();
+  final FocusNode destinationFocusNode = FocusNode();
   final stt.SpeechToText speech = stt.SpeechToText();
 
   /// 텍스트 입력 여부 확인
@@ -54,6 +54,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
     super.initState();
     speech.initialize();
     initCurrentLocation();
+    destinationFocusNode.addListener(_onTextChanged);
     destinationController.addListener(() {
       _onTextChanged();
 
@@ -153,9 +154,11 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
   void dispose() {
     destinationController.removeListener(_onTextChanged);
     placeNameController.removeListener(_onTextChanged);
+    destinationFocusNode.removeListener(_onTextChanged);
     _debounce?.cancel();
     destinationController.dispose();
     placeNameController.dispose();
+    destinationFocusNode.dispose();
     super.dispose();
   }
 
@@ -211,6 +214,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
       address: currentLocation,
       latitude: latitude!,
       longitude: longitude!,
+      category: selectedCategory!.apiValue,
     );
 
     if (success) {
@@ -242,6 +246,7 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
                         children: [
                           AddressSection(
                             controller: destinationController,
+                            focusNode: destinationFocusNode,
                             currentLocation: currentLocation,
                             onSubmitted: searchPlaces,
                             onClear: () {
@@ -305,7 +310,9 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
               ),
 
               /// 검색 결과 overlay
-              if (destinationController.text.trim().isNotEmpty && !_isSelecting)
+              if (destinationController.text.trim().isNotEmpty &&
+                  !_isSelecting &&
+                  destinationFocusNode.hasFocus)
                 Positioned(
                   top: 90,
                   left: 0,

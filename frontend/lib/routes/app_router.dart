@@ -71,7 +71,10 @@ class AppRouter {
       case savedplace:
         return MaterialPageRoute(builder: (_) => const SavedPlaceScreen());
       case navigationing:
-        return MaterialPageRoute(builder: (_) => const NavigationIngScreen());
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const NavigationIngScreen(),
+        );
       case addplace:
         return MaterialPageRoute(builder: (_) => const AddPlaceScreen());
       case appinfo:
