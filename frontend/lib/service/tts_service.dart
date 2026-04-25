@@ -24,13 +24,15 @@ class TtsService {
   bool _initialized = false;
   bool _isSpeaking = false;
 
+  static const double defaultSpeechRate = 2.0;
+
   // ─── 초기화 ────────────────────────────────────────────────────────────────
 
   Future<void> _init() async {
     if (_initialized) return;
 
     await _tts.setLanguage('ko-KR');
-    await _tts.setSpeechRate(0.45); // 너무 빠르면 안내문 알아듣기 어려움
+    await _tts.setSpeechRate(defaultSpeechRate);
     await _tts.setVolume(1.0);
     await _tts.setPitch(1.0);
 
@@ -80,6 +82,14 @@ class TtsService {
 
     debugPrint('🔊 [TTS] 출력: $text');
     await _tts.speak(text);
+  }
+
+  // ─── 속도 조절 ─────────────────────────────────────────────────────────────
+
+  /// 음성 속도를 변경한다. 범위: 0.5(느림) ~ 5.0(빠름)
+  Future<void> setSpeechRate(double rate) async {
+    await _init();
+    await _tts.setSpeechRate(rate.clamp(0.5, 5.0));
   }
 
   // ─── 중지 ──────────────────────────────────────────────────────────────────
