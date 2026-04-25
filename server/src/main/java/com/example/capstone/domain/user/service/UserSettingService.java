@@ -25,7 +25,8 @@ public class UserSettingService {
         return new UserSettingResponse(
                 setting.getSentenceLength(),
                 setting.getVibrationStrength(),
-                setting.getVoiceGuidanceEnabled()
+                setting.getVoiceGuidanceEnabled(),
+                setting.getGuidanceSpeed()
         );
     }
 
@@ -38,13 +39,15 @@ public class UserSettingService {
         setting.update(
                 request.sentenceLength(),
                 request.vibrationStrength(),
-                request.voiceGuidanceEnabled()
+                request.voiceGuidanceEnabled(),
+                request.guidanceSpeed()
         );
 
         return new UserSettingResponse(
                 setting.getSentenceLength(),
                 setting.getVibrationStrength(),
-                setting.getVoiceGuidanceEnabled()
+                setting.getVoiceGuidanceEnabled(),
+                setting.getGuidanceSpeed()
         );
     }
 }
