@@ -46,8 +46,7 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
           1.0,
         );
     final speed = widget.initialSettings.guidanceSpeed;
-    _ttsSpeed =
-        ((speed - _ttsMin) / (_ttsMax - _ttsMin)).clamp(0.0, 1.0);
+    _ttsSpeed = ((speed - _ttsMin) / (_ttsMax - _ttsMin)).clamp(0.0, 1.0);
   }
 
   double get _ttsSpeedValue => _ttsMin + _ttsSpeed * (_ttsMax - _ttsMin);
@@ -97,8 +96,13 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
               setState(() => _ttsSpeed = v);
               TtsService().setSpeechRate(_ttsSpeedValue);
             },
-            onChangeEnd: (_) =>
-                widget.onGuidanceSpeedChanged?.call(_ttsSpeedValue),
+            onChangeEnd: (_) {
+              TtsService().speak(
+                '안내 음성 속도 조절 중입니다. 이 속도로 안내를 받게 됩니다.',
+                interrupt: true,
+              );
+              widget.onGuidanceSpeedChanged?.call(_ttsSpeedValue);
+            },
           ),
           const SizedBox(height: 4),
           Divider(
@@ -111,9 +115,8 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
             value: _vibrationStrength,
             description: '경고 진동의 강도를 조절합니다.',
             onChanged: (v) => setState(() => _vibrationStrength = v),
-            onChangeEnd: (v) => widget.onVibrationChanged?.call(
-              (v * _vibrationMax).round(),
-            ),
+            onChangeEnd: (v) =>
+                widget.onVibrationChanged?.call((v * _vibrationMax).round()),
           ),
         ],
       ),
@@ -142,8 +145,9 @@ class _SliderRow extends StatelessWidget {
     this.tickLabels,
   });
 
-  String get _displayValue =>
-      valueFormatter != null ? valueFormatter!(value) : '${(value * 100).round()}%';
+  String get _displayValue => valueFormatter != null
+      ? valueFormatter!(value)
+      : '${(value * 100).round()}%';
 
   @override
   Widget build(BuildContext context) {
