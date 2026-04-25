@@ -4,6 +4,35 @@ import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/service/tts_service.dart';
 
+enum MessageLength {
+  short,
+  medium,
+  long;
+
+  /// 백엔드 통신값: SHORT / MEDIUM / LONG
+  String get backendValue => name.toUpperCase();
+
+  /// 슬라이더 double 값: 0.0 / 0.5 / 1.0
+  double get sliderValue => index / 2.0;
+
+  String get displayLabel {
+    switch (this) {
+      case MessageLength.short:
+        return '간결';
+      case MessageLength.medium:
+        return '보통';
+      case MessageLength.long:
+        return '상세';
+    }
+  }
+
+  static MessageLength fromSlider(double v) {
+    if (v < 0.25) return MessageLength.short;
+    if (v < 0.75) return MessageLength.medium;
+    return MessageLength.long;
+  }
+}
+
 /// 안내 스타일 개인화 섹션 (슬라이더)
 class SettingsStyleWidget extends StatefulWidget {
   const SettingsStyleWidget({super.key});
@@ -13,7 +42,7 @@ class SettingsStyleWidget extends StatefulWidget {
 }
 
 class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
-  double _messageLength = 0.9;
+  MessageLength _messageLength = MessageLength.medium;
   double _vibrationStrength = 0.5;
 
   // TTS 속도: 0.5배속~5.0배속 → 슬라이더 0.0~1.0으로 변환
@@ -45,9 +74,13 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
         children: [
           _SliderRow(
             label: '안내 문장 길이',
-            value: _messageLength,
+            value: _messageLength.sliderValue,
             description: '안내 메시지의 상세도를 조절합니다.',
-            onChanged: (v) => setState(() => _messageLength = v),
+            divisions: 2,
+            tickLabels: const ['간결', '보통', '상세'],
+            valueFormatter: (_) => _messageLength.displayLabel,
+            onChanged: (v) =>
+                setState(() => _messageLength = MessageLength.fromSlider(v)),
           ),
           const SizedBox(height: 4),
           Divider(
@@ -92,6 +125,8 @@ class _SliderRow extends StatelessWidget {
   final String description;
   final ValueChanged<double> onChanged;
   final String Function(double)? valueFormatter;
+  final int? divisions;
+  final List<String>? tickLabels;
 
   const _SliderRow({
     required this.label,
@@ -99,6 +134,8 @@ class _SliderRow extends StatelessWidget {
     required this.description,
     required this.onChanged,
     this.valueFormatter,
+    this.divisions,
+    this.tickLabels,
   });
 
   String get _displayValue => valueFormatter != null
@@ -140,8 +177,34 @@ class _SliderRow extends StatelessWidget {
               overlayShape: SliderComponentShape.noOverlay,
               inactiveTrackColor: ColorCollection.point.withValues(alpha: 0.15),
             ),
-            child: Slider(value: value, onChanged: onChanged),
+            child: Slider(
+              value: value,
+              onChanged: onChanged,
+              divisions: divisions,
+            ),
           ),
+          if (tickLabels != null) ...[
+            const SizedBox(height: 5),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: tickLabels!
+                    .map(
+                      (t) => Text(
+                        t,
+                        style: AppTextStyles.labelRegular.copyWith(
+                          color: ColorCollection.point,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           SizedBox(height: 8),
           Text(
             description,
