@@ -131,12 +131,15 @@ class AuthService {
 
   // ─── 로컬 세션 정리 ──────────────────────────────────────
 
-  /// 회원탈퇴 등 서버 logout 호출 없이 로컬 토큰만 삭제할 때 사용
+  /// 회원탈퇴 후 호출. logout API 없이 로컬 토큰 삭제 + Kakao 앱 연결 해제(unlink)
   Future<void> clearLocalSession() async {
     await TokenStorage().clear();
     try {
-      await UserApi.instance.logout();
-    } catch (_) {}
+      await UserApi.instance.unlink();
+      debugPrint('🟡 [Auth] Kakao 연결 해제(unlink) 완료');
+    } catch (e) {
+      debugPrint('🔴 [Auth] Kakao unlink 실패: $e');
+    }
     debugPrint('🟡 [Auth] 로컬 세션 정리 완료');
   }
 }
