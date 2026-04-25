@@ -13,12 +13,14 @@ class NavigationStepCard extends StatelessWidget {
   final DirectionType direction;
   final String instruction;
   final int distance;
+  final bool isApproaching;
 
   const NavigationStepCard({
     super.key,
     required this.direction,
     required this.instruction,
     required this.distance,
+    this.isApproaching = true,
   });
 
   IconData _getDirectionIcon(DirectionType direction) {
@@ -48,6 +50,8 @@ class NavigationStepCard extends StatelessWidget {
   }
 
   String _getTtsMessage(DirectionType direction, int distance, String instruction) {
+    if (!isApproaching) return instruction.isNotEmpty ? instruction : '계속 직진하세요';
+
     final action = switch (direction) {
       DirectionType.straight => '직진',
       DirectionType.left => '좌회전',
@@ -56,6 +60,7 @@ class NavigationStepCard extends StatelessWidget {
     };
 
     if (distance <= 15) return '$action하세요';
+    if (distance <= 30) return '잠시 후 $action하세요';
     if (distance <= 50) return instruction.isNotEmpty ? instruction : '잠시 후 $action하세요';
     return '계속 직진하세요';
   }
@@ -71,7 +76,7 @@ class NavigationStepCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: ColorCollection.point.withOpacity(0.1),
+        color: ColorCollection.point.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: ColorCollection.main, width: 2),
       ),
@@ -128,7 +133,7 @@ class NavigationStepCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               decoration: BoxDecoration(
-                color: ColorCollection.main.withOpacity(0.5),
+                color: ColorCollection.main.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
