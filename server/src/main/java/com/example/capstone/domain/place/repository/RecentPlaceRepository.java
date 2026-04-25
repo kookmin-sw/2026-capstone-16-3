@@ -1,6 +1,7 @@
 package com.example.capstone.domain.place.repository;
 
 import com.example.capstone.domain.place.entity.RecentPlace;
+import com.example.capstone.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,4 +19,6 @@ public interface RecentPlaceRepository extends JpaRepository<RecentPlace, Long> 
     int deleteByIdAndUserId(Long id, Long userId);
 
     int deleteByUserId(Long userId);
+
+    void deleteByUser(User user);
 }
