@@ -5,7 +5,14 @@ import 'package:safepath/common/theme/text_styles.dart';
 
 /// 알림 및 소리 섹션 (토글)
 class SettingsNotificationWidget extends StatefulWidget {
-  const SettingsNotificationWidget({super.key});
+  final bool initialVoiceGuidanceEnabled;
+  final void Function(bool)? onVoiceGuidanceChanged;
+
+  const SettingsNotificationWidget({
+    super.key,
+    required this.initialVoiceGuidanceEnabled,
+    this.onVoiceGuidanceChanged,
+  });
 
   @override
   State<SettingsNotificationWidget> createState() =>
@@ -16,7 +23,13 @@ class _SettingsNotificationWidgetState
     extends State<SettingsNotificationWidget> {
   bool _pushAlert = true;
   bool _soundEffect = false;
-  bool _voiceGuide = true;
+  late bool _voiceGuide;
+
+  @override
+  void initState() {
+    super.initState();
+    _voiceGuide = widget.initialVoiceGuidanceEnabled;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +63,10 @@ class _SettingsNotificationWidgetState
             label: '음성 안내',
             description: 'TTS 음성 안내 기능',
             value: _voiceGuide,
-            onChanged: (v) => setState(() => _voiceGuide = v),
+            onChanged: (v) {
+              setState(() => _voiceGuide = v);
+              widget.onVoiceGuidanceChanged?.call(v);
+            },
           ),
         ],
       ),

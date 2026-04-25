@@ -3,58 +3,51 @@ import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/service/tts_service.dart';
-
-enum MessageLength {
-  short,
-  medium,
-  long;
-
-  /// 백엔드 통신값: SHORT / MEDIUM / LONG
-  String get backendValue => name.toUpperCase();
-
-  /// 슬라이더 double 값: 0.0 / 0.5 / 1.0
-  double get sliderValue => index / 2.0;
-
-  String get displayLabel {
-    switch (this) {
-      case MessageLength.short:
-        return '간결';
-      case MessageLength.medium:
-        return '보통';
-      case MessageLength.long:
-        return '상세';
-    }
-  }
-
-  static MessageLength fromSlider(double v) {
-    if (v < 0.25) return MessageLength.short;
-    if (v < 0.75) return MessageLength.medium;
-    return MessageLength.long;
-  }
-}
+import 'package:safepath/service/user_settings_service.dart';
 
 /// 안내 스타일 개인화 섹션 (슬라이더)
 class SettingsStyleWidget extends StatefulWidget {
-  const SettingsStyleWidget({super.key});
+  final UserSettings initialSettings;
+  final void Function(MessageLength)? onSentenceLengthChanged;
+  final void Function(int)? onVibrationChanged;
+  final void Function(double)? onGuidanceSpeedChanged;
+
+  const SettingsStyleWidget({
+    super.key,
+    required this.initialSettings,
+    this.onSentenceLengthChanged,
+    this.onVibrationChanged,
+    this.onGuidanceSpeedChanged,
+  });
 
   @override
   State<SettingsStyleWidget> createState() => _SettingsStyleWidgetState();
 }
 
 class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
-  MessageLength _messageLength = MessageLength.medium;
-  double _vibrationStrength = 0.5;
-
   // TTS 속도: 0.5배속~5.0배속 → 슬라이더 0.0~1.0으로 변환
   static const double _ttsMin = 0.5;
   static const double _ttsMax = 5.0;
 
-  late double _ttsSpeed;
+  // 진동 강도: 백엔드 int 값 최대치 (Java Integer.MAX_VALUE)
+  static const int _vibrationMax = 2147483647;
+
+  late MessageLength _messageLength;
+  late double _vibrationStrength; // 슬라이더 0.0~1.0
+  late double _ttsSpeed; // 슬라이더 0.0~1.0
 
   @override
   void initState() {
     super.initState();
-    _ttsSpeed = (TtsService.defaultSpeechRate - _ttsMin) / (_ttsMax - _ttsMin);
+    _messageLength = widget.initialSettings.sentenceLength;
+    _vibrationStrength =
+        (widget.initialSettings.vibrationStrength / _vibrationMax).clamp(
+          0.0,
+          1.0,
+        );
+    final speed = widget.initialSettings.guidanceSpeed;
+    _ttsSpeed =
+        ((speed - _ttsMin) / (_ttsMax - _ttsMin)).clamp(0.0, 1.0);
   }
 
   double get _ttsSpeedValue => _ttsMin + _ttsSpeed * (_ttsMax - _ttsMin);
@@ -81,6 +74,8 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
             valueFormatter: (_) => _messageLength.displayLabel,
             onChanged: (v) =>
                 setState(() => _messageLength = MessageLength.fromSlider(v)),
+            onChangeEnd: (_) =>
+                widget.onSentenceLengthChanged?.call(_messageLength),
           ),
           const SizedBox(height: 4),
           Divider(
@@ -92,6 +87,8 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
             label: '안내 문장 빠르기',
             value: _ttsSpeed,
             description: '안내 메시지의 재생 속도를 조절합니다.',
+            // 0.5~5.0배속, 0.1 단위 스냅: (5.0 - 0.5) / 0.1 = 45 divisions
+            divisions: 45,
             valueFormatter: (v) {
               final speed = _ttsMin + v * (_ttsMax - _ttsMin);
               return '${speed.toStringAsFixed(1)}배속';
@@ -100,6 +97,8 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
               setState(() => _ttsSpeed = v);
               TtsService().setSpeechRate(_ttsSpeedValue);
             },
+            onChangeEnd: (_) =>
+                widget.onGuidanceSpeedChanged?.call(_ttsSpeedValue),
           ),
           const SizedBox(height: 4),
           Divider(
@@ -112,6 +111,9 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
             value: _vibrationStrength,
             description: '경고 진동의 강도를 조절합니다.',
             onChanged: (v) => setState(() => _vibrationStrength = v),
+            onChangeEnd: (v) => widget.onVibrationChanged?.call(
+              (v * _vibrationMax).round(),
+            ),
           ),
         ],
       ),
@@ -124,6 +126,7 @@ class _SliderRow extends StatelessWidget {
   final double value;
   final String description;
   final ValueChanged<double> onChanged;
+  final ValueChanged<double>? onChangeEnd;
   final String Function(double)? valueFormatter;
   final int? divisions;
   final List<String>? tickLabels;
@@ -133,14 +136,14 @@ class _SliderRow extends StatelessWidget {
     required this.value,
     required this.description,
     required this.onChanged,
+    this.onChangeEnd,
     this.valueFormatter,
     this.divisions,
     this.tickLabels,
   });
 
-  String get _displayValue => valueFormatter != null
-      ? valueFormatter!(value)
-      : '${(value * 100).round()}%';
+  String get _displayValue =>
+      valueFormatter != null ? valueFormatter!(value) : '${(value * 100).round()}%';
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +171,7 @@ class _SliderRow extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 14),
+          const SizedBox(height: 14),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
               trackHeight: 13,
@@ -180,6 +183,7 @@ class _SliderRow extends StatelessWidget {
             child: Slider(
               value: value,
               onChanged: onChanged,
+              onChangeEnd: onChangeEnd,
               divisions: divisions,
             ),
           ),
@@ -205,7 +209,7 @@ class _SliderRow extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             description,
             style: AppTextStyles.labelRegular.copyWith(
@@ -292,7 +296,7 @@ class _GradientTrackShape extends SliderTrackShape {
   }
 }
 
-// ─── 가로형 흰색 Thumb ────────────────────────────────────────────────────────
+// ─── 가로형 Thumb ─────────────────────────────────────────────────────────────
 
 class _RoundedRectThumbShape extends SliderComponentShape {
   const _RoundedRectThumbShape();
