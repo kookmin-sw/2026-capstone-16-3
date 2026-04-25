@@ -128,6 +128,17 @@ class AuthService {
       await UserApi.instance.logout();
     } catch (_) {}
   }
+
+  // ─── 로컬 세션 정리 ──────────────────────────────────────
+
+  /// 회원탈퇴 등 서버 logout 호출 없이 로컬 토큰만 삭제할 때 사용
+  Future<void> clearLocalSession() async {
+    await TokenStorage().clear();
+    try {
+      await UserApi.instance.logout();
+    } catch (_) {}
+    debugPrint('🟡 [Auth] 로컬 세션 정리 완료');
+  }
 }
 
 /// 로그인 결과

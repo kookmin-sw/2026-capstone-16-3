@@ -63,7 +63,9 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     setState(() => _isLoading = true);
     try {
       final uri = Uri.parse('${const String.fromEnvironment('BASE_URL')}/api/users/me/profile');
+      debugPrint('🔴 [UserInfo] 회원탈퇴 요청: DELETE $uri');
       final response = await ApiClient().delete(uri);
+      debugPrint('🔴 [UserInfo] 회원탈퇴 응답: ${response.statusCode} / ${response.body}');
       if (response.statusCode != 200 && response.statusCode != 204) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -75,7 +77,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         }
         return;
       }
-      await AuthService().signOut();
+      await AuthService().clearLocalSession();
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
