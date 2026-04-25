@@ -8,6 +8,7 @@ import 'package:safepath/common/widgets/action_button_widget.dart';
 import 'package:safepath/common/widgets/route_debug_overlay.dart';
 import 'package:safepath/features/navigation/navigation_step_card.dart';
 import 'package:safepath/features/navigation/navigation_overview_card.dart';
+import 'package:safepath/features/navigation/navigation_start_overview_card.dart';
 import 'package:safepath/models/route_result.dart';
 import 'package:safepath/service/navigation_service.dart';
 import 'dart:ui' show DisplayFeatureType;
@@ -37,9 +38,11 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   static const double _arrivalThresholdMeters = 10;
   bool _hasBeenOutsideThreshold = false;
   double? _debugDistance;
+  bool _hasArrived = false;
+  bool _showStartOverview = false;
 
   // 경로 이탈 감지
-  static const double _deviationThresholdMeters = 30.0;
+  static const double _deviationThresholdMeters = 20.0;
   static const int _deviationCountThreshold = 3;
   int _deviationCount = 0;
   bool _isRecalculating = false;
@@ -112,7 +115,11 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   }
 
   void _onPositionUpdate(Position position) {
-    if (_pointSteps.isEmpty || _currentStepIndex >= _pointSteps.length) return;
+    if (_currentStepIndex >= _pointSteps.length) {
+      _trackDestination(position);
+      if (!_hasArrived) _checkDeviation(position);
+      return;
+    }
 
     final step = _pointSteps[_currentStepIndex];
     if (step.latitude == null || step.longitude == null) return;
@@ -125,6 +132,12 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     );
 
     setState(() => _debugDistance = distance);
+    if (!_showStartOverview && !_hasBeenOutsideThreshold) {
+      setState(() => _showStartOverview = true);
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) setState(() => _showStartOverview = false);
+      });
+    }
     debugPrint(
       '📍 [Nav] step $_currentStepIndex/${_pointSteps.length - 1} | '
       '남은 거리: ${distance.toStringAsFixed(1)}m | '
@@ -139,9 +152,34 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         _currentStepIndex++;
         _hasBeenOutsideThreshold = false;
       });
+    } else {
+      // 처음부터 threshold 이내 → 이미 지난 step으로 간주하고 skip
+      setState(() => _currentStepIndex++);
     }
 
     _checkDeviation(position);
+  }
+
+  void _trackDestination(Position position) {
+    if (_hasArrived ||
+        _destinationStep?.latitude == null ||
+        _destinationStep?.longitude == null) {
+      return;
+    }
+
+    final distance = Geolocator.distanceBetween(
+      position.latitude,
+      position.longitude,
+      _destinationStep!.latitude!,
+      _destinationStep!.longitude!,
+    );
+
+    setState(() => _debugDistance = distance);
+    debugPrint('📍 [Nav] 목적지까지: ${distance.toStringAsFixed(1)}m');
+
+    if (distance < _arrivalThresholdMeters) {
+      setState(() => _hasArrived = true);
+    }
   }
 
   void _checkDeviation(Position position) {
@@ -195,6 +233,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         _currentStepIndex = 0;
         _hasBeenOutsideThreshold = false;
         _debugDistance = null;
+        _hasArrived = false;
         _isRecalculating = false;
       });
       _loadRoute(result);
@@ -292,24 +331,52 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 2),
                             child: Column(
                               children: [
-                                if (currentStep != null)
+                                if (_showStartOverview && _route != null)
+                                  NavigationStartOverviewCard(
+                                    totalDistance: _route!.totalDistance,
+                                    totalTime: (_route!.totalTime / 60).ceil(),
+                                    firstStepDistance: _debugDistance?.round() ?? 0,
+                                    firstStepDirection: currentStep != null
+                                        ? _turnTypeToDirection(currentStep.turnType)
+                                        : DirectionType.straight,
+                                  )
+                                else if (currentStep != null)
                                   NavigationStepCard(
                                     direction: _turnTypeToDirection(
                                       currentStep.turnType,
                                     ),
                                     instruction: currentStep.description ?? '',
                                     distance: _debugDistance?.round() ?? 0,
+                                    isApproaching: _hasBeenOutsideThreshold,
+                                  )
+                                else if (_hasArrived)
+                                  Center(
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          '목적지에 도착했습니다.',
+                                          style: AppTextStyles.labelRegular
+                                              .copyWith(
+                                                color: ColorCollection.point,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '경로 안내를 종료합니다.',
+                                          style: AppTextStyles.labelRegular
+                                              .copyWith(
+                                                color: ColorCollection.point,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
                                   )
                                 else if (_route != null)
-                                  // 모든 step 완료
-                                  Center(
-                                    child: Text(
-                                      '목적지에 도착했습니다!',
-                                      style: AppTextStyles.labelRegular
-                                          .copyWith(
-                                            color: ColorCollection.point,
-                                          ),
-                                    ),
+                                  NavigationStepCard(
+                                    direction: DirectionType.straight,
+                                    instruction: '목적지 방향으로 직진하세요',
+                                    distance: _debugDistance?.round() ?? 0,
+                                    isApproaching: false,
                                   ),
                                 SizedBox(height: bottomPad),
                               ],
@@ -335,7 +402,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                 left: 0,
                 right: 0,
                 child: Container(
-                  color: ColorCollection.point.withValues(alpha: 0.9),
+                  color: ColorCollection.main.withValues(alpha: 0.9),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
