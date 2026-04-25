@@ -24,7 +24,7 @@ class TtsService {
   bool _initialized = false;
   bool _isSpeaking = false;
 
-  static const double defaultSpeechRate = 2.0;
+  static const double defaultSpeechRate = 1.0;
 
   // ─── 초기화 ────────────────────────────────────────────────────────────────
 

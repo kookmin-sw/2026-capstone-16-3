@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
+import 'package:safepath/service/tts_service.dart';
 
 /// 안내 스타일 개인화 섹션 (슬라이더)
 class SettingsStyleWidget extends StatefulWidget {
@@ -14,6 +15,20 @@ class SettingsStyleWidget extends StatefulWidget {
 class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
   double _messageLength = 0.9;
   double _vibrationStrength = 0.5;
+
+  // TTS 속도: 0.5배속~5.0배속 → 슬라이더 0.0~1.0으로 변환
+  static const double _ttsMin = 0.5;
+  static const double _ttsMax = 5.0;
+
+  late double _ttsSpeed;
+
+  @override
+  void initState() {
+    super.initState();
+    _ttsSpeed = (TtsService.defaultSpeechRate - _ttsMin) / (_ttsMax - _ttsMin);
+  }
+
+  double get _ttsSpeedValue => _ttsMin + _ttsSpeed * (_ttsMax - _ttsMin);
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +56,25 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
             height: 28,
           ),
           _SliderRow(
+            label: '안내 문장 빠르기',
+            value: _ttsSpeed,
+            description: '안내 메시지의 재생 속도를 조절합니다.',
+            valueFormatter: (v) {
+              final speed = _ttsMin + v * (_ttsMax - _ttsMin);
+              return '${speed.toStringAsFixed(1)}배속';
+            },
+            onChanged: (v) {
+              setState(() => _ttsSpeed = v);
+              TtsService().setSpeechRate(_ttsSpeedValue);
+            },
+          ),
+          const SizedBox(height: 4),
+          Divider(
+            color: ColorCollection.point.withValues(alpha: 0.2),
+            thickness: 1,
+            height: 28,
+          ),
+          _SliderRow(
             label: '진동 강도',
             value: _vibrationStrength,
             description: '경고 진동의 강도를 조절합니다.',
@@ -57,19 +91,24 @@ class _SliderRow extends StatelessWidget {
   final double value;
   final String description;
   final ValueChanged<double> onChanged;
+  final String Function(double)? valueFormatter;
 
   const _SliderRow({
     required this.label,
     required this.value,
     required this.description,
     required this.onChanged,
+    this.valueFormatter,
   });
+
+  String get _displayValue => valueFormatter != null
+      ? valueFormatter!(value)
+      : '${(value * 100).round()}%';
 
   @override
   Widget build(BuildContext context) {
-    final percent = '${(value * 100).round()}%';
     return Semantics(
-      label: '$label $percent. $description',
+      label: '$label $_displayValue. $description',
       excludeSemantics: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,7 +124,7 @@ class _SliderRow extends StatelessWidget {
                 ),
               ),
               Text(
-                percent,
+                _displayValue,
                 style: AppTextStyles.labelBold.copyWith(
                   color: ColorCollection.main,
                 ),
