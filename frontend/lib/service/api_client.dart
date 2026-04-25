@@ -26,6 +26,9 @@ class ApiClient {
   Future<http.Response> put(Uri uri, {Object? body}) =>
       _send('PUT', uri, body: body);
 
+  Future<http.Response> patch(Uri uri, {Object? body}) =>
+      _send('PATCH', uri, body: body);
+
   Future<http.Response> delete(Uri uri) => _send('DELETE', uri);
 
   Future<http.Response> _send(
@@ -69,6 +72,8 @@ class ApiClient {
         return http.post(uri, headers: headers, body: encoded);
       case 'PUT':
         return http.put(uri, headers: headers, body: encoded);
+      case 'PATCH':
+        return http.patch(uri, headers: headers, body: encoded);
       case 'DELETE':
         return http.delete(uri, headers: headers);
       default:
