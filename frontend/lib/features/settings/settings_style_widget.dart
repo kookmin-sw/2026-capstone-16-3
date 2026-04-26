@@ -29,8 +29,8 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
   static const double _ttsMin = 0.5;
   static const double _ttsMax = 5.0;
 
-  // 진동 강도: 백엔드 int 값 최대치 (Java Integer.MAX_VALUE)
-  static const int _vibrationMax = 2147483647;
+  // 진동 강도: 0~100
+  static const int _vibrationMax = 100;
 
   late MessageLength _messageLength;
   late double _vibrationStrength; // 슬라이더 0.0~1.0

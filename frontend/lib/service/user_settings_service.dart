@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:safepath/service/api_client.dart';
@@ -67,7 +67,7 @@ class UserSettings {
 
   static const UserSettings defaults = UserSettings(
     sentenceLength: MessageLength.medium,
-    vibrationStrength: 1073741824,
+    vibrationStrength: 50,
     voiceGuidanceEnabled: true,
     soundEffectEnabled: true,
     pushNotificationEnabled: true,
@@ -77,7 +77,7 @@ class UserSettings {
   factory UserSettings.fromJson(Map<String, dynamic> json) => UserSettings(
     sentenceLength: MessageLength.fromBackend(json['sentenceLength'] as String?),
     vibrationStrength:
-        (json['vibrationStrength'] as num?)?.toInt() ?? 1073741824,
+        (json['vibrationStrength'] as num?)?.toInt() ?? 50,
     voiceGuidanceEnabled: json['voiceGuidanceEnabled'] as bool? ?? true,
     soundEffectEnabled: json['soundEffectEnabled'] as bool? ?? true,
     pushNotificationEnabled: json['pushNotificationEnabled'] as bool? ?? true,
