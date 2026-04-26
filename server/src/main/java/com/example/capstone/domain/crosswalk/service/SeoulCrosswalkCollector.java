@@ -174,7 +174,7 @@ public class SeoulCrosswalkCollector implements PublicDataCollector {
 
         Wgs84Point point = extractPoint(row, type);
         if (point == null) {
-            log.warn("[SEOUL CROSSWALK SKIP] invalid geometry. code={}, type={}, nodeWkt={}, linkWkt={}",
+            log.debug("[SEOUL CROSSWALK SKIP] invalid geometry. code={}, type={}, nodeWkt={}, linkWkt={}",
                     crosswalkCode, type,
                     firstNonBlank(text(row, "NODE_WKT"), text(row, "노드 WKT")),
                     firstNonBlank(text(row, "LINK_WKT"), text(row, "링크 WKT")));
