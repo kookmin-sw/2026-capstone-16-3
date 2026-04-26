@@ -94,6 +94,24 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         .where((s) => s.type == 'LINE')
         .expand((s) => s.path ?? <LatLng>[])
         .toList();
+
+    // 경로 데이터로 방향 계산 (GPS 오차 무관)
+    if (_routePath.length >= 2) {
+      final startBearing = Geolocator.bearingBetween(
+        _routePath[0].latitude, _routePath[0].longitude,
+        _routePath[1].latitude, _routePath[1].longitude,
+      );
+      _startDirection = _bearingToDirection(startBearing);
+
+      final destBearing = Geolocator.bearingBetween(
+        _routePath[_routePath.length - 2].latitude,
+        _routePath[_routePath.length - 2].longitude,
+        _routePath[_routePath.length - 1].latitude,
+        _routePath[_routePath.length - 1].longitude,
+      );
+      _destinationDirection = _bearingToDirection(destBearing);
+    }
+
     debugPrint(
       '📍 [Nav] 전체 step 수: ${_pointSteps.length}, path 좌표 수: ${_routePath.length}',
     );
@@ -119,22 +137,6 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   }
 
   void _onPositionUpdate(Position position) {
-    // 방향 표시는 정확도 무관하게 업데이트
-    if (!_hasArrived &&
-        _destinationStep?.latitude != null &&
-        _destinationStep?.longitude != null) {
-      final bearing = Geolocator.bearingBetween(
-        position.latitude,
-        position.longitude,
-        _destinationStep!.latitude!,
-        _destinationStep!.longitude!,
-      );
-      final dir = _bearingToDirection(bearing);
-      if (_destinationDirection != dir) {
-        setState(() => _destinationDirection = dir);
-      }
-    }
-
     if (position.accuracy > 20) return;
 
     if (_currentStepIndex >= _pointSteps.length) {
@@ -160,23 +162,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         !_hasBeenOutsideThreshold &&
         !_hasShownStartOverview) {
       _hasShownStartOverview = true;
-      final targetStep = (distance < 20 && _pointSteps.length > 1)
-          ? _pointSteps[1]
-          : _pointSteps[_currentStepIndex];
-      String? direction;
-      if (targetStep.latitude != null && targetStep.longitude != null) {
-        final bearing = Geolocator.bearingBetween(
-          position.latitude,
-          position.longitude,
-          targetStep.latitude!,
-          targetStep.longitude!,
-        );
-        direction = _bearingToDirection(bearing);
-      }
-      setState(() {
-        _showStartOverview = true;
-        _startDirection = direction;
-      });
+      setState(() => _showStartOverview = true);
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) setState(() => _showStartOverview = false);
       });
@@ -221,19 +207,8 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       _destinationStep!.longitude!,
     );
 
-    final bearing = Geolocator.bearingBetween(
-      position.latitude,
-      position.longitude,
-      _destinationStep!.latitude!,
-      _destinationStep!.longitude!,
-    );
-    final dir = _bearingToDirection(bearing);
-
-    setState(() {
-      _debugDistance = distance;
-      _destinationDirection = dir;
-    });
-    debugPrint('📍 [Nav] 목적지까지: ${distance.toStringAsFixed(1)}m ($dir)');
+    setState(() => _debugDistance = distance);
+    debugPrint('📍 [Nav] 목적지까지: ${distance.toStringAsFixed(1)}m ($_destinationDirection)');
 
     if (distance < _arrivalThresholdMeters) {
       setState(() => _hasArrived = true);
