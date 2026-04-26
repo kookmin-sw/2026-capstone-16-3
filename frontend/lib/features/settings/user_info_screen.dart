@@ -20,7 +20,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   Future<void> _onLogout() async {
     setState(() => _isLoading = true);
     try {
-      await AuthService().signOut();
+      await AuthService().clearLocalSession();
     } finally {
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
@@ -43,7 +43,9 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         ),
         content: Text(
           '탈퇴하면 모든 데이터가 삭제되며\n복구할 수 없습니다. 계속하시겠습니까?',
-          style: AppTextStyles.labelRegular.copyWith(color: ColorCollection.point),
+          style: AppTextStyles.labelRegular.copyWith(
+            color: ColorCollection.point,
+          ),
         ),
         actions: [
           TextButton(
@@ -62,8 +64,14 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final uri = Uri.parse('${const String.fromEnvironment('BASE_URL')}/api/users/me/profile');
+      final uri = Uri.parse(
+        '${const String.fromEnvironment('BASE_URL')}/api/users/me/profile',
+      );
+      debugPrint('🔴 [UserInfo] 회원탈퇴 요청: DELETE $uri');
       final response = await ApiClient().delete(uri);
+      debugPrint(
+        '🔴 [UserInfo] 회원탈퇴 응답: ${response.statusCode} / ${response.body}',
+      );
       if (response.statusCode != 200 && response.statusCode != 204) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -75,7 +83,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         }
         return;
       }
-      await AuthService().signOut();
+      await AuthService().clearLocalSession();
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
@@ -132,8 +140,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
                   ),
                 ],
               ),
-              if (_isLoading)
-                const Center(child: CircularProgressIndicator()),
+              if (_isLoading) const Center(child: CircularProgressIndicator()),
             ],
           ),
         ),
