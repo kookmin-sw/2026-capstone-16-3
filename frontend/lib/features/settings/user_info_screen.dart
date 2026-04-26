@@ -7,6 +7,7 @@ import 'package:safepath/routes/app_router.dart';
 import 'package:safepath/service/api_client.dart';
 import 'package:safepath/service/auth_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class UserInfoScreen extends StatefulWidget {
   const UserInfoScreen({super.key});
@@ -86,6 +87,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
           TextButton(
             onPressed: () {
               SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
               Navigator.pop(ctx, false);
             },
             child: Text('취소', style: TextStyle(color: ColorCollection.point)),
@@ -93,6 +95,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
           TextButton(
             onPressed: () {
               SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
               Navigator.pop(ctx, true);
             },
             child: Text('탈퇴', style: TextStyle(color: ColorCollection.red)),

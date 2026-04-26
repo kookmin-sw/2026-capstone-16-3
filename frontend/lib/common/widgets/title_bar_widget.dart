@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 /// 커스텀 타이틀 바 위젯
 ///
@@ -60,6 +61,7 @@ class CustomTitleBar extends StatelessWidget implements PreferredSizeWidget {
                 child: InkWell(
                   onTap: () {
                     SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
                     if (onBack != null) {
                       onBack!();
                     } else {

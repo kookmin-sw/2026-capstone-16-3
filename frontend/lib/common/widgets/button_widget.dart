@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 /// 커스텀 버튼 위젯
 ///
@@ -119,6 +120,7 @@ class CustomButton extends StatelessWidget {
             ? null
             : () {
                 SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
                 onTap!();
               },
         borderRadius: BorderRadius.circular(borderRadius),

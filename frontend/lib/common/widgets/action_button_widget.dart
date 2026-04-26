@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 /// 사용 예시 :
 /// 1) 활성화된 상태 - onTap != null
@@ -51,6 +52,7 @@ class ActionButton extends StatelessWidget {
             ? null
             : () {
                 SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
                 onTap!();
               },
         child: Container(

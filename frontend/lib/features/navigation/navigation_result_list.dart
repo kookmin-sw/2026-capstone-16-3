@@ -2,6 +2,7 @@
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class ResultList extends StatefulWidget {
   final List<Map<String, dynamic>> results;
@@ -104,6 +105,7 @@ class _ResultListState extends State<ResultList> {
             ),
             onTap: () {
               SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
               widget.onTap(item);
             },
           );

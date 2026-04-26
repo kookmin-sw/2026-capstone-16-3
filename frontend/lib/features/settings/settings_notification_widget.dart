@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 /// 알림 및 소리 섹션 (토글)
 class SettingsNotificationWidget extends StatefulWidget {
@@ -140,6 +141,7 @@ class _SettingsNotificationWidgetState
                 // OFF→ON 전환 시: 서비스 먼저 활성화 후 효과음 재생 (UX 피드백)
                 SoundEffectService().setEnabled(true);
                 SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
               }
               widget.onSoundEffectChanged?.call(v);
             },
@@ -230,6 +232,7 @@ class _ToggleRow extends StatelessWidget {
               value: value,
               onChanged: (v) {
                 SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
                 onChanged(v);
               },
               activeThumbColor: Colors.white,

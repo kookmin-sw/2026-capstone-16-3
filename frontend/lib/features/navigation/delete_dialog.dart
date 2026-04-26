@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class DeleteDialog extends StatelessWidget {
   final VoidCallback onDelete;
@@ -24,6 +25,7 @@ class DeleteDialog extends StatelessWidget {
         TextButton(
           onPressed: () {
             SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
             Navigator.pop(context);
           },
           child: Text(
@@ -36,6 +38,7 @@ class DeleteDialog extends StatelessWidget {
         TextButton(
           onPressed: () {
             SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
             onDelete();
             Navigator.pop(context);
           },

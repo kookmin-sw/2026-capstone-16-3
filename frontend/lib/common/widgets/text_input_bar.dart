@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class TextInputBar extends StatelessWidget {
   final TextEditingController controller; // 텍스트 컨트롤러
@@ -51,6 +52,7 @@ class TextInputBar extends StatelessWidget {
                     icon: const Icon(Icons.close, color: ColorCollection.main),
                     onPressed: () {
                       SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
                       if (onClear != null) {
                         onClear!();
                       } else {
@@ -92,6 +94,7 @@ class TextInputBar extends StatelessWidget {
                 ? null
                 : () {
                     SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
                     micTap!();
                   },
             child: Container(
