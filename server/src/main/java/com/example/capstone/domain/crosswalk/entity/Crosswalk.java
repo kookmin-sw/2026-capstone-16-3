@@ -150,4 +150,37 @@ public class Crosswalk {
         this.referenceDate = referenceDate;
         this.lastSyncedAt = lastSyncedAt;
     }
+
+    public void mergeWithNationalAttributes(Crosswalk national, LocalDateTime mergedAt) {
+        this.roadAddress = firstNonBlank(this.roadAddress, national.getRoadAddress());
+        this.sido = firstNonBlank(this.sido, national.getSido());
+        this.sigungu = firstNonBlank(this.sigungu, national.getSigungu());
+        this.emd = firstNonBlank(this.emd, national.getEmd());
+        this.kind = firstNonBlank(this.kind, national.getKind());
+
+        this.width = firstNonNull(this.width, national.getWidth());
+        this.length = firstNonNull(this.length, national.getLength());
+
+        this.pedestrianSignal = firstNonNull(this.pedestrianSignal, national.getPedestrianSignal());
+        this.actuatedSignal = firstNonNull(this.actuatedSignal, national.getActuatedSignal());
+
+        this.greenTime = firstNonNull(this.greenTime, national.getGreenTime());
+        this.redTime = firstNonNull(this.redTime, national.getRedTime());
+
+        this.brailleBlock = firstNonNull(this.brailleBlock, national.getBrailleBlock());
+        this.curbLowered = firstNonNull(this.curbLowered, national.getCurbLowered());
+        this.trafficIsland = firstNonNull(this.trafficIsland, national.getTrafficIsland());
+        this.safetyLighting = firstNonNull(this.safetyLighting, national.getSafetyLighting());
+
+        this.referenceDate = firstNonNull(this.referenceDate, national.getReferenceDate());
+        this.lastSyncedAt = mergedAt;
+    }
+
+    private String firstNonBlank(String current, String incoming) {
+        return current != null && !current.isBlank() ? current : incoming;
+    }
+
+    private <T> T firstNonNull(T current, T incoming) {
+        return current != null ? current : incoming;
+    }
 }
