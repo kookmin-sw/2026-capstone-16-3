@@ -66,8 +66,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
       });
     });
 
-    initCurrentPosition();
-    loadLocation();
+    _initLocation();
   }
 
   Future<void> _loadRecentPlaces() async {
@@ -93,11 +92,22 @@ class _NavigationScreenState extends State<NavigationScreen> {
     }
   }
 
-  Future<void> initCurrentPosition() async {
+  Future<void> _initLocation() async {
     try {
-      _currentPosition = await getCurrentLocation();
+      final position = await getCurrentLocation();
+      if (!mounted) return;
+      _currentPosition = position;
+      final address = await PlaceService.reverseGeocode(
+        lat: position.latitude,
+        lng: position.longitude,
+      );
+      if (!mounted) return;
+      setState(() {
+        currentLocation = address ?? '현재 위치 로딩 실패';
+      });
     } catch (e) {
       debugPrint('🔴 위치 초기화 실패: $e');
+      if (mounted) setState(() => currentLocation = '현재 위치 불러오기 실패');
     }
   }
 
@@ -192,8 +202,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
         _selectedName = '';
         currentLocation = "현재 위치 불러오는 중...";
       });
-      initCurrentPosition();
-      loadLocation();
+      _initLocation();
     } catch (e) {
       debugPrint('🔴 [Navigation] 길찾기 오류: $e');
     } finally {
@@ -226,31 +235,18 @@ class _NavigationScreenState extends State<NavigationScreen> {
       throw Exception('위치 권한이 영구적으로 거부되었습니다.');
     }
 
-    // 현재 위치 가져오기
-    return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-  }
-
-  /// 현재 위치 주소 가져오기
-  void loadLocation() async {
+    // 현재 위치 가져오기 (5초 타임아웃 후 마지막 알려진 위치로 폴백)
     try {
-      final position = await getCurrentLocation();
-
-      final address = await PlaceService.reverseGeocode(
-        lat: position.latitude,
-        lng: position.longitude,
-      );
-
-      setState(() {
-        currentLocation = address ?? "현재 위치 로딩 실패";
-      });
-    } catch (e) {
-      setState(() {
-        currentLocation = "현재 위치 불러오기 실패";
-      });
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      ).timeout(const Duration(seconds: 5));
+    } catch (_) {
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null) return last;
+      rethrow;
     }
   }
+
 
   /// 장소 검색 함수 (새 쿼리 입력 시 초기화)
   void searchPlaces() async {
