@@ -108,6 +108,11 @@ class _SettingsNotificationWidgetState
             value: _soundEffect,
             onChanged: (v) {
               setState(() => _soundEffect = v);
+              if (v) {
+                // OFF→ON 전환 시: 서비스 먼저 활성화 후 효과음 재생 (UX 피드백)
+                SoundEffectService().setEnabled(true);
+                SoundEffectService().play(SoundEffect.buttonTap);
+              }
               widget.onSoundEffectChanged?.call(v);
             },
           ),
