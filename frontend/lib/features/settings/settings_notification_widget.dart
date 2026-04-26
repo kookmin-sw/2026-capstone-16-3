@@ -1,17 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
+import 'package:safepath/service/sound_effect_service.dart';
 
 /// 알림 및 소리 섹션 (토글)
 class SettingsNotificationWidget extends StatefulWidget {
+  final bool initialPushNotificationEnabled;
   final bool initialVoiceGuidanceEnabled;
+  final bool initialSoundEffectEnabled;
+
+  final void Function(bool)? onPushNotificationChanged;
   final void Function(bool)? onVoiceGuidanceChanged;
+  final void Function(bool)? onSoundEffectChanged;
 
   const SettingsNotificationWidget({
     super.key,
+    required this.initialPushNotificationEnabled,
     required this.initialVoiceGuidanceEnabled,
+    required this.initialSoundEffectEnabled,
+    this.onPushNotificationChanged,
     this.onVoiceGuidanceChanged,
+    this.onSoundEffectChanged,
   });
 
   @override
@@ -21,15 +32,55 @@ class SettingsNotificationWidget extends StatefulWidget {
 
 class _SettingsNotificationWidgetState
     extends State<SettingsNotificationWidget> {
-  bool _pushAlert = true;
-  bool _soundEffect = false;
+  late bool _pushAlert;
+  late bool _soundEffect;
   late bool _voiceGuide;
 
   @override
   void initState() {
     super.initState();
+    _pushAlert = widget.initialPushNotificationEnabled;
+    _soundEffect = widget.initialSoundEffectEnabled;
     _voiceGuide = widget.initialVoiceGuidanceEnabled;
   }
+
+  // ─── 푸시 알림 토글 ──────────────────────────────────────────────────────────
+
+  /// 토글은 사용자 의사(설정값)를 저장한다.
+  /// ON으로 켤 때만 OS 권한 상태를 확인하고, 권한이 없으면 안내 스낵바를 표시한다.
+  /// 권한 요청은 앱 시작 시 일괄 처리 예정 (TODO: app startup permission flow).
+  Future<void> _onPushAlertChanged(bool value) async {
+    setState(() => _pushAlert = value);
+    widget.onPushNotificationChanged?.call(value);
+
+    if (value) {
+      final status = await Permission.notification.status;
+      if (!status.isGranted && mounted) {
+        _showPermissionGuidance();
+      }
+    }
+    // OFF → 추후 푸시 발송 로직에서 pushNotificationEnabled == false 이면 전송 스킵
+  }
+
+  void _showPermissionGuidance() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '알림 권한이 허용되지 않았습니다. 시스템 설정에서 알림을 허용해주세요.',
+          style: AppTextStyles.labelRegular.copyWith(color: Colors.white),
+        ),
+        action: SnackBarAction(
+          label: '설정 열기',
+          textColor: ColorCollection.main,
+          onPressed: openAppSettings,
+        ),
+        backgroundColor: ColorCollection.point,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  // ─── 빌드 ────────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +98,7 @@ class _SettingsNotificationWidgetState
             label: '푸시 알림',
             description: '중요 안내 및 업데이트 알림',
             value: _pushAlert,
-            onChanged: (v) => setState(() => _pushAlert = v),
+            onChanged: _onPushAlertChanged,
           ),
           _divider(),
           _ToggleRow(
@@ -55,7 +106,10 @@ class _SettingsNotificationWidgetState
             label: '효과음',
             description: '버튼 및 동작 효과음',
             value: _soundEffect,
-            onChanged: (v) => setState(() => _soundEffect = v),
+            onChanged: (v) {
+              setState(() => _soundEffect = v);
+              widget.onSoundEffectChanged?.call(v);
+            },
           ),
           _divider(),
           _ToggleRow(
@@ -81,6 +135,8 @@ class _SettingsNotificationWidgetState
     endIndent: 20,
   );
 }
+
+// ─── 토글 행 ──────────────────────────────────────────────────────────────────
 
 class _ToggleRow extends StatelessWidget {
   final IconData icon;
@@ -139,13 +195,15 @@ class _ToggleRow extends StatelessWidget {
             ),
             Switch(
               value: value,
-              onChanged: onChanged,
+              onChanged: (v) {
+                SoundEffectService().play(SoundEffect.buttonTap);
+                onChanged(v);
+              },
               activeThumbColor: Colors.white,
               activeTrackColor: ColorCollection.main,
               inactiveThumbColor: Colors.white,
               inactiveTrackColor: Colors.white.withValues(alpha: 0.5),
               trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
-              // M3에서 inactive thumb이 작아지는 현상 방지 — thumbIcon 제공 시 양쪽 동일 크기로 고정됨
               thumbIcon: WidgetStateProperty.all(const Icon(null)),
             ),
           ],

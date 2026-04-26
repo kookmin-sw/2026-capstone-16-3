@@ -8,6 +8,8 @@ import 'package:safepath/features/settings/settings_notification_widget.dart';
 import 'package:safepath/features/settings/settings_profile_widget.dart';
 import 'package:safepath/features/settings/settings_style_widget.dart';
 import 'package:safepath/routes/app_router.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/tts_service.dart';
 import 'package:safepath/service/user_settings_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -30,7 +32,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _load() async {
     final s = await UserSettingsService().fetch();
-    if (mounted) setState(() => _settings = s);
+    if (mounted) {
+      setState(() => _settings = s);
+      TtsService().setVoiceGuidanceEnabled(s.voiceGuidanceEnabled);
+      SoundEffectService().setEnabled(s.soundEffectEnabled);
+    }
   }
 
   Future<void> _patch(UserSettings updated) async {
@@ -80,9 +86,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 12),
               if (s != null)
                 SettingsNotificationWidget(
+                  initialPushNotificationEnabled: s.pushNotificationEnabled,
                   initialVoiceGuidanceEnabled: s.voiceGuidanceEnabled,
-                  onVoiceGuidanceChanged: (v) =>
-                      _patch(s.copyWith(voiceGuidanceEnabled: v)),
+                  initialSoundEffectEnabled: s.soundEffectEnabled,
+                  onPushNotificationChanged: (v) =>
+                      _patch(s.copyWith(pushNotificationEnabled: v)),
+                  onVoiceGuidanceChanged: (v) {
+                    TtsService().setVoiceGuidanceEnabled(v);
+                    _patch(s.copyWith(voiceGuidanceEnabled: v));
+                  },
+                  onSoundEffectChanged: (v) {
+                    SoundEffectService().setEnabled(v);
+                    _patch(s.copyWith(soundEffectEnabled: v));
+                  },
                 )
               else
                 const _SettingsLoadingPlaceholder(height: 160),
