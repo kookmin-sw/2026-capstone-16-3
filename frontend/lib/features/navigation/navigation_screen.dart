@@ -43,6 +43,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   int _currentPage = 1;
   bool _isLoadingMore = false;
   Timer? _debounce;
+  Timer? _reverseGeocodeRetry;
   Position? _currentPosition;
   bool isLoading = false;
   List<SavedPlace> _savedPlaces = [];
@@ -96,17 +97,35 @@ class _NavigationScreenState extends State<NavigationScreen> {
       final position = await getCurrentLocation();
       if (!mounted) return;
       _currentPosition = position;
-      final address = await PlaceService.reverseGeocode(
-        lat: position.latitude,
-        lng: position.longitude,
-      );
-      if (!mounted) return;
-      setState(() {
-        currentLocation = address ?? '현재 위치 로딩 실패';
-      });
+      await _fetchAddress(position);
     } catch (e) {
       debugPrint('🔴 위치 초기화 실패: $e');
-      if (mounted) setState(() => currentLocation = '현재 위치 불러오기 실패');
+      if (mounted) setState(() => currentLocation = '현재 위치 불러오는 중...');
+    }
+  }
+
+  Future<void> _fetchAddress(Position position) async {
+    final address = await PlaceService.reverseGeocode(
+      lat: position.latitude,
+      lng: position.longitude,
+    );
+    if (!mounted) return;
+    if (address != null) {
+      _reverseGeocodeRetry?.cancel();
+      setState(() => currentLocation = address);
+    } else {
+      _reverseGeocodeRetry?.cancel();
+      _reverseGeocodeRetry = Timer.periodic(const Duration(seconds: 5), (_) async {
+        final retryAddress = await PlaceService.reverseGeocode(
+          lat: position.latitude,
+          lng: position.longitude,
+        );
+        if (!mounted) return;
+        if (retryAddress != null) {
+          _reverseGeocodeRetry?.cancel();
+          setState(() => currentLocation = retryAddress);
+        }
+      });
     }
   }
 
@@ -115,6 +134,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   void dispose() {
     destinationController.dispose();
     _debounce?.cancel();
+    _reverseGeocodeRetry?.cancel();
     super.dispose();
   }
 
