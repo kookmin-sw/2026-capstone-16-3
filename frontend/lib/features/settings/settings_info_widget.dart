@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
+import 'package:safepath/service/sound_effect_service.dart';
 
 /// 앱 정보 섹션 (페이지 연결 행 목록)
 class SettingsInfoWidget extends StatelessWidget {
@@ -44,7 +45,12 @@ class _InfoRow extends StatelessWidget {
       label: item.label,
       excludeSemantics: true,
       child: InkWell(
-        onTap: item.onTap,
+        onTap: item.onTap == null
+            ? null
+            : () {
+                SoundEffectService().play(SoundEffect.buttonTap);
+                item.onTap!();
+              },
         borderRadius: BorderRadius.circular(10),
         child: Container(
           width: double.infinity,

@@ -8,6 +8,7 @@ import 'package:safepath/features/detection/detection_idle_view.dart';
 import 'package:safepath/model/detection_event.dart';
 import 'package:safepath/service/camera_service.dart';
 import 'package:safepath/service/detection_ws_service.dart';
+import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/tts_service.dart';
 
 class DetectionScreen extends StatefulWidget {
@@ -36,6 +37,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
   // ─── 탐지 시작 ───────────────────────────────────────────────────────────
 
   Future<void> _startDetection() async {
+    SoundEffectService().play(SoundEffect.actionStart);
     await CameraService().start(CameraMode.detection);
     await DetectionWsService().connect(
       onConnected: () {
@@ -66,6 +68,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
   // ─── 탐지 중지 ───────────────────────────────────────────────────────────
 
   Future<void> _stopDetection() async {
+    SoundEffectService().play(SoundEffect.actionStop);
     await _wsSub?.cancel();
     _wsSub = null;
 

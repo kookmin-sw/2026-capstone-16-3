@@ -47,6 +47,7 @@ class UserSettings {
   final MessageLength sentenceLength;
   final int vibrationStrength;
   final bool voiceGuidanceEnabled;
+  final bool soundEffectEnabled;
 
   /// TTS 실제 재생 속도 (0.5배속 ~ 5.0배속)
   final double guidanceSpeed;
@@ -55,6 +56,7 @@ class UserSettings {
     required this.sentenceLength,
     required this.vibrationStrength,
     required this.voiceGuidanceEnabled,
+    required this.soundEffectEnabled,
     required this.guidanceSpeed,
   });
 
@@ -62,6 +64,7 @@ class UserSettings {
     sentenceLength: MessageLength.medium,
     vibrationStrength: 1073741824,
     voiceGuidanceEnabled: true,
+    soundEffectEnabled: true,
     guidanceSpeed: 2.0,
   );
 
@@ -70,6 +73,7 @@ class UserSettings {
     vibrationStrength:
         (json['vibrationStrength'] as num?)?.toInt() ?? 1073741824,
     voiceGuidanceEnabled: json['voiceGuidanceEnabled'] as bool? ?? true,
+    soundEffectEnabled: json['soundEffectEnabled'] as bool? ?? true,
     guidanceSpeed: (json['guidanceSpeed'] as num?)?.toDouble() ?? 2.0,
   );
 
@@ -77,6 +81,7 @@ class UserSettings {
     'sentenceLength': sentenceLength.backendValue,
     'vibrationStrength': vibrationStrength,
     'voiceGuidanceEnabled': voiceGuidanceEnabled,
+    'soundEffectEnabled': soundEffectEnabled,
     'guidanceSpeed': double.parse(guidanceSpeed.toStringAsFixed(1)),
   };
 
@@ -84,11 +89,13 @@ class UserSettings {
     MessageLength? sentenceLength,
     int? vibrationStrength,
     bool? voiceGuidanceEnabled,
+    bool? soundEffectEnabled,
     double? guidanceSpeed,
   }) => UserSettings(
     sentenceLength: sentenceLength ?? this.sentenceLength,
     vibrationStrength: vibrationStrength ?? this.vibrationStrength,
     voiceGuidanceEnabled: voiceGuidanceEnabled ?? this.voiceGuidanceEnabled,
+    soundEffectEnabled: soundEffectEnabled ?? this.soundEffectEnabled,
     guidanceSpeed: guidanceSpeed ?? this.guidanceSpeed,
   );
 }
@@ -116,6 +123,7 @@ class UserSettingsService {
           'sentenceLength=${settings.sentenceLength.backendValue}, '
           'vibration=${settings.vibrationStrength}, '
           'voiceGuide=${settings.voiceGuidanceEnabled}, '
+          'soundEffect=${settings.soundEffectEnabled}, '
           'speed=${settings.guidanceSpeed}',
         );
         return settings;

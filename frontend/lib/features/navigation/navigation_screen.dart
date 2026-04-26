@@ -15,6 +15,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:geolocator/geolocator.dart';
 import 'package:safepath/service/place_service.dart';
 import 'package:safepath/service/navigation_service.dart';
+import 'package:safepath/service/sound_effect_service.dart';
 
 class NavigationScreen extends StatefulWidget {
   const NavigationScreen({super.key});
@@ -154,6 +155,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     }
 
     FocusManager.instance.primaryFocus?.unfocus();
+    SoundEffectService().play(SoundEffect.actionStart);
 
     setState(() => isLoading = true);
 
