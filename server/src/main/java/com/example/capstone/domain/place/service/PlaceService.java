@@ -4,6 +4,7 @@ import com.example.capstone.domain.place.dto.response.*;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoAddressSearchResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCategorySearchResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToAddressResponse;
+import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToRegionCodeResponse;
 import com.example.capstone.domain.place.exception.PlaceErrorCode;
 import com.example.capstone.domain.place.exception.PlaceException;
 import org.slf4j.Logger;
@@ -237,26 +238,40 @@ public class PlaceService {
         validateLatLng(lat, lng);
 
         try {
-            KakaoCoordToAddressResponse resp = kakaoLocalClient.coordToAddress(lat, lng)
+            KakaoCoordToAddressResponse addressResp = kakaoLocalClient.coordToAddress(lat, lng)
                     .doOnSubscribe(s -> log.info("Kakao reverse geocode start lat={}, lng={}", lat, lng))
                     .doOnError(e -> log.error("Kakao reverse geocode fail lat={}, lng={}", lat, lng, e))
                     .block();
 
-            if (resp == null || resp.documents() == null || resp.documents().isEmpty()) {
-                throw new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND);
+            if (addressResp != null && addressResp.documents() != null && !addressResp.documents().isEmpty()) {
+                KakaoCoordToAddressResponse.Document doc = addressResp.documents().getFirst();
+
+                String address = doc.address() != null ? doc.address().addressName() : null;
+                String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
+
+                if (hasText(roadAddress) || hasText(address)) {
+                    return ReverseGeocodeResponse.ofAddress(address, roadAddress, lat, lng);
+                }
             }
 
-            KakaoCoordToAddressResponse.Document doc = resp.documents().getFirst();
+            KakaoCoordToRegionCodeResponse regionResp = kakaoLocalClient.coordToRegionCode(lat, lng)
+                    .doOnSubscribe(s -> log.info("Kakao coord2region start lat={}, lng={}", lat, lng))
+                    .doOnError(e -> log.error("Kakao coord2region fail lat={}, lng={}", lat, lng, e))
+                    .block();
 
-            String address = doc.address() != null ? doc.address().addressName() : null;
-            String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
+            KakaoCoordToRegionCodeResponse.Document regionDoc = selectRegionDocument(regionResp);
+            String regionAddress = regionDoc != null ? regionDoc.addressName() : null;
 
-            return new ReverseGeocodeResponse(
-                    address,
-                    roadAddress,
-                    lat,
-                    lng
-            );
+            ReverseGeocodeResponse nearestPlace = findNearestPlaceFallback(regionDoc, regionAddress, lat, lng);
+            if (nearestPlace != null) {
+                return nearestPlace;
+            }
+
+            if (hasText(regionAddress)) {
+                return ReverseGeocodeResponse.ofRegion(regionAddress, lat, lng);
+            }
+
+            throw new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND);
         } catch (PlaceException e) {
             throw e;
         } catch (WebClientResponseException e) {
@@ -272,6 +287,67 @@ public class PlaceService {
         } catch (Exception e) {
             throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR);
         }
+    }
+
+    private KakaoCoordToRegionCodeResponse.Document selectRegionDocument(
+            KakaoCoordToRegionCodeResponse regionResp
+    ) {
+        if (regionResp == null || regionResp.documents() == null || regionResp.documents().isEmpty()) {
+            return null;
+        }
+
+        return regionResp.documents().stream()
+                .filter(doc -> "H".equals(doc.regionType()))
+                .findFirst()
+                .or(() -> regionResp.documents().stream()
+                        .filter(doc -> "B".equals(doc.regionType()))
+                        .findFirst())
+                .orElse(regionResp.documents().getFirst());
+    }
+
+    private ReverseGeocodeResponse findNearestPlaceFallback(
+            KakaoCoordToRegionCodeResponse.Document regionDoc,
+            String regionAddress,
+            double lat,
+            double lng
+    ) {
+        String query = null;
+        if (regionDoc != null && hasText(regionDoc.region3DepthName())) {
+            query = regionDoc.region3DepthName();
+        } else if (hasText(regionAddress)) {
+            query = regionAddress;
+        }
+
+        if (!hasText(query)) {
+            return null;
+        }
+
+        final String fallbackQuery = query;
+
+        KakaoCategorySearchResponse placeResp = kakaoLocalClient.searchKeywordByDistance(
+                        fallbackQuery, lat, lng, 500, 1, 1
+                )
+                .doOnSubscribe(s -> log.info("Kakao nearest place fallback start query='{}', lat={}, lng={}", fallbackQuery, lat, lng))
+                .doOnError(e -> log.error("Kakao nearest place fallback fail query='{}', lat={}, lng={}", fallbackQuery, lat, lng, e))
+                .onErrorReturn(new KakaoCategorySearchResponse(null, List.of()))
+                .block();
+
+        if (placeResp == null || placeResp.documents() == null || placeResp.documents().isEmpty()) {
+            return null;
+        }
+
+        KakaoCategorySearchResponse.KakaoPlaceDocument place = placeResp.documents().getFirst();
+        Long distanceMeters = parseDistance(place.distance());
+
+        return ReverseGeocodeResponse.ofNearestPlace(
+                place.addressName(),
+                place.roadAddressName(),
+                regionAddress,
+                place.placeName(),
+                distanceMeters,
+                lat,
+                lng
+        );
     }
 
     private void validateQuery(String query) {
@@ -325,5 +401,21 @@ public class PlaceService {
 
         // 0~360 정규화
         return (deg + 360.0) % 360.0;
+    }
+
+    private static Long parseDistance(String distance) {
+        if (!hasText(distance)) {
+            return null;
+        }
+
+        try {
+            return Long.parseLong(distance);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 }
