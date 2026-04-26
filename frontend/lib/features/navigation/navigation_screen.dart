@@ -233,15 +233,20 @@ class _NavigationScreenState extends State<NavigationScreen> {
       throw Exception('위치 권한이 영구적으로 거부되었습니다.');
     }
 
-    // 현재 위치 가져오기 (5초 타임아웃 후 마지막 알려진 위치로 폴백)
+    // 정확도 20m 이하인 첫 번째 위치 반환 (최대 10초 대기, 초과 시 폴백)
     try {
-      return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      ).timeout(const Duration(seconds: 5));
+      return await Geolocator.getPositionStream(
+        locationSettings: AndroidSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 0,
+        ),
+      ).firstWhere((p) => p.accuracy <= 20).timeout(const Duration(seconds: 10));
     } catch (_) {
       final last = await Geolocator.getLastKnownPosition();
       if (last != null) return last;
-      rethrow;
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+      );
     }
   }
 
