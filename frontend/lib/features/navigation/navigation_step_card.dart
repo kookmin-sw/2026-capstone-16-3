@@ -59,6 +59,7 @@ class NavigationStepCard extends StatelessWidget {
       DirectionType.crosswalk => '횡단보도를 이용',
     };
 
+    if (direction == DirectionType.straight) return '계속 직진하세요';
     if (distance <= 15) return '$action하세요';
     if (distance <= 30) return '잠시 후 $action하세요';
     if (distance <= 50) return instruction.isNotEmpty ? instruction : '잠시 후 $action하세요';
@@ -106,7 +107,9 @@ class NavigationStepCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${_formatDistance(distance)} 후 ${_getDirectionLabel(direction)}',
+                        direction == DirectionType.straight
+                            ? '${_formatDistance(distance)} 직진'
+                            : '${_formatDistance(distance)} 후 ${_getDirectionLabel(direction)}',
                         style: AppTextStyles.title2.copyWith(
                           color: ColorCollection.point,
                           fontSize: 20,
