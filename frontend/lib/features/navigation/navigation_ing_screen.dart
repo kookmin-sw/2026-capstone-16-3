@@ -109,17 +109,22 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
 
   void _startLocationTracking() {
     _positionSub = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
+      locationSettings: AndroidSettings(
+        accuracy: LocationAccuracy.best,
+        distanceFilter: 0,
+        intervalDuration: Duration.zero,
       ),
     ).listen(_onPositionUpdate);
   }
 
   void _onPositionUpdate(Position position) {
+    if (position.accuracy > 20) return;
+
     if (_currentStepIndex >= _pointSteps.length) {
       _trackDestination(position);
-      if (!_hasArrived) _checkDeviation(position);
+      if (!_hasArrived && (_debugDistance == null || _debugDistance! >= 50)) {
+        _checkDeviation(position);
+      }
       return;
     }
 
@@ -170,10 +175,14 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       setState(() {
         _currentStepIndex++;
         _hasBeenOutsideThreshold = false;
+        _debugDistance = null;
       });
     } else {
       // 처음부터 threshold 이내 → 이미 지난 step으로 간주하고 skip
-      setState(() => _currentStepIndex++);
+      setState(() {
+        _currentStepIndex++;
+        _debugDistance = null;
+      });
     }
 
     _checkDeviation(position);
