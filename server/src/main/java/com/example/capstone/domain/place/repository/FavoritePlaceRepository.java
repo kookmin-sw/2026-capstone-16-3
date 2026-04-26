@@ -1,6 +1,7 @@
 package com.example.capstone.domain.place.repository;
 
 import com.example.capstone.domain.place.entity.FavoritePlace;
+import com.example.capstone.domain.user.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,4 +15,6 @@ public interface FavoritePlaceRepository extends JpaRepository<FavoritePlace, Lo
     long countByUserId(Long userId);
 
     int deleteByIdAndUserId(Long id, Long userId);
+
+    void deleteByUser(User user);
 }
