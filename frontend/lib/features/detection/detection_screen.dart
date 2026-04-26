@@ -10,6 +10,7 @@ import 'package:safepath/service/camera_service.dart';
 import 'package:safepath/service/detection_ws_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/tts_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class DetectionScreen extends StatefulWidget {
   final ValueChanged<bool>? onDetectingChanged;
@@ -38,6 +39,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
 
   Future<void> _startDetection() async {
     SoundEffectService().play(SoundEffect.actionStart);
+    VibrationService().vibrate(VibrationEffect.actionStart);
     await CameraService().start(CameraMode.detection);
     await DetectionWsService().connect(
       onConnected: () {
@@ -69,6 +71,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
 
   Future<void> _stopDetection() async {
     SoundEffectService().play(SoundEffect.actionStop);
+    VibrationService().vibrate(VibrationEffect.actionStop);
     await _wsSub?.cancel();
     _wsSub = null;
 
@@ -94,6 +97,13 @@ class _DetectionScreenState extends State<DetectionScreen> {
       _detectedCount++;
       _obstacles.insert(0, event); // 최신 이벤트를 목록 맨 앞에
       if (_obstacles.length > 3) _obstacles.removeLast(); // 최근 3개 유지
+    });
+
+    // 장애물 위험 등급별 진동 피드백
+    VibrationService().vibrate(switch (event.alertLevel) {
+      'high' => VibrationEffect.obstacleLevel3,
+      'medium' => VibrationEffect.obstacleLevel2,
+      _ => VibrationEffect.obstacleLevel1,
     });
 
     // high → 진행 중인 음성 중단 후 즉시 출력

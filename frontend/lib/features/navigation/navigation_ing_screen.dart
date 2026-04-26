@@ -12,6 +12,7 @@ import 'package:safepath/features/navigation/navigation_start_overview_card.dart
 import 'package:safepath/models/route_result.dart';
 import 'package:safepath/service/navigation_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 import 'dart:ui' show DisplayFeatureType;
 import 'package:flutter/services.dart';
 
@@ -351,6 +352,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                             backgroundColor: ColorCollection.red,
                             onTap: () {
                               SoundEffectService().play(SoundEffect.actionStop);
+                              VibrationService().vibrate(VibrationEffect.actionStop);
                               SystemChrome.setPreferredOrientations([
                                 DeviceOrientation.portraitUp,
                                 DeviceOrientation.portraitDown,
