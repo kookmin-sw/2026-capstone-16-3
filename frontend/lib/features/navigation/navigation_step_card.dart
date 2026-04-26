@@ -12,14 +12,14 @@ enum DirectionType {
 class NavigationStepCard extends StatelessWidget {
   final DirectionType direction;
   final String instruction;
-  final int distance;
+  final int? distance;
   final bool isApproaching;
 
   const NavigationStepCard({
     super.key,
     required this.direction,
     required this.instruction,
-    required this.distance,
+    this.distance,
     this.isApproaching = true,
   });
 
@@ -49,8 +49,9 @@ class NavigationStepCard extends StatelessWidget {
     }
   }
 
-  String _getTtsMessage(DirectionType direction, int distance, String instruction) {
+  String _getTtsMessage(DirectionType direction, int? distance, String instruction) {
     if (!isApproaching) return instruction.isNotEmpty ? instruction : '계속 직진하세요';
+    if (distance == null) return '계속 직진하세요';
 
     final action = switch (direction) {
       DirectionType.straight => '직진',
@@ -66,10 +67,9 @@ class NavigationStepCard extends StatelessWidget {
     return '계속 직진하세요';
   }
 
-  String _formatDistance(int distance) {
-    if (distance >= 1000) {
-      return '${(distance / 1000).toStringAsFixed(1)}km';
-    }
+  String _formatDistance(int? distance) {
+    if (distance == null) return '--';
+    if (distance >= 1000) return '${(distance / 1000).toStringAsFixed(1)}km';
     return '${distance}m';
   }
 
