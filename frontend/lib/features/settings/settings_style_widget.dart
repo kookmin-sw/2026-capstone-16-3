@@ -4,6 +4,7 @@ import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/service/tts_service.dart';
 import 'package:safepath/service/user_settings_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 /// 안내 스타일 개인화 섹션 (슬라이더)
 class SettingsStyleWidget extends StatefulWidget {
@@ -114,7 +115,11 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
             label: '진동 강도',
             value: _vibrationStrength,
             description: '경고 진동의 강도를 조절합니다.',
-            onChanged: (v) => setState(() => _vibrationStrength = v),
+            divisions: 10,
+            onChanged: (v) {
+              setState(() => _vibrationStrength = v);
+              VibrationService().setStrength((v * _vibrationMax).round());
+            },
             onChangeEnd: (v) =>
                 widget.onVibrationChanged?.call((v * _vibrationMax).round()),
           ),
@@ -124,7 +129,7 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
   }
 }
 
-class _SliderRow extends StatelessWidget {
+class _SliderRow extends StatefulWidget {
   final String label;
   final double value;
   final String description;
@@ -145,14 +150,41 @@ class _SliderRow extends StatelessWidget {
     this.tickLabels,
   });
 
-  String get _displayValue => valueFormatter != null
-      ? valueFormatter!(value)
-      : '${(value * 100).round()}%';
+  @override
+  State<_SliderRow> createState() => _SliderRowState();
+}
+
+class _SliderRowState extends State<_SliderRow> {
+  late int _lastStep;
+
+  @override
+  void initState() {
+    super.initState();
+    _lastStep = _toStep(widget.value);
+  }
+
+  int _toStep(double v) =>
+      widget.divisions != null ? (v * widget.divisions!).round() : -1;
+
+  String get _displayValue => widget.valueFormatter != null
+      ? widget.valueFormatter!(widget.value)
+      : '${(widget.value * 100).round()}%';
+
+  void _handleChanged(double v) {
+    if (widget.divisions != null) {
+      final step = _toStep(v);
+      if (step != _lastStep) {
+        _lastStep = step;
+        VibrationService().vibrate(VibrationEffect.buttonTap);
+      }
+    }
+    widget.onChanged(v);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: '$label $_displayValue. $description',
+      label: '${widget.label} $_displayValue. ${widget.description}',
       excludeSemantics: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -161,7 +193,7 @@ class _SliderRow extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                label,
+                widget.label,
                 style: AppTextStyles.labelBold.copyWith(
                   color: ColorCollection.point,
                   fontWeight: FontWeight.w800,
@@ -183,21 +215,24 @@ class _SliderRow extends StatelessWidget {
               thumbShape: const _RoundedRectThumbShape(),
               overlayShape: SliderComponentShape.noOverlay,
               inactiveTrackColor: ColorCollection.point.withValues(alpha: 0.15),
+              tickMarkShape: widget.tickLabels != null
+                  ? null
+                  : SliderTickMarkShape.noTickMark,
             ),
             child: Slider(
-              value: value,
-              onChanged: onChanged,
-              onChangeEnd: onChangeEnd,
-              divisions: divisions,
+              value: widget.value,
+              onChanged: _handleChanged,
+              onChangeEnd: widget.onChangeEnd,
+              divisions: widget.divisions,
             ),
           ),
-          if (tickLabels != null) ...[
+          if (widget.tickLabels != null) ...[
             const SizedBox(height: 5),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: tickLabels!
+                children: widget.tickLabels!
                     .map(
                       (t) => Text(
                         t,
@@ -215,7 +250,7 @@ class _SliderRow extends StatelessWidget {
           ],
           const SizedBox(height: 8),
           Text(
-            description,
+            widget.description,
             style: AppTextStyles.labelRegular.copyWith(
               color: ColorCollection.point,
               fontWeight: FontWeight.w400,

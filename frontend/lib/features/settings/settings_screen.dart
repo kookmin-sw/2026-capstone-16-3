@@ -11,6 +11,7 @@ import 'package:safepath/routes/app_router.dart';
 import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/tts_service.dart';
 import 'package:safepath/service/user_settings_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   final ScrollController? scrollController;
@@ -36,6 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() => _settings = s);
       TtsService().setVoiceGuidanceEnabled(s.voiceGuidanceEnabled);
       SoundEffectService().setEnabled(s.soundEffectEnabled);
+      VibrationService().setStrength(s.vibrationStrength);
     }
   }
 
@@ -72,8 +74,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   initialSettings: s,
                   onSentenceLengthChanged: (v) =>
                       _patch(s.copyWith(sentenceLength: v)),
-                  onVibrationChanged: (v) =>
-                      _patch(s.copyWith(vibrationStrength: v)),
+                  onVibrationChanged: (v) {
+                    VibrationService().setStrength(v);
+                    _patch(s.copyWith(vibrationStrength: v));
+                  },
                   onGuidanceSpeedChanged: (v) =>
                       _patch(s.copyWith(guidanceSpeed: v)),
                 )
