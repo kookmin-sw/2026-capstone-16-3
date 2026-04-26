@@ -42,6 +42,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   bool _showStartOverview = false;
   bool _hasShownStartOverview = false;
   String? _startDirection;
+  String? _destinationDirection;
 
   // 경로 이탈 감지
   static const double _deviationThresholdMeters = 20.0;
@@ -118,6 +119,22 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   }
 
   void _onPositionUpdate(Position position) {
+    // 방향 표시는 정확도 무관하게 업데이트
+    if (!_hasArrived &&
+        _destinationStep?.latitude != null &&
+        _destinationStep?.longitude != null) {
+      final bearing = Geolocator.bearingBetween(
+        position.latitude,
+        position.longitude,
+        _destinationStep!.latitude!,
+        _destinationStep!.longitude!,
+      );
+      final dir = _bearingToDirection(bearing);
+      if (_destinationDirection != dir) {
+        setState(() => _destinationDirection = dir);
+      }
+    }
+
     if (position.accuracy > 20) return;
 
     if (_currentStepIndex >= _pointSteps.length) {
@@ -139,7 +156,9 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     );
 
     setState(() => _debugDistance = distance);
-    if (!_showStartOverview && !_hasBeenOutsideThreshold && !_hasShownStartOverview) {
+    if (!_showStartOverview &&
+        !_hasBeenOutsideThreshold &&
+        !_hasShownStartOverview) {
       _hasShownStartOverview = true;
       final targetStep = (distance < 20 && _pointSteps.length > 1)
           ? _pointSteps[1]
@@ -202,8 +221,19 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       _destinationStep!.longitude!,
     );
 
-    setState(() => _debugDistance = distance);
-    debugPrint('📍 [Nav] 목적지까지: ${distance.toStringAsFixed(1)}m');
+    final bearing = Geolocator.bearingBetween(
+      position.latitude,
+      position.longitude,
+      _destinationStep!.latitude!,
+      _destinationStep!.longitude!,
+    );
+    final dir = _bearingToDirection(bearing);
+
+    setState(() {
+      _debugDistance = distance;
+      _destinationDirection = dir;
+    });
+    debugPrint('📍 [Nav] 목적지까지: ${distance.toStringAsFixed(1)}m ($dir)');
 
     if (distance < _arrivalThresholdMeters) {
       setState(() => _hasArrived = true);
@@ -333,7 +363,8 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                             time: _route != null
                                 ? (_route!.totalTime / 60).ceil()
                                 : 0,
-                            status: RouteStatus.safe,
+                            status:
+                                RouteStatus.safe, // TODO: 장애물탐지에 따른 경로 상태 반영
                           ),
                         ),
                         Padding(
@@ -367,9 +398,12 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                                   NavigationStartOverviewCard(
                                     totalDistance: _route!.totalDistance,
                                     totalTime: (_route!.totalTime / 60).ceil(),
-                                    firstStepDistance: _debugDistance?.round() ?? 0,
+                                    firstStepDistance:
+                                        _debugDistance?.round() ?? 0,
                                     firstStepDirection: currentStep != null
-                                        ? _turnTypeToDirection(currentStep.turnType)
+                                        ? _turnTypeToDirection(
+                                            currentStep.turnType,
+                                          )
                                         : DirectionType.straight,
                                     startDirection: _startDirection,
                                   )
@@ -407,8 +441,10 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                                 else if (_route != null)
                                   NavigationStepCard(
                                     direction: DirectionType.straight,
-                                    instruction: '목적지 방향으로 직진하세요',
-                                    distance: _debugDistance?.round() ?? 0,
+                                    instruction: _destinationDirection != null
+                                        ? '$_destinationDirection 방향으로 직진하세요'
+                                        : '목적지 방향으로 직진하세요',
+                                    distance: _debugDistance?.round(),
                                     isApproaching: false,
                                   ),
                                 SizedBox(height: bottomPad),
