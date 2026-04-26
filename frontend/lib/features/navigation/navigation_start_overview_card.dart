@@ -8,6 +8,7 @@ class NavigationStartOverviewCard extends StatelessWidget {
   final int totalTime;
   final int firstStepDistance;
   final DirectionType firstStepDirection;
+  final String? startDirection;
 
   const NavigationStartOverviewCard({
     super.key,
@@ -15,6 +16,7 @@ class NavigationStartOverviewCard extends StatelessWidget {
     required this.totalTime,
     required this.firstStepDistance,
     required this.firstStepDirection,
+    this.startDirection,
   });
 
   String _formatDistance(int distance) {
@@ -57,7 +59,9 @@ class NavigationStartOverviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '길안내를 시작합니다.',
+            startDirection != null
+                ? '$startDirection 방향으로 출발하세요.'
+                : '길안내를 시작합니다.',
             style: AppTextStyles.labelBold.copyWith(color: ColorCollection.point),
           ),
           const SizedBox(height: 12),

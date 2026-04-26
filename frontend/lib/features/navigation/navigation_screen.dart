@@ -44,6 +44,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   int _currentPage = 1;
   bool _isLoadingMore = false;
   Timer? _debounce;
+  Timer? _reverseGeocodeRetry;
   Position? _currentPosition;
   bool isLoading = false;
   List<SavedPlace> _savedPlaces = [];
@@ -97,17 +98,35 @@ class _NavigationScreenState extends State<NavigationScreen> {
       final position = await getCurrentLocation();
       if (!mounted) return;
       _currentPosition = position;
-      final address = await PlaceService.reverseGeocode(
-        lat: position.latitude,
-        lng: position.longitude,
-      );
-      if (!mounted) return;
-      setState(() {
-        currentLocation = address ?? '현재 위치 로딩 실패';
-      });
+      await _fetchAddress(position);
     } catch (e) {
       debugPrint('🔴 위치 초기화 실패: $e');
-      if (mounted) setState(() => currentLocation = '현재 위치 불러오기 실패');
+      if (mounted) setState(() => currentLocation = '현재 위치 불러오는 중...');
+    }
+  }
+
+  Future<void> _fetchAddress(Position position) async {
+    final address = await PlaceService.reverseGeocode(
+      lat: position.latitude,
+      lng: position.longitude,
+    );
+    if (!mounted) return;
+    if (address != null) {
+      _reverseGeocodeRetry?.cancel();
+      setState(() => currentLocation = address);
+    } else {
+      _reverseGeocodeRetry?.cancel();
+      _reverseGeocodeRetry = Timer.periodic(const Duration(seconds: 5), (_) async {
+        final retryAddress = await PlaceService.reverseGeocode(
+          lat: position.latitude,
+          lng: position.longitude,
+        );
+        if (!mounted) return;
+        if (retryAddress != null) {
+          _reverseGeocodeRetry?.cancel();
+          setState(() => currentLocation = retryAddress);
+        }
+      });
     }
   }
 
@@ -116,6 +135,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   void dispose() {
     destinationController.dispose();
     _debounce?.cancel();
+    _reverseGeocodeRetry?.cancel();
     super.dispose();
   }
 
@@ -235,15 +255,20 @@ class _NavigationScreenState extends State<NavigationScreen> {
       throw Exception('위치 권한이 영구적으로 거부되었습니다.');
     }
 
-    // 현재 위치 가져오기 (5초 타임아웃 후 마지막 알려진 위치로 폴백)
+    // 정확도 20m 이하인 첫 번째 위치 반환 (최대 10초 대기, 초과 시 폴백)
     try {
-      return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      ).timeout(const Duration(seconds: 5));
+      return await Geolocator.getPositionStream(
+        locationSettings: AndroidSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 0,
+        ),
+      ).firstWhere((p) => p.accuracy <= 20).timeout(const Duration(seconds: 10));
     } catch (_) {
       final last = await Geolocator.getLastKnownPosition();
       if (last != null) return last;
-      rethrow;
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+      );
     }
   }
 
