@@ -22,7 +22,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   Future<void> _onLogout() async {
     setState(() => _isLoading = true);
     try {
-      await AuthService().clearLocalSession();
+      await AuthService().signOut();
     } finally {
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
