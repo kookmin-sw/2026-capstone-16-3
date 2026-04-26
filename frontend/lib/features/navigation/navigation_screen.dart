@@ -636,7 +636,10 @@ class _ClearButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
+        onTap: () {
+          SoundEffectService().play(SoundEffect.buttonTap);
+          onTap();
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(

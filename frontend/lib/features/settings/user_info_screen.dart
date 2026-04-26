@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/widgets/action_button_widget.dart';
@@ -6,6 +6,7 @@ import 'package:safepath/common/widgets/title_bar_widget.dart';
 import 'package:safepath/routes/app_router.dart';
 import 'package:safepath/service/api_client.dart';
 import 'package:safepath/service/auth_service.dart';
+import 'package:safepath/service/sound_effect_service.dart';
 
 class UserInfoScreen extends StatefulWidget {
   const UserInfoScreen({super.key});
@@ -49,11 +50,17 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () {
+              SoundEffectService().play(SoundEffect.buttonTap);
+              Navigator.pop(ctx, false);
+            },
             child: Text('취소', style: TextStyle(color: ColorCollection.point)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () {
+              SoundEffectService().play(SoundEffect.buttonTap);
+              Navigator.pop(ctx, true);
+            },
             child: Text('탈퇴', style: TextStyle(color: ColorCollection.red)),
           ),
         ],

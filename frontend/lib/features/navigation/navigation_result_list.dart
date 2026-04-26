@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
+import 'package:safepath/service/sound_effect_service.dart';
 
 class ResultList extends StatefulWidget {
   final List<Map<String, dynamic>> results;
@@ -101,7 +102,10 @@ class _ResultListState extends State<ResultList> {
                 color: ColorCollection.point,
               ),
             ),
-            onTap: () => widget.onTap(item),
+            onTap: () {
+              SoundEffectService().play(SoundEffect.buttonTap);
+              widget.onTap(item);
+            },
           );
         },
       ),

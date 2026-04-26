@@ -4,6 +4,7 @@ import 'package:safepath/features/detection/detection_screen.dart';
 import 'package:safepath/features/home/home_screen.dart';
 import 'package:safepath/features/navigation/navigation_screen.dart';
 import 'package:safepath/features/settings/settings_screen.dart';
+import 'package:safepath/service/sound_effect_service.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -62,7 +63,10 @@ class _MainLayoutState extends State<MainLayout> {
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: _onTap,
+          onTap: (index) {
+            SoundEffectService().play(SoundEffect.buttonTap);
+            _onTap(index);
+          },
           type: BottomNavigationBarType.fixed,
           backgroundColor: ColorCollection.background,
           selectedItemColor: ColorCollection.main,
