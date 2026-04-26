@@ -21,7 +21,7 @@ enum SoundEffect {
 ///   - soundEffectEnabled = false 이면 모든 소리 무음 처리
 ///
 /// 음원 파일 위치: assets/sounds/
-///   - button_tap.wav  : 버튼 터치음 (짧은 클릭, ~50ms)
+///   - button_click.wav  : 버튼 터치음 (짧은 클릭, ~50ms)
 ///   - action_start.wav: 시작 효과음 (상승 톤, ~300ms)
 ///   - action_stop.wav : 종료 효과음 (하강 톤, ~300ms)
 ///
@@ -90,7 +90,7 @@ class SoundEffectService {
   Future<void> play(SoundEffect effect) async {
     if (!_enabled) return;
     final (player, path) = switch (effect) {
-      SoundEffect.buttonTap => (_getTapPlayer, 'sounds/button_tap.wav'),
+      SoundEffect.buttonTap => (_getTapPlayer, 'sounds/button_click.wav'),
       SoundEffect.actionStart => (_getActionPlayer, 'sounds/action_start.wav'),
       SoundEffect.actionStop => (_getActionPlayer, 'sounds/action_stop.wav'),
     };
