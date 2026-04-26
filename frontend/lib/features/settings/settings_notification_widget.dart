@@ -63,19 +63,47 @@ class _SettingsNotificationWidgetState
   }
 
   void _showPermissionGuidance() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ColorCollection.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: ColorCollection.point, width: 2),
+        ),
+        title: Text(
+          '알림 권한 필요',
+          style: AppTextStyles.bodyBold.copyWith(color: ColorCollection.point),
+        ),
         content: Text(
-          '알림 권한이 허용되지 않았습니다. 시스템 설정에서 알림을 허용해주세요.',
-          style: AppTextStyles.labelRegular.copyWith(color: Colors.white),
+          '알림 권한이 허용되지 않았습니다.\n시스템 설정에서 알림을 허용해주세요.',
+          style: AppTextStyles.labelRegular.copyWith(
+            color: ColorCollection.point,
+          ),
         ),
-        action: SnackBarAction(
-          label: '설정 열기',
-          textColor: ColorCollection.main,
-          onPressed: openAppSettings,
-        ),
-        backgroundColor: ColorCollection.point,
-        duration: const Duration(seconds: 4),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              '취소',
+              style: AppTextStyles.labelBold.copyWith(
+                color: ColorCollection.point,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              openAppSettings();
+            },
+            child: Text(
+              '설정 열기',
+              style: AppTextStyles.labelBold.copyWith(
+                color: ColorCollection.main,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
