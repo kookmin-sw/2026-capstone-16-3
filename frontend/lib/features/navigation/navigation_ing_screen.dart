@@ -40,6 +40,8 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   double? _debugDistance;
   bool _hasArrived = false;
   bool _showStartOverview = false;
+  bool _hasShownStartOverview = false;
+  String? _startDirection;
 
   // 경로 이탈 감지
   static const double _deviationThresholdMeters = 20.0;
@@ -132,8 +134,25 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     );
 
     setState(() => _debugDistance = distance);
-    if (!_showStartOverview && !_hasBeenOutsideThreshold) {
-      setState(() => _showStartOverview = true);
+    if (!_showStartOverview && !_hasBeenOutsideThreshold && !_hasShownStartOverview) {
+      _hasShownStartOverview = true;
+      final targetStep = (distance < 20 && _pointSteps.length > 1)
+          ? _pointSteps[1]
+          : _pointSteps[_currentStepIndex];
+      String? direction;
+      if (targetStep.latitude != null && targetStep.longitude != null) {
+        final bearing = Geolocator.bearingBetween(
+          position.latitude,
+          position.longitude,
+          targetStep.latitude!,
+          targetStep.longitude!,
+        );
+        direction = _bearingToDirection(bearing);
+      }
+      setState(() {
+        _showStartOverview = true;
+        _startDirection = direction;
+      });
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) setState(() => _showStartOverview = false);
       });
@@ -217,16 +236,20 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     debugPrint('🔄 [Nav] 경로 재탐색 시작...');
 
     try {
-      final result = await NavigationService.getRoute(
-        startX: position.longitude,
-        startY: position.latitude,
-        endX: _endX!,
-        endY: _endY!,
-        startName: '현재 위치',
-        endName: _endName,
-      );
+      final results = await Future.wait([
+        NavigationService.getRoute(
+          startX: position.longitude,
+          startY: position.latitude,
+          endX: _endX!,
+          endY: _endY!,
+          startName: '현재 위치',
+          endName: _endName,
+        ),
+        Future.delayed(const Duration(milliseconds: 800)),
+      ]);
 
       if (!mounted) return;
+      final result = results[0] as RouteResult;
 
       setState(() {
         _route = result;
@@ -339,6 +362,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                                     firstStepDirection: currentStep != null
                                         ? _turnTypeToDirection(currentStep.turnType)
                                         : DirectionType.straight,
+                                    startDirection: _startDirection,
                                   )
                                 else if (currentStep != null)
                                   NavigationStepCard(
@@ -430,6 +454,18 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         ),
       ),
     );
+  }
+
+  String _bearingToDirection(double bearing) {
+    final b = (bearing + 360) % 360;
+    if (b < 22.5 || b >= 337.5) return '북쪽';
+    if (b < 67.5) return '북동쪽';
+    if (b < 112.5) return '동쪽';
+    if (b < 157.5) return '남동쪽';
+    if (b < 202.5) return '남쪽';
+    if (b < 247.5) return '남서쪽';
+    if (b < 292.5) return '서쪽';
+    return '북서쪽';
   }
 
   DirectionType _turnTypeToDirection(int? turnType) {
