@@ -61,6 +61,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   // 장애물 탐지 (카메라 + WS)
   StreamSubscription<DetectionEvent>? _wsSub;
   final List<DetectionEvent> _obstacles = [];
+  RouteStatus _routeStatus = RouteStatus.safe;
 
   @override
   void initState() {
@@ -105,6 +106,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     setState(() {
       _obstacles.insert(0, event);
       if (_obstacles.length > 3) _obstacles.removeLast();
+      _routeStatus = _computeRouteStatus();
     });
 
     VibrationService().vibrate(switch (event.alertLevel) {
@@ -119,6 +121,12 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         interrupt: event.alertLevel == 'high',
       );
     }
+  }
+
+  RouteStatus _computeRouteStatus() {
+    if (_obstacles.any((e) => e.alertLevel == 'high')) return RouteStatus.danger;
+    if (_obstacles.any((e) => e.alertLevel == 'medium')) return RouteStatus.warning;
+    return RouteStatus.safe;
   }
 
   String _obstacleText(DetectionEvent event) {
@@ -395,8 +403,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                             time: _route != null
                                 ? (_route!.totalTime / 60).ceil()
                                 : 0,
-                            status:
-                                RouteStatus.safe, // TODO: 장애물탐지에 따른 경로 상태 반영
+                            status: _routeStatus,
                           ),
                         ),
                         Padding(
