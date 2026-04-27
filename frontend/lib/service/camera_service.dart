@@ -44,7 +44,7 @@ class CameraService {
   static const String _baseUrl = String.fromEnvironment('BASE_URL');
 
   /// true → 카메라 대신 테스트 이미지(assets/images/test_detection.jpg)를 주기 전송
-  static const bool useTestImage = false;
+  static const bool useTestImage = true;
 
   /// 캡처 전송 주기
   static const Duration _captureInterval = Duration(milliseconds: 500);

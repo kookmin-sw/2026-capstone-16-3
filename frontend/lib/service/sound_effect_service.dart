@@ -52,6 +52,10 @@ class SoundEffectService {
       stayAwake: false,
       isSpeakerphoneOn: false,
     ),
+    iOS: AudioContextIOS(
+      category: AVAudioSessionCategory.playback,
+      options: {AVAudioSessionOptions.mixWithOthers}, // TTS와 동시 재생
+    ),
   );
 
   static final _actionContext = AudioContext(
@@ -61,6 +65,10 @@ class SoundEffectService {
       audioFocus: AndroidAudioFocus.gainTransientMayDuck,
       stayAwake: false,
       isSpeakerphoneOn: false,
+    ),
+    iOS: AudioContextIOS(
+      category: AVAudioSessionCategory.playback,
+      options: {AVAudioSessionOptions.mixWithOthers}, // TTS와 동시 재생
     ),
   );
 
