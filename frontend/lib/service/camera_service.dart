@@ -44,7 +44,7 @@ class CameraService {
   static const String _baseUrl = String.fromEnvironment('BASE_URL');
 
   /// true → 카메라 대신 테스트 이미지(assets/images/test_detection.jpg)를 주기 전송
-  static const bool useTestImage = true;
+  static const bool useTestImage = false;
 
   /// 캡처 전송 주기
   static const Duration _captureInterval = Duration(milliseconds: 500);
@@ -194,7 +194,7 @@ class CameraService {
     }
   }
 
-  /// POST /api/guide/image 또는 navigation 엔드포인트로 이미지를 전송한다.
+  /// POST /api/guide/image 엔드포인트로 이미지를 전송한다.
   ///
   /// Request: multipart/form-data
   ///   - image      : JPEG 바이너리
@@ -203,10 +203,7 @@ class CameraService {
   /// Response: { "success": bool, "data": {}, "error": { ... } }
   /// success=true이고 HTTP 200일 때만 전송 성공으로 처리한다.
   Future<bool> _sendFrame(Uint8List bytes) async {
-    // detection 모드: /api/guide/image / navigation 모드: 별도 엔드포인트 (미구현)
-    final endpoint = _currentMode == CameraMode.detection
-        ? '$_baseUrl/api/guide/image'
-        : '$_baseUrl/api/navigation/frame'; // TODO: navigation 엔드포인트 확정 시 수정
+    final endpoint = '$_baseUrl/api/guide/image';
 
     final capturedAt = DateTime.now().toUtc().toIso8601String();
     final accessToken = await TokenStorage().accessToken;
