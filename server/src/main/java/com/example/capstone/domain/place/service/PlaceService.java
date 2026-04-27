@@ -155,18 +155,27 @@ public class PlaceService {
         double placeLat = Double.parseDouble(doc.y());
         Long dist = (doc.distance() == null || doc.distance().isBlank()) ? null : Long.parseLong(doc.distance());
 
+        String resolvedAddress = normalizeAddress(doc.addressName());
+
+        String resolvedRoadAddress = resolveRoadAddress(
+                doc.addressName(),
+                doc.roadAddressName(),
+                placeLat,
+                placeLng
+        );
+
         return new PlaceDetailResponse(
                 placeId,
                 doc.placeName(),
                 doc.categoryName(),
-                doc.addressName(),
-                doc.roadAddressName(),
+                resolvedAddress,
+                resolvedRoadAddress,
                 placeLat,
                 placeLng,
                 dist,
                 doc.phone(),
                 doc.placeUrl(),
-                null, // openingHours: Kakao Local REST에서 제공되지 않음
+                null,
                 new PlaceDetailResponse.Extra("KAKAO")
         );
     }
@@ -188,11 +197,18 @@ public class PlaceService {
 
         Integer directionClock = toDirectionClock(originLat, originLng, placeLat, placeLng);
 
+        String resolvedRoadAddress = resolveRoadAddress(
+                d.addressName(),
+                d.roadAddressName(),
+                placeLat,
+                placeLng
+        );
+
         return new PlaceResponse(
                 placeId,
                 d.placeName(),
                 d.categoryName(),
-                d.roadAddressName(),
+                resolvedRoadAddress,
                 placeLat,
                 placeLng,
                 dist,
@@ -220,12 +236,20 @@ public class PlaceService {
             double lng = Double.parseDouble(doc.x());
             double lat = Double.parseDouble(doc.y());
 
+            String address = normalizeAddress(doc.addressName());
             String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
+
+            String resolvedRoadAddress = resolveRoadAddress(
+                    doc.addressName(),
+                    roadAddress,
+                    lat,
+                    lng
+            );
 
             return new GeocodeResponse(
                     query.trim(),
-                    doc.addressName(),
-                    roadAddress,
+                    address,
+                    resolvedRoadAddress,
                     lat,
                     lng
             );
@@ -249,8 +273,16 @@ public class PlaceService {
                 String address = doc.address() != null ? doc.address().addressName() : null;
                 String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
 
-                if (hasText(roadAddress) || hasText(address)) {
-                    return ReverseGeocodeResponse.ofAddress(address, roadAddress, lat, lng);
+                String normalizedAddress = normalizeAddress(address);
+                String resolvedRoadAddress = resolveRoadAddress(address, roadAddress, lat, lng);
+
+                if (hasText(resolvedRoadAddress) || hasText(normalizedAddress)) {
+                    return ReverseGeocodeResponse.ofAddress(
+                            normalizedAddress,
+                            resolvedRoadAddress,
+                            lat,
+                            lng
+                    );
                 }
             }
 
@@ -260,7 +292,9 @@ public class PlaceService {
                     .block();
 
             KakaoCoordToRegionCodeResponse.Document regionDoc = selectRegionDocument(regionResp);
-            String regionAddress = regionDoc != null ? regionDoc.addressName() : null;
+            String regionAddress = regionDoc != null
+                    ? normalizeAddress(regionDoc.addressName())
+                    : null;
 
             ReverseGeocodeResponse nearestPlace = findNearestPlaceFallback(regionDoc, regionAddress, lat, lng);
             if (nearestPlace != null) {
@@ -339,15 +373,192 @@ public class PlaceService {
         KakaoCategorySearchResponse.KakaoPlaceDocument place = placeResp.documents().getFirst();
         Long distanceMeters = parseDistance(place.distance());
 
-        return ReverseGeocodeResponse.ofNearestPlace(
+        String resolvedAddress = normalizeAddress(place.addressName());
+
+        String resolvedRoadAddress = resolveRoadAddress(
                 place.addressName(),
                 place.roadAddressName(),
-                regionAddress,
+                lat,
+                lng
+        );
+
+        String normalizedRegionAddress = normalizeAddress(regionAddress);
+
+        return ReverseGeocodeResponse.ofNearestPlace(
+                resolvedAddress,
+                resolvedRoadAddress,
+                normalizedRegionAddress,
                 place.placeName(),
                 distanceMeters,
                 lat,
                 lng
         );
+    }
+
+    private String normalizeAddress(String address) {
+        if (!hasText(address)) {
+            return address;
+        }
+
+        String normalized = address.trim().replaceAll("\\s+", " ");
+
+        if (normalized.startsWith("서울 ")) {
+            return "서울특별시 " + normalized.substring("서울 ".length());
+        }
+        if (normalized.startsWith("부산 ")) {
+            return "부산광역시 " + normalized.substring("부산 ".length());
+        }
+        if (normalized.startsWith("대구 ")) {
+            return "대구광역시 " + normalized.substring("대구 ".length());
+        }
+        if (normalized.startsWith("인천 ")) {
+            return "인천광역시 " + normalized.substring("인천 ".length());
+        }
+        if (normalized.startsWith("광주 ")) {
+            return "광주광역시 " + normalized.substring("광주 ".length());
+        }
+        if (normalized.startsWith("대전 ")) {
+            return "대전광역시 " + normalized.substring("대전 ".length());
+        }
+        if (normalized.startsWith("울산 ")) {
+            return "울산광역시 " + normalized.substring("울산 ".length());
+        }
+        if (normalized.startsWith("세종 ")) {
+            return "세종특별자치시 " + normalized.substring("세종 ".length());
+        }
+        if (normalized.startsWith("경기 ")) {
+            return "경기도 " + normalized.substring("경기 ".length());
+        }
+        if (normalized.startsWith("강원 ")) {
+            return "강원특별자치도 " + normalized.substring("강원 ".length());
+        }
+        if (normalized.startsWith("충북 ")) {
+            return "충청북도 " + normalized.substring("충북 ".length());
+        }
+        if (normalized.startsWith("충남 ")) {
+            return "충청남도 " + normalized.substring("충남 ".length());
+        }
+        if (normalized.startsWith("전북 ")) {
+            return "전북특별자치도 " + normalized.substring("전북 ".length());
+        }
+        if (normalized.startsWith("전남 ")) {
+            return "전라남도 " + normalized.substring("전남 ".length());
+        }
+        if (normalized.startsWith("경북 ")) {
+            return "경상북도 " + normalized.substring("경북 ".length());
+        }
+        if (normalized.startsWith("경남 ")) {
+            return "경상남도 " + normalized.substring("경남 ".length());
+        }
+        if (normalized.startsWith("제주 ")) {
+            return "제주특별자치도 " + normalized.substring("제주 ".length());
+        }
+
+        return normalized;
+    }
+
+    private String resolveRoadAddress(
+            String jibunAddress,
+            String roadAddress,
+            double lat,
+            double lng
+    ) {
+        if (hasText(roadAddress)) {
+            return normalizeAddress(roadAddress);
+        }
+
+        String convertedRoadAddress = convertJibunToRoadAddress(jibunAddress, lat, lng);
+        if (hasText(convertedRoadAddress)) {
+            return normalizeAddress(convertedRoadAddress);
+        }
+
+        // 카카오에서 도로명 주소가 존재하지 않는 장소도 있으므로,
+        // 빈 값 방지를 위해 마지막에는 지번 주소를 반환한다.
+        return hasText(jibunAddress) ? normalizeAddress(jibunAddress) : null;
+    }
+
+    private String convertJibunToRoadAddress(
+            String jibunAddress,
+            double lat,
+            double lng
+    ) {
+        if (!hasText(jibunAddress)) {
+            return null;
+        }
+
+        KakaoAddressSearchResponse resp = kakaoLocalClient.searchAddress(jibunAddress.trim())
+                .doOnSubscribe(s -> log.info(
+                        "Kakao jibun to road address start address='{}'",
+                        jibunAddress
+                ))
+                .doOnError(e -> log.warn(
+                        "Kakao jibun to road address fail address='{}'",
+                        jibunAddress,
+                        e
+                ))
+                .onErrorReturn(new KakaoAddressSearchResponse(null, List.of()))
+                .block();
+
+        return selectNearestRoadAddress(resp, lat, lng);
+    }
+
+    private String selectNearestRoadAddress(
+            KakaoAddressSearchResponse resp,
+            double lat,
+            double lng
+    ) {
+        if (resp == null || resp.documents() == null || resp.documents().isEmpty()) {
+            return null;
+        }
+
+        String fallbackRoadAddress = null;
+        Long minDistance = null;
+        String nearestRoadAddress = null;
+
+        for (KakaoAddressSearchResponse.Document doc : resp.documents()) {
+            if (doc.roadAddress() == null || !hasText(doc.roadAddress().addressName())) {
+                continue;
+            }
+
+            String roadAddress = doc.roadAddress().addressName().trim();
+
+            if (fallbackRoadAddress == null) {
+                fallbackRoadAddress = roadAddress;
+            }
+
+            Double docLng = parseDoubleOrNull(doc.roadAddress().x());
+            Double docLat = parseDoubleOrNull(doc.roadAddress().y());
+
+            if (docLng == null || docLat == null) {
+                docLng = parseDoubleOrNull(doc.x());
+                docLat = parseDoubleOrNull(doc.y());
+            }
+
+            if (docLng == null || docLat == null) {
+                continue;
+            }
+
+            long distance = haversineMeters(lat, lng, docLat, docLng);
+
+            if (minDistance == null || distance < minDistance) {
+                minDistance = distance;
+                nearestRoadAddress = roadAddress;
+            }
+        }
+
+        return hasText(nearestRoadAddress) ? nearestRoadAddress : fallbackRoadAddress;
+    }
+
+    private static Double parseDoubleOrNull(String value) {
+        if (!hasText(value)) {
+            return null;
+        }
+
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private void validateQuery(String query) {
