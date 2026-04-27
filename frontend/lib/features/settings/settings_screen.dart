@@ -10,6 +10,7 @@ import 'package:safepath/features/settings/settings_style_widget.dart';
 import 'package:safepath/routes/app_router.dart';
 import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/tts_service.dart';
+import 'package:safepath/service/user_service.dart';
 import 'package:safepath/service/user_settings_service.dart';
 import 'package:safepath/service/vibration_service.dart';
 
@@ -24,6 +25,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   UserSettings? _settings;
+  String _nickname = '';
 
   @override
   void initState() {
@@ -32,13 +34,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _load() async {
-    final s = await UserSettingsService().fetch();
-    if (mounted) {
-      setState(() => _settings = s);
-      TtsService().setVoiceGuidanceEnabled(s.voiceGuidanceEnabled);
-      SoundEffectService().setEnabled(s.soundEffectEnabled);
-      VibrationService().setStrength(s.vibrationStrength);
-    }
+    final results = await Future.wait([
+      UserSettingsService().fetch(),
+      UserService().getProfile(),
+    ]);
+    if (!mounted) return;
+    final s = results[0] as UserSettings;
+    final profile = results[1] as UserProfile?;
+    setState(() {
+      _settings = s;
+      _nickname = profile?.nickname ?? '';
+    });
+    TtsService().setVoiceGuidanceEnabled(s.voiceGuidanceEnabled);
+    SoundEffectService().setEnabled(s.soundEffectEnabled);
+    VibrationService().setStrength(s.vibrationStrength);
   }
 
   Future<void> _patch(UserSettings updated) async {
@@ -61,7 +70,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               // 유저 프로필
               SettingsProfileWidget(
-                name: '홍길동',
+                name: _nickname.isEmpty ? '불러오는 중...' : _nickname,
                 onTap: () => Navigator.pushNamed(context, AppRouter.userinfo),
               ),
               const SizedBox(height: 32),
