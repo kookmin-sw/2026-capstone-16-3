@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/widgets/action_button_widget.dart';
@@ -6,6 +6,7 @@ import 'package:safepath/common/widgets/title_bar_widget.dart';
 import 'package:safepath/routes/app_router.dart';
 import 'package:safepath/service/api_client.dart';
 import 'package:safepath/service/auth_service.dart';
+import 'package:safepath/service/user_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/vibration_service.dart';
 
@@ -183,14 +184,31 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
   }
 }
 
-class _UserCard extends StatelessWidget {
+class _UserCard extends StatefulWidget {
   const _UserCard();
 
   @override
-  Widget build(BuildContext context) {
-    final String name = '홍길동';
-    final String email = 'gildong@gmail.com';
+  State<_UserCard> createState() => _UserCardState();
+}
 
+class _UserCardState extends State<_UserCard> {
+  String _nickname = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final profile = await UserService().getProfile();
+    if (mounted && profile != null) {
+      setState(() => _nickname = profile.nickname);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -214,18 +232,18 @@ class _UserCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    name,
+                    _nickname.isEmpty ? '불러오는 중...' : _nickname,
                     style: AppTextStyles.bodyBold.copyWith(
                       color: ColorCollection.point,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    email,
-                    style: AppTextStyles.labelRegular.copyWith(
-                      color: ColorCollection.point,
-                    ),
-                  ),
+                  // const SizedBox(height: 6),
+                  // Text(
+                  //   email,
+                  //   style: AppTextStyles.labelRegular.copyWith(
+                  //     color: ColorCollection.point,
+                  //   ),
+                  // ),
                 ],
               ),
             ],
