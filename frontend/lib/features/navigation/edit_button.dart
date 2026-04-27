@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class EditButton extends StatelessWidget {
   final VoidCallback? onTap;
@@ -13,7 +15,13 @@ class EditButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
+        onTap: onTap == null
+            ? null
+            : () {
+                SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
+                onTap!();
+              },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 18),
           constraints: const BoxConstraints(minHeight: 75),

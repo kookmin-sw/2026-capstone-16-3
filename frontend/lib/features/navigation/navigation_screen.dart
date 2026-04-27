@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/theme/color_collection.dart';
@@ -15,6 +15,8 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:geolocator/geolocator.dart';
 import 'package:safepath/service/place_service.dart';
 import 'package:safepath/service/navigation_service.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class NavigationScreen extends StatefulWidget {
   const NavigationScreen({super.key});
@@ -184,6 +186,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
     }
 
     FocusManager.instance.primaryFocus?.unfocus();
+    SoundEffectService().play(SoundEffect.actionStart);
+    VibrationService().vibrate(VibrationEffect.actionStart);
 
     setState(() => isLoading = true);
 
@@ -634,7 +638,11 @@ class _ClearButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
+        onTap: () {
+          SoundEffectService().play(SoundEffect.buttonTap);
+          VibrationService().vibrate(VibrationEffect.buttonTap);
+          onTap();
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(

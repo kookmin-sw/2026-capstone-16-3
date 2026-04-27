@@ -8,7 +8,10 @@ import 'package:safepath/features/settings/settings_notification_widget.dart';
 import 'package:safepath/features/settings/settings_profile_widget.dart';
 import 'package:safepath/features/settings/settings_style_widget.dart';
 import 'package:safepath/routes/app_router.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/tts_service.dart';
 import 'package:safepath/service/user_settings_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   final ScrollController? scrollController;
@@ -30,7 +33,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _load() async {
     final s = await UserSettingsService().fetch();
-    if (mounted) setState(() => _settings = s);
+    if (mounted) {
+      setState(() => _settings = s);
+      TtsService().setVoiceGuidanceEnabled(s.voiceGuidanceEnabled);
+      SoundEffectService().setEnabled(s.soundEffectEnabled);
+      VibrationService().setStrength(s.vibrationStrength);
+    }
   }
 
   Future<void> _patch(UserSettings updated) async {
@@ -66,8 +74,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   initialSettings: s,
                   onSentenceLengthChanged: (v) =>
                       _patch(s.copyWith(sentenceLength: v)),
-                  onVibrationChanged: (v) =>
-                      _patch(s.copyWith(vibrationStrength: v)),
+                  onVibrationChanged: (v) {
+                    VibrationService().setStrength(v);
+                    _patch(s.copyWith(vibrationStrength: v));
+                  },
                   onGuidanceSpeedChanged: (v) =>
                       _patch(s.copyWith(guidanceSpeed: v)),
                 )
@@ -80,9 +90,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 12),
               if (s != null)
                 SettingsNotificationWidget(
+                  initialPushNotificationEnabled: s.pushNotificationEnabled,
                   initialVoiceGuidanceEnabled: s.voiceGuidanceEnabled,
-                  onVoiceGuidanceChanged: (v) =>
-                      _patch(s.copyWith(voiceGuidanceEnabled: v)),
+                  initialSoundEffectEnabled: s.soundEffectEnabled,
+                  onPushNotificationChanged: (v) =>
+                      _patch(s.copyWith(pushNotificationEnabled: v)),
+                  onVoiceGuidanceChanged: (v) {
+                    TtsService().setVoiceGuidanceEnabled(v);
+                    _patch(s.copyWith(voiceGuidanceEnabled: v));
+                  },
+                  onSoundEffectChanged: (v) {
+                    SoundEffectService().setEnabled(v);
+                    _patch(s.copyWith(soundEffectEnabled: v));
+                  },
                 )
               else
                 const _SettingsLoadingPlaceholder(height: 160),

@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 /// 설정 화면 상단 유저 프로필 행
 class SettingsProfileWidget extends StatelessWidget {
@@ -17,7 +19,13 @@ class SettingsProfileWidget extends StatelessWidget {
       label: '프로필: $name. 프로필 편집',
       excludeSemantics: true,
       child: InkWell(
-        onTap: onTap,
+        onTap: onTap == null
+            ? null
+            : () {
+                SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
+                onTap!();
+              },
         borderRadius: BorderRadius.circular(10),
         child: Container(
           width: double.infinity,

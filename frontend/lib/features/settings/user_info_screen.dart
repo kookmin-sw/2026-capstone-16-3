@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/widgets/action_button_widget.dart';
@@ -6,6 +6,8 @@ import 'package:safepath/common/widgets/title_bar_widget.dart';
 import 'package:safepath/routes/app_router.dart';
 import 'package:safepath/service/api_client.dart';
 import 'package:safepath/service/auth_service.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class UserInfoScreen extends StatefulWidget {
   const UserInfoScreen({super.key});
@@ -32,6 +34,40 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
     }
   }
 
+  Future<void> _showErrorDialog(String message) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ColorCollection.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: ColorCollection.point, width: 2),
+        ),
+        title: Text(
+          '오류',
+          style: AppTextStyles.bodyBold.copyWith(color: ColorCollection.point),
+        ),
+        content: Text(
+          message,
+          style: AppTextStyles.labelRegular.copyWith(
+            color: ColorCollection.point,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              '확인',
+              style: AppTextStyles.labelBold.copyWith(
+                color: ColorCollection.main,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _onDeleteAccount() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -49,11 +85,19 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () {
+              SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
+              Navigator.pop(ctx, false);
+            },
             child: Text('취소', style: TextStyle(color: ColorCollection.point)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () {
+              SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
+              Navigator.pop(ctx, true);
+            },
             child: Text('탈퇴', style: TextStyle(color: ColorCollection.red)),
           ),
         ],
@@ -74,12 +118,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       );
       if (response.statusCode != 200 && response.statusCode != 204) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('회원 탈퇴에 실패했습니다. 다시 시도해주세요.'),
-              backgroundColor: ColorCollection.red,
-            ),
-          );
+          await _showErrorDialog('회원 탈퇴에 실패했습니다.\n다시 시도해주세요.');
         }
         return;
       }
@@ -93,12 +132,7 @@ class _UserInfoScreenState extends State<UserInfoScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('회원 탈퇴에 실패했습니다. 다시 시도해주세요.'),
-            backgroundColor: ColorCollection.red,
-          ),
-        );
+        await _showErrorDialog('회원 탈퇴에 실패했습니다.\n다시 시도해주세요.');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

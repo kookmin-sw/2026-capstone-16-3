@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class TextInputBar extends StatelessWidget {
   final TextEditingController controller; // 텍스트 컨트롤러
@@ -49,11 +51,12 @@ class TextInputBar extends StatelessWidget {
                   return IconButton(
                     icon: const Icon(Icons.close, color: ColorCollection.main),
                     onPressed: () {
-                      // 부모에서 상태 + controller 모두 관리하도록 위임
+                      SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
                       if (onClear != null) {
                         onClear!();
                       } else {
-                        controller.clear(); // fallback
+                        controller.clear();
                       }
                     },
                   );
@@ -87,7 +90,13 @@ class TextInputBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           child: InkWell(
             borderRadius: BorderRadius.circular(10),
-            onTap: micTap,
+            onTap: micTap == null
+                ? null
+                : () {
+                    SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
+                    micTap!();
+                  },
             child: Container(
               width: 55,
               height: 55,

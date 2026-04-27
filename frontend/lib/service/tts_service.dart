@@ -23,6 +23,7 @@ class TtsService {
   final FlutterTts _tts = FlutterTts();
   bool _initialized = false;
   bool _isSpeaking = false;
+  bool _voiceGuidanceEnabled = true;
 
   static const double defaultSpeechRate = 1.0;
 
@@ -66,8 +67,14 @@ class TtsService {
   ///
   /// [interrupt] = true  → 진행 중인 음성을 중단하고 즉시 출력 (high alert용)
   /// [interrupt] = false → 이미 말하는 중이면 스킵 (medium / low alert용)
+  void setVoiceGuidanceEnabled(bool enabled) {
+    _voiceGuidanceEnabled = enabled;
+    debugPrint('🔊 [TTS] 음성 안내 ${enabled ? '켜짐' : '꺼짐'}');
+  }
+
   Future<void> speak(String text, {bool interrupt = false}) async {
     if (text.isEmpty) return;
+    if (!_voiceGuidanceEnabled) return;
 
     await _init();
 

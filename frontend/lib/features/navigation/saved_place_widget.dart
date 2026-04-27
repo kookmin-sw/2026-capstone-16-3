@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/enum/place_category.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class SavedPlaceWidget extends StatelessWidget {
   final String label; // 저장된 장소 이름
@@ -36,7 +38,13 @@ class SavedPlaceWidget extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
+        onTap: onTap == null
+            ? null
+            : () {
+                SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
+                onTap!();
+              },
         child: Container(
           decoration: BoxDecoration(
             color: ColorCollection.point.withOpacity(0.1),
@@ -86,7 +94,13 @@ class SavedPlaceWidget extends StatelessWidget {
                 const SizedBox(width: 10),
                 if (isEditMode)
                   GestureDetector(
-                    onTap: onDelete,
+                    onTap: onDelete == null
+                        ? null
+                        : () {
+                            SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
+                            onDelete!();
+                          },
                     child: Container(
                       width: 50,
                       height: 50,

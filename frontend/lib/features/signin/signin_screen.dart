@@ -22,27 +22,50 @@ class _SignInScreenState extends State<SignInScreen> {
       await AuthService().signInWithKakao();
       if (!mounted) return;
 
-      // 신규/기존 유저 모두 홈으로 (카카오 회원가입은 SDK가 자동 처리)
       Navigator.pushReplacementNamed(context, AppRouter.home);
     } on AuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: ColorCollection.red,
-        ),
-      );
+      await _showErrorDialog(e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('로그인에 실패했습니다. 다시 시도해주세요.'),
-          backgroundColor: ColorCollection.red,
-        ),
-      );
+      await _showErrorDialog('로그인에 실패했습니다.\n다시 시도해주세요.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _showErrorDialog(String message) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ColorCollection.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: ColorCollection.point, width: 2),
+        ),
+        title: Text(
+          '오류',
+          style: AppTextStyles.bodyBold.copyWith(color: ColorCollection.point),
+        ),
+        content: Text(
+          message,
+          style: AppTextStyles.labelRegular.copyWith(
+            color: ColorCollection.point,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              '확인',
+              style: AppTextStyles.labelBold.copyWith(
+                color: ColorCollection.main,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:safepath/service/api_client.dart';
@@ -47,6 +47,11 @@ class UserSettings {
   final MessageLength sentenceLength;
   final int vibrationStrength;
   final bool voiceGuidanceEnabled;
+  final bool soundEffectEnabled;
+
+  /// 사용자의 푸시 알림 수신 의사 (OS 권한과 별개)
+  /// OFF → 추후 발송 로직에서 이 값을 보고 전송 스킵
+  final bool pushNotificationEnabled;
 
   /// TTS 실제 재생 속도 (0.5배속 ~ 5.0배속)
   final double guidanceSpeed;
@@ -55,21 +60,27 @@ class UserSettings {
     required this.sentenceLength,
     required this.vibrationStrength,
     required this.voiceGuidanceEnabled,
+    required this.soundEffectEnabled,
+    required this.pushNotificationEnabled,
     required this.guidanceSpeed,
   });
 
   static const UserSettings defaults = UserSettings(
     sentenceLength: MessageLength.medium,
-    vibrationStrength: 1073741824,
+    vibrationStrength: 50,
     voiceGuidanceEnabled: true,
+    soundEffectEnabled: true,
+    pushNotificationEnabled: true,
     guidanceSpeed: 2.0,
   );
 
   factory UserSettings.fromJson(Map<String, dynamic> json) => UserSettings(
     sentenceLength: MessageLength.fromBackend(json['sentenceLength'] as String?),
     vibrationStrength:
-        (json['vibrationStrength'] as num?)?.toInt() ?? 1073741824,
+        (json['vibrationStrength'] as num?)?.toInt() ?? 50,
     voiceGuidanceEnabled: json['voiceGuidanceEnabled'] as bool? ?? true,
+    soundEffectEnabled: json['soundEffectEnabled'] as bool? ?? true,
+    pushNotificationEnabled: json['pushNotificationEnabled'] as bool? ?? true,
     guidanceSpeed: (json['guidanceSpeed'] as num?)?.toDouble() ?? 2.0,
   );
 
@@ -77,6 +88,8 @@ class UserSettings {
     'sentenceLength': sentenceLength.backendValue,
     'vibrationStrength': vibrationStrength,
     'voiceGuidanceEnabled': voiceGuidanceEnabled,
+    'soundEffectEnabled': soundEffectEnabled,
+    'pushNotificationEnabled': pushNotificationEnabled,
     'guidanceSpeed': double.parse(guidanceSpeed.toStringAsFixed(1)),
   };
 
@@ -84,11 +97,16 @@ class UserSettings {
     MessageLength? sentenceLength,
     int? vibrationStrength,
     bool? voiceGuidanceEnabled,
+    bool? soundEffectEnabled,
+    bool? pushNotificationEnabled,
     double? guidanceSpeed,
   }) => UserSettings(
     sentenceLength: sentenceLength ?? this.sentenceLength,
     vibrationStrength: vibrationStrength ?? this.vibrationStrength,
     voiceGuidanceEnabled: voiceGuidanceEnabled ?? this.voiceGuidanceEnabled,
+    soundEffectEnabled: soundEffectEnabled ?? this.soundEffectEnabled,
+    pushNotificationEnabled:
+        pushNotificationEnabled ?? this.pushNotificationEnabled,
     guidanceSpeed: guidanceSpeed ?? this.guidanceSpeed,
   );
 }
@@ -116,6 +134,8 @@ class UserSettingsService {
           'sentenceLength=${settings.sentenceLength.backendValue}, '
           'vibration=${settings.vibrationStrength}, '
           'voiceGuide=${settings.voiceGuidanceEnabled}, '
+          'soundEffect=${settings.soundEffectEnabled}, '
+          'pushNotification=${settings.pushNotificationEnabled}, '
           'speed=${settings.guidanceSpeed}',
         );
         return settings;

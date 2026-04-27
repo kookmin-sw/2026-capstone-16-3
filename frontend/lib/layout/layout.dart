@@ -1,9 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/features/detection/detection_screen.dart';
 import 'package:safepath/features/home/home_screen.dart';
 import 'package:safepath/features/navigation/navigation_screen.dart';
 import 'package:safepath/features/settings/settings_screen.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -62,7 +64,11 @@ class _MainLayoutState extends State<MainLayout> {
         ),
         child: BottomNavigationBar(
           currentIndex: _currentIndex,
-          onTap: _onTap,
+          onTap: (index) {
+            SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
+            _onTap(index);
+          },
           type: BottomNavigationBarType.fixed,
           backgroundColor: ColorCollection.background,
           selectedItemColor: ColorCollection.main,
