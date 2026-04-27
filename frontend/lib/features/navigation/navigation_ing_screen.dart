@@ -10,8 +10,14 @@ import 'package:safepath/features/navigation/navigation_step_card.dart';
 import 'package:safepath/features/navigation/navigation_overview_card.dart';
 import 'package:safepath/features/navigation/navigation_start_overview_card.dart';
 import 'package:safepath/models/route_result.dart';
+import 'package:safepath/common/widgets/camera_debug_overlay.dart';
+import 'package:safepath/features/navigation/navigation_voiceguide_card.dart';
+import 'package:safepath/model/detection_event.dart';
+import 'package:safepath/service/camera_service.dart';
+import 'package:safepath/service/detection_ws_service.dart';
 import 'package:safepath/service/navigation_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/tts_service.dart';
 import 'package:safepath/service/vibration_service.dart';
 import 'dart:ui' show DisplayFeatureType;
 import 'package:flutter/services.dart';
@@ -52,6 +58,10 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   int _deviationCount = 0;
   bool _isRecalculating = false;
 
+  // 장애물 탐지 (카메라 + WS)
+  StreamSubscription<DetectionEvent>? _wsSub;
+  final List<DetectionEvent> _obstacles = [];
+
   @override
   void initState() {
     super.initState();
@@ -77,9 +87,50 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       if (_route != null) {
         _loadRoute(_route!);
         _startLocationTracking();
+        _startObstacleDetection();
         _routeLoaded = true;
       }
     }
+  }
+
+  // ─── 장애물 탐지 시작 ────────────────────────────────────────────────────────
+
+  Future<void> _startObstacleDetection() async {
+    await CameraService().start(CameraMode.navigation);
+    await DetectionWsService().connect();
+    _wsSub = DetectionWsService().eventStream?.listen(_onObstacleEvent);
+  }
+
+  void _onObstacleEvent(DetectionEvent event) {
+    setState(() {
+      _obstacles.insert(0, event);
+      if (_obstacles.length > 3) _obstacles.removeLast();
+    });
+
+    VibrationService().vibrate(switch (event.alertLevel) {
+      'high' => VibrationEffect.obstacleLevel3,
+      'medium' => VibrationEffect.obstacleLevel2,
+      _ => VibrationEffect.obstacleLevel1,
+    });
+
+    if (event.guideText.isNotEmpty) {
+      TtsService().speak(
+        event.guideText,
+        interrupt: event.alertLevel == 'high',
+      );
+    }
+  }
+
+  String _obstacleText(DetectionEvent event) {
+    final particle = _hasTrailingConsonant(event.objectName) ? '이' : '가';
+    return '${event.clockDirection} 방향에 ${event.objectName}$particle 있습니다.';
+  }
+
+  bool _hasTrailingConsonant(String text) {
+    if (text.isEmpty) return false;
+    final code = text.codeUnitAt(text.length - 1);
+    if (code < 0xAC00 || code > 0xD7A3) return false;
+    return (code - 0xAC00) % 28 != 0;
   }
 
   void _loadRoute(RouteResult route) {
@@ -286,6 +337,10 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   @override
   void dispose() {
     _positionSub?.cancel();
+    _wsSub?.cancel();
+    CameraService().stop();
+    DetectionWsService().disconnect();
+    TtsService().stop();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -365,72 +420,94 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                     ),
                   ),
                   const SizedBox(width: 24),
+                  // ── 우측: 길찾기 안내(고정) + 장애물 목록(스크롤) ──────────
                   Expanded(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                            child: Column(
-                              children: [
-                                if (_showStartOverview && _route != null)
-                                  NavigationStartOverviewCard(
-                                    totalDistance: _route!.totalDistance,
-                                    totalTime: (_route!.totalTime / 60).ceil(),
-                                    firstStepDistance:
-                                        _debugDistance?.round() ?? 0,
-                                    firstStepDirection: currentStep != null
-                                        ? _turnTypeToDirection(
-                                            currentStep.turnType,
-                                          )
-                                        : DirectionType.straight,
-                                    startDirection: _startDirection,
-                                  )
-                                else if (currentStep != null)
-                                  NavigationStepCard(
-                                    direction: _turnTypeToDirection(
-                                      currentStep.turnType,
+                        // 길찾기 안내 카드 — 고정
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: () {
+                            if (_showStartOverview && _route != null) {
+                              return NavigationStartOverviewCard(
+                                totalDistance: _route!.totalDistance,
+                                totalTime: (_route!.totalTime / 60).ceil(),
+                                firstStepDistance:
+                                    _debugDistance?.round() ?? 0,
+                                firstStepDirection: currentStep != null
+                                    ? _turnTypeToDirection(
+                                        currentStep.turnType,
+                                      )
+                                    : DirectionType.straight,
+                                startDirection: _startDirection,
+                              );
+                            } else if (currentStep != null) {
+                              return NavigationStepCard(
+                                direction: _turnTypeToDirection(
+                                  currentStep.turnType,
+                                ),
+                                instruction: currentStep.description ?? '',
+                                distance: _debugDistance?.round() ?? 0,
+                                isApproaching: _hasBeenOutsideThreshold,
+                              );
+                            } else if (_hasArrived) {
+                              return Center(
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      '목적지에 도착했습니다.',
+                                      style: AppTextStyles.labelRegular
+                                          .copyWith(
+                                            color: ColorCollection.point,
+                                          ),
                                     ),
-                                    instruction: currentStep.description ?? '',
-                                    distance: _debugDistance?.round() ?? 0,
-                                    isApproaching: _hasBeenOutsideThreshold,
-                                  )
-                                else if (_hasArrived)
-                                  Center(
-                                    child: Column(
-                                      children: [
-                                        Text(
-                                          '목적지에 도착했습니다.',
-                                          style: AppTextStyles.labelRegular
-                                              .copyWith(
-                                                color: ColorCollection.point,
-                                              ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '경로 안내를 종료합니다.',
-                                          style: AppTextStyles.labelRegular
-                                              .copyWith(
-                                                color: ColorCollection.point,
-                                              ),
-                                        ),
-                                      ],
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '경로 안내를 종료합니다.',
+                                      style: AppTextStyles.labelRegular
+                                          .copyWith(
+                                            color: ColorCollection.point,
+                                          ),
                                     ),
-                                  )
-                                else if (_route != null)
-                                  NavigationStepCard(
-                                    direction: DirectionType.straight,
-                                    instruction: _destinationDirection != null
-                                        ? '$_destinationDirection 방향으로 직진하세요'
-                                        : '목적지 방향으로 직진하세요',
-                                    distance: _debugDistance?.round(),
-                                    isApproaching: false,
+                                  ],
+                                ),
+                              );
+                            } else if (_route != null) {
+                              return NavigationStepCard(
+                                direction: DirectionType.straight,
+                                instruction: _destinationDirection != null
+                                    ? '$_destinationDirection 방향으로 직진하세요'
+                                    : '목적지 방향으로 직진하세요',
+                                distance: _debugDistance?.round(),
+                                isApproaching: false,
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          }(),
+                        ),
+                        // 장애물 안내 목록 — 스크롤 (최신 순)
+                        if (_obstacles.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Expanded(
+                            child: ListView.separated(
+                              padding: EdgeInsets.only(
+                                left: 2,
+                                right: 2,
+                                bottom: bottomPad,
+                              ),
+                              itemCount: _obstacles.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (_, index) =>
+                                  NavigationVoiceGuideCard(
+                                    voiceGuide:
+                                        _obstacleText(_obstacles[index]),
                                   ),
-                                SizedBox(height: bottomPad),
-                              ],
                             ),
                           ),
-                        ),
+                        ] else
+                          SizedBox(height: bottomPad),
                       ],
                     ),
                   ),
@@ -444,6 +521,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
               outsideThreshold: _hasBeenOutsideThreshold,
               threshold: _arrivalThresholdMeters,
             ),
+            const CameraDebugOverlay(anchorLeft: true),
             if (_isRecalculating)
               Positioned(
                 top: 0,
