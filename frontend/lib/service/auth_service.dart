@@ -26,27 +26,45 @@ class AuthService {
   // ─── 카카오 로그인 ────────────────────────────────────────────────────────
 
   /// 카카오 SDK로 access token 획득 후 BE JWT 발급
-  Future<AuthResult> signInWithKakao() async {
+  ///
+  /// [onKakaoSdkComplete] SDK 호출 완료(성공/실패 모두) 시 호출되는 콜백.
+  /// 앱 복귀 감지와 조합해 취소 시 로딩 해제에 사용된다.
+  Future<AuthResult> signInWithKakao({VoidCallback? onKakaoSdkComplete}) async {
     String kakaoAccessToken;
     try {
       final kakaoTalkInstalled = await isKakaoTalkInstalled();
       debugPrint('🟡 [Auth] 카카오톡 설치 여부: $kakaoTalkInstalled');
 
-      if (kakaoTalkInstalled) {
-        final token = await UserApi.instance.loginWithKakaoTalk();
-        kakaoAccessToken = token.accessToken;
-        debugPrint('🟡 [Auth] 카카오톡 앱으로 로그인 성공');
-      } else {
-        final token = await UserApi.instance.loginWithKakaoAccount();
-        kakaoAccessToken = token.accessToken;
-        debugPrint('🟡 [Auth] 카카오 계정(웹)으로 로그인 성공');
+      try {
+        if (kakaoTalkInstalled) {
+          kakaoAccessToken =
+              (await UserApi.instance.loginWithKakaoTalk()).accessToken;
+          debugPrint('🟡 [Auth] 카카오톡 앱으로 로그인 성공');
+        } else {
+          kakaoAccessToken =
+              (await UserApi.instance.loginWithKakaoAccount()).accessToken;
+          debugPrint('🟡 [Auth] 카카오 계정(웹)으로 로그인 성공');
+        }
+      } catch (e) {
+        debugPrint('🔴 [Auth] 카카오 로그인 실패: $e');
+        if (_isKakaoCancellation(e)) throw const AuthCancelledException();
+        throw AuthException('카카오 로그인 실패: $e');
+      } finally {
+        onKakaoSdkComplete?.call();
       }
+    } on AuthException {
+      rethrow;
     } catch (e) {
-      debugPrint('🔴 [Auth] 카카오 로그인 실패: $e');
+      debugPrint('🔴 [Auth] 예상치 못한 오류: $e');
       throw AuthException('카카오 로그인 실패: $e');
     }
 
     return await _fetchTokenFromServer(kakaoAccessToken);
+  }
+
+  bool _isKakaoCancellation(Object e) {
+    final msg = e.toString().toLowerCase();
+    return msg.contains('cancelled') || msg.contains('canceled');
   }
 
   Future<AuthResult> _fetchTokenFromServer(String kakaoAccessToken) async {
@@ -157,4 +175,10 @@ class AuthException implements Exception {
 
   @override
   String toString() => 'AuthException: $message';
+}
+
+/// 사용자가 카카오 인증을 취소했을 때 던져지는 예외.
+/// 오류 다이얼로그 없이 조용히 로딩을 해제하는 데 사용된다.
+class AuthCancelledException extends AuthException {
+  const AuthCancelledException() : super('');
 }

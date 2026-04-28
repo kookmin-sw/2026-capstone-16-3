@@ -13,16 +13,53 @@ class SignInScreen extends StatefulWidget {
   State<SignInScreen> createState() => _SignInScreenState();
 }
 
-class _SignInScreenState extends State<SignInScreen> {
+class _SignInScreenState extends State<SignInScreen> with WidgetsBindingObserver {
   bool _isLoading = false;
 
+  /// SDK 호출이 완료(성공/실패)되면 false로 바뀐다.
+  /// true인 채로 앱이 foreground로 복귀하면 → 사용자가 인증 없이 돌아온 것.
+  bool _kakaoAuthPending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// 앱이 foreground로 복귀할 때 SDK가 아직 응답하지 않았으면 로딩 해제.
+  /// (KakaoTalk에서 뒤로가기로 돌아온 경우 SDK Future가 완료되지 않는 버그 대응)
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        _isLoading &&
+        _kakaoAuthPending &&
+        mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
+
   Future<void> _onKakaoLogin() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _kakaoAuthPending = true;
+    });
     try {
-      await AuthService().signInWithKakao();
+      await AuthService().signInWithKakao(
+        onKakaoSdkComplete: () {
+          if (mounted) setState(() => _kakaoAuthPending = false);
+        },
+      );
       if (!mounted) return;
 
       Navigator.pushReplacementNamed(context, AppRouter.home);
+    } on AuthCancelledException {
+      // 사용자가 직접 취소 — 오류 메시지 없이 초기 화면으로 복귀
     } on AuthException catch (e) {
       if (!mounted) return;
       await _showErrorDialog(e.message);
