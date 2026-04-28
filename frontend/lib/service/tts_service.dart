@@ -100,6 +100,7 @@ class TtsService {
     }
 
     _pendingNavMessage = null;
+    _isSpeaking = true;
     debugPrint('🔊 [TTS] 출력: $text');
     await _tts.speak(text);
   }
