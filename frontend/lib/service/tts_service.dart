@@ -1,20 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
-/// =======================================================
-/// TtsService
-///
-/// 역할:
-///   - 장애물 탐지 결과(guideText)를 한국어 음성으로 출력
-///   - alertLevel 기반 우선순위 처리
-///     · high   → 진행 중인 음성을 중단하고 즉시 출력
-///     · medium → 현재 말하는 중이 아닐 때만 출력
-///     · low    → 현재 말하는 중이 아닐 때만 출력
-///
-/// 호출 위치:
-///   - DetectionScreen: 탐지 이벤트 수신 시 speak() 호출
-///   - DetectionScreen: 탐지 중지 시 stop() 호출
-/// =======================================================
+enum TtsChannel { detection, navigation }
+
 class TtsService {
   static final TtsService _instance = TtsService._internal();
   factory TtsService() => _instance;
@@ -25,9 +13,10 @@ class TtsService {
   bool _isSpeaking = false;
   bool _voiceGuidanceEnabled = true;
 
-  static const double defaultSpeechRate = 1.0;
+  // navigation 채널 전용 큐 (detection 중일 때 대기)
+  String? _pendingNavMessage;
 
-  // ─── 초기화 ────────────────────────────────────────────────────────────────
+  static const double defaultSpeechRate = 1.0;
 
   Future<void> _init() async {
     if (_initialized) return;
@@ -45,6 +34,13 @@ class TtsService {
     _tts.setCompletionHandler(() {
       _isSpeaking = false;
       debugPrint('🔊 [TTS] 음성 출력 완료');
+      // detection 종료 후 대기 중인 nav 안내 재생
+      final pending = _pendingNavMessage;
+      if (pending != null) {
+        _pendingNavMessage = null;
+        debugPrint('🔊 [TTS] 대기 nav 안내 출력: $pending');
+        _tts.speak(pending);
+      }
     });
 
     _tts.setCancelHandler(() {
@@ -61,48 +57,60 @@ class TtsService {
     debugPrint('🔊 [TTS] 초기화 완료');
   }
 
-  // ─── 음성 출력 ─────────────────────────────────────────────────────────────
-
-  /// guideText를 음성으로 출력한다.
-  ///
-  /// [interrupt] = true  → 진행 중인 음성을 중단하고 즉시 출력 (high alert용)
-  /// [interrupt] = false → 이미 말하는 중이면 스킵 (medium / low alert용)
   void setVoiceGuidanceEnabled(bool enabled) {
     _voiceGuidanceEnabled = enabled;
     debugPrint('🔊 [TTS] 음성 안내 ${enabled ? '켜짐' : '꺼짐'}');
   }
 
-  Future<void> speak(String text, {bool interrupt = false}) async {
-    if (text.isEmpty) return;
-    if (!_voiceGuidanceEnabled) return;
-
+  /// 우선순위 규칙:
+  ///
+  ///   상황                         동작
+  ///   ─────────────────────────────────────────────────────────────────
+  ///   nav step전환 / ≤8m           detection 포함 모든 음성 끊고 즉시 출력
+  ///   nav ≤20m / ≤40m             detection 말하는 중이면 큐 대기 → 완료 후 출력
+  ///   detection high alert         nav 말하는 중이어도 끊고 즉시 출력
+  ///   detection medium / low       말하는 중이면 스킵
+  ///   목적지 도착                   detection 끊고 즉시 출력
+  ///   ─────────────────────────────────────────────────────────────────
+  ///   interrupt=true           → 채널 무관 현재 음성 끊고 즉시 출력
+  ///   interrupt=false, nav     → detection 말하는 중이면 큐에 저장 후 완료 시 출력
+  ///   interrupt=false, detect  → 말하는 중이면 스킵
+  Future<void> speak(
+    String text, {
+    bool interrupt = false,
+    TtsChannel channel = TtsChannel.detection,
+  }) async {
+    if (text.isEmpty || !_voiceGuidanceEnabled) return;
     await _init();
 
     if (_isSpeaking) {
       if (interrupt) {
+        _pendingNavMessage = null;
         await _tts.stop();
+      } else if (channel == TtsChannel.navigation) {
+        // detection 말하는 중 → 대기
+        _pendingNavMessage = text;
+        debugPrint('🔊 [TTS] nav 안내 대기 중: $text');
+        return;
       } else {
+        // detection → nav 말하는 중이면 스킵
         debugPrint('🔊 [TTS] 출력 중 — 스킵: $text');
         return;
       }
     }
 
+    _pendingNavMessage = null;
     debugPrint('🔊 [TTS] 출력: $text');
     await _tts.speak(text);
   }
 
-  // ─── 속도 조절 ─────────────────────────────────────────────────────────────
-
-  /// 음성 속도를 변경한다. 범위: 0.5(느림) ~ 5.0(빠름)
   Future<void> setSpeechRate(double rate) async {
     await _init();
     await _tts.setSpeechRate(rate.clamp(0.5, 5.0));
   }
 
-  // ─── 중지 ──────────────────────────────────────────────────────────────────
-
-  /// 진행 중인 음성 출력을 즉시 중단한다.
   Future<void> stop() async {
+    _pendingNavMessage = null;
     await _tts.stop();
     _isSpeaking = false;
     debugPrint('🔊 [TTS] 중지');
