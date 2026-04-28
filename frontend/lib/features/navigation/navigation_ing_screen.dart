@@ -16,6 +16,7 @@ import 'package:safepath/model/detection_event.dart';
 import 'package:safepath/service/camera_service.dart';
 import 'package:safepath/service/detection_ws_service.dart';
 import 'package:safepath/service/navigation_service.dart';
+import 'package:safepath/service/navigation_tts_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/tts_service.dart';
 import 'package:safepath/service/vibration_service.dart';
@@ -121,6 +122,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       TtsService().speak(
         event.guideText,
         interrupt: event.alertLevel == 'high',
+        channel: TtsChannel.detection,
       );
     }
   }
@@ -221,11 +223,22 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     );
 
     setState(() => _debugDistance = distance);
+    final direction = _turnTypeToDirection(step.turnType);
+
     if (!_showStartOverview &&
         !_hasBeenOutsideThreshold &&
         !_hasShownStartOverview) {
       _hasShownStartOverview = true;
       setState(() => _showStartOverview = true);
+      if (_route != null) {
+        NavigationTtsService().speakStartOverview(
+          startDirection: _startDirection,
+          totalTime: (_route!.totalTime / 60).ceil(),
+          firstStepDistance: distance.round(),
+          firstStepDirection: direction,
+          firstStepInstruction: step.description ?? '',
+        );
+      }
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) setState(() => _showStartOverview = false);
       });
@@ -242,8 +255,11 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
 
     if (distance >= _arrivalThresholdMeters) {
       _hasBeenOutsideThreshold = true;
+      NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
     } else if (_hasBeenOutsideThreshold) {
-      // pass-through: 최근접 거리에서 _passThroughOffsetMeters 이상 멀어졌을 때 완수
+      // pass-through zone — 8m 안내 포함
+      NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
+      // 최근접 거리에서 _passThroughOffsetMeters 이상 멀어졌을 때 완수
       if (distance > _minDistanceToStep + _passThroughOffsetMeters) {
         setState(() {
           _currentStepIndex++;
@@ -251,14 +267,16 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
           _minDistanceToStep = double.infinity;
           _debugDistance = null;
         });
+        _speakNextStepOrDestination();
       }
     } else {
-      // 처음부터 threshold 이내 → 이미 지난 step으로 간주하고 skip
+      // 처음부터 threshold 이내 → 이미 지난 step으로 간주하고 skip (TTS 없음)
       setState(() {
         _currentStepIndex++;
         _minDistanceToStep = double.infinity;
         _debugDistance = null;
       });
+      _speakNextStepOrDestination();
     }
 
     _checkDeviation(position);
@@ -283,6 +301,24 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
 
     if (distance < _arrivalThresholdMeters) {
       setState(() => _hasArrived = true);
+      NavigationTtsService().speakArrival();
+    }
+  }
+
+  void _speakNextStepOrDestination() {
+    if (_currentStepIndex < _pointSteps.length) {
+      final next = _pointSteps[_currentStepIndex];
+      NavigationTtsService().speakStep(
+        _turnTypeToDirection(next.turnType),
+        next.description ?? '',
+      );
+    } else {
+      // 모든 step 완료 → 목적지 직진 안내
+      NavigationTtsService().reset();
+      final msg = _destinationDirection != null
+          ? '$_destinationDirection 방향으로 직진하세요'
+          : '목적지 방향으로 직진하세요';
+      TtsService().speak(msg, interrupt: true, channel: TtsChannel.navigation);
     }
   }
 
@@ -340,11 +376,20 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         _route = result;
         _currentStepIndex = 0;
         _hasBeenOutsideThreshold = false;
+        _minDistanceToStep = double.infinity;
         _debugDistance = null;
         _hasArrived = false;
         _isRecalculating = false;
       });
       _loadRoute(result);
+      // 재탐색 후 overview 카드 없이 새 경로 첫 step 바로 안내
+      if (_pointSteps.isNotEmpty) {
+        final first = _pointSteps[0];
+        NavigationTtsService().speakStep(
+          _turnTypeToDirection(first.turnType),
+          first.description ?? '',
+        );
+      }
       debugPrint('✅ [Nav] 경로 재탐색 완료 - 새 step 수: ${_pointSteps.length}');
     } catch (e) {
       debugPrint('🔴 [Nav] 경로 재탐색 실패: $e');
@@ -354,6 +399,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
 
   @override
   void dispose() {
+    NavigationTtsService().reset();
     _positionSub?.cancel();
     _wsSub?.cancel();
     CameraService().stop();
