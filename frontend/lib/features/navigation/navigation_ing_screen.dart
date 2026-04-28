@@ -44,7 +44,9 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   String _endName = '';
 
   static const double _arrivalThresholdMeters = 10;
+  static const double _passThroughOffsetMeters = 8;
   bool _hasBeenOutsideThreshold = false;
+  double _minDistanceToStep = double.infinity;
   double? _debugDistance;
   bool _hasArrived = false;
   bool _showStartOverview = false;
@@ -230,23 +232,31 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     }
     debugPrint(
       '📍 [Nav] step $_currentStepIndex/${_pointSteps.length - 1} | '
-      '남은 거리: ${distance.toStringAsFixed(1)}m | '
-      '${_hasBeenOutsideThreshold ? "진행 중" : "대기 중"} | '
-      '${_pointSteps[_currentStepIndex].description}',
+      '거리: ${distance.toStringAsFixed(1)}m | '
+      '최근접: ${_minDistanceToStep == double.infinity ? "-" : _minDistanceToStep.toStringAsFixed(1)}m | '
+      'pass-through: ${_minDistanceToStep < _arrivalThresholdMeters ? "${(distance - _minDistanceToStep).toStringAsFixed(1)}/${_passThroughOffsetMeters}m" : "대기"} | '
+      '${_hasBeenOutsideThreshold ? "진행 중" : "대기 중"}',
     );
+
+    if (distance < _minDistanceToStep) _minDistanceToStep = distance;
 
     if (distance >= _arrivalThresholdMeters) {
       _hasBeenOutsideThreshold = true;
     } else if (_hasBeenOutsideThreshold) {
-      setState(() {
-        _currentStepIndex++;
-        _hasBeenOutsideThreshold = false;
-        _debugDistance = null;
-      });
+      // pass-through: 최근접 거리에서 _passThroughOffsetMeters 이상 멀어졌을 때 완수
+      if (distance > _minDistanceToStep + _passThroughOffsetMeters) {
+        setState(() {
+          _currentStepIndex++;
+          _hasBeenOutsideThreshold = false;
+          _minDistanceToStep = double.infinity;
+          _debugDistance = null;
+        });
+      }
     } else {
       // 처음부터 threshold 이내 → 이미 지난 step으로 간주하고 skip
       setState(() {
         _currentStepIndex++;
+        _minDistanceToStep = double.infinity;
         _debugDistance = null;
       });
     }
@@ -500,6 +510,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                             child: ListView.separated(
                               padding: EdgeInsets.only(
                                 left: 2,
+                                top: 2,
                                 right: 2,
                                 bottom: bottomPad,
                               ),
@@ -527,6 +538,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
               distanceToStep: _debugDistance,
               outsideThreshold: _hasBeenOutsideThreshold,
               threshold: _arrivalThresholdMeters,
+              minDistanceToStep: _minDistanceToStep,
             ),
             const CameraDebugOverlay(anchorLeft: true),
             if (_isRecalculating)
