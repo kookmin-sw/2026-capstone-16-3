@@ -39,7 +39,7 @@ class NavigationTtsService {
     }
   }
 
-  // 길안내 시작 시 overview 안내 (방향 + 예상 시간 + 첫 step)
+  // 길안내 시작 시 overview 안내: 총 N분 → 방향 출발 → N미터 앞에서 ~
   void speakStartOverview({
     required String? startDirection,
     required int totalTime,
@@ -48,23 +48,39 @@ class NavigationTtsService {
     required String firstStepInstruction,
   }) {
     reset();
-    final dirMsg = startDirection != null
-        ? '$startDirection 방향으로 출발합니다'
-        : '길안내를 시작합니다';
+    // 현재 거리 내 임계값 마킹 → overview 후 speakDistance 중복 방지
+    _markDistanceAnnounced(firstStepDistance);
 
     final timeStr = totalTime >= 60
         ? '${totalTime ~/ 60}시간${totalTime % 60 == 0 ? '' : ' ${totalTime % 60}분'}'
         : '$totalTime분';
 
-    final stepMsg = firstStepInstruction.isNotEmpty
-        ? firstStepInstruction
-        : '$firstStepDistance미터 앞에서 ${_actionText(firstStepDirection)}하세요';
+    final dirMsg = startDirection != null
+        ? '$startDirection 방향으로 출발하세요'
+        : '길안내를 시작합니다';
 
     TtsService().speak(
-      '$dirMsg. 약 $timeStr 소요됩니다. $stepMsg',
+      '총 $timeStr 소요됩니다. $dirMsg. $firstStepDistance미터 앞에서 ${_actionText(firstStepDirection)}하세요',
       interrupt: true,
       channel: TtsChannel.navigation,
     );
+  }
+
+  // overview 종료 후 step[0] 서버 안내문 자동 재생 (큐 삽입)
+  void speakAfterOverview(String instruction) {
+    if (instruction.isEmpty) return;
+    // _isSpeaking = true (overview 재생 중) → pending 큐에 삽입 → overview 완료 시 자동 재생
+    TtsService().speak(instruction, interrupt: false, channel: TtsChannel.navigation);
+  }
+
+  void _markDistanceAnnounced(int distance) {
+    if (distance <= 8) {
+      _announcedThresholds.addAll({'8', '20', '40'});
+    } else if (distance <= 20) {
+      _announcedThresholds.addAll({'20', '40'});
+    } else if (distance <= 40) {
+      _announcedThresholds.add('40');
+    }
   }
 
   void speakArrival() {
