@@ -7,7 +7,7 @@ import 'package:safepath/features/detection/detection_active_view.dart';
 import 'package:safepath/features/detection/detection_idle_view.dart';
 import 'package:safepath/model/detection_event.dart';
 import 'package:safepath/service/camera_service.dart';
-import 'package:safepath/service/detection_ws_service.dart';
+import 'package:safepath/service/on_device_detection_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/tts_service.dart';
 import 'package:safepath/service/vibration_service.dart';
@@ -24,33 +24,25 @@ class DetectionScreen extends StatefulWidget {
 class _DetectionScreenState extends State<DetectionScreen> {
   bool _isDetecting = false;
 
-  /// WS로 수신한 최신 탐지 결과 목록 (최근 3개까지 유지)
+  /// 온디바이스 탐지 결과 목록 (최근 3개)
   final List<DetectionEvent> _obstacles = [];
 
-  /// 탐지 시작 후 수신된 이벤트 총 횟수
   int _detectedCount = 0;
 
-  /// WS STOMP 연결 완료 여부
-  bool _wsConnected = false;
+  /// 온디바이스 서비스 준비 여부 (DetectionActiveView wsConnected 파라미터 재활용)
+  bool _isReady = false;
 
-  StreamSubscription<DetectionEvent>? _wsSub;
+  StreamSubscription<DetectionEvent>? _detectionSub;
 
   // ─── 탐지 시작 ───────────────────────────────────────────────────────────
 
   Future<void> _startDetection() async {
     SoundEffectService().play(SoundEffect.actionStart);
     VibrationService().vibrate(VibrationEffect.actionStart);
-    await CameraService().start(CameraMode.detection);
-    await DetectionWsService().connect(
-      onConnected: () {
-        if (mounted) setState(() => _wsConnected = true);
-      },
-      onDisconnected: () {
-        if (mounted) setState(() => _wsConnected = false);
-      },
-    );
 
-    _wsSub = DetectionWsService().eventStream?.listen(_onDetectionEvent);
+    await OnDeviceDetectionService().start(CameraMode.detection);
+    _detectionSub =
+        OnDeviceDetectionService().eventStream.listen(_onDetectionEvent);
 
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
@@ -59,7 +51,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
 
     setState(() {
       _isDetecting = true;
-      _wsConnected = false;
+      _isReady = true;
       _obstacles.clear();
       _detectedCount = 0;
     });
@@ -72,42 +64,38 @@ class _DetectionScreenState extends State<DetectionScreen> {
   Future<void> _stopDetection() async {
     SoundEffectService().play(SoundEffect.actionStop);
     VibrationService().vibrate(VibrationEffect.actionStop);
-    await _wsSub?.cancel();
-    _wsSub = null;
+
+    await _detectionSub?.cancel();
+    _detectionSub = null;
 
     await TtsService().stop();
-    await CameraService().stop();
-    await DetectionWsService().disconnect();
+    await OnDeviceDetectionService().stop();
 
-    // 세로 모드로 복원
     await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
     setState(() {
       _isDetecting = false;
-      _wsConnected = false;
+      _isReady = false;
     });
 
     widget.onDetectingChanged?.call(false);
   }
 
-  // ─── WS 이벤트 수신 ──────────────────────────────────────────────────────
+  // ─── 탐지 이벤트 처리 ────────────────────────────────────────────────────
 
   void _onDetectionEvent(DetectionEvent event) {
     setState(() {
       _detectedCount++;
-      _obstacles.insert(0, event); // 최신 이벤트를 목록 맨 앞에
-      if (_obstacles.length > 3) _obstacles.removeLast(); // 최근 3개 유지
+      _obstacles.insert(0, event);
+      if (_obstacles.length > 3) _obstacles.removeLast();
     });
 
-    // 장애물 위험 등급별 진동 피드백
     VibrationService().vibrate(switch (event.alertLevel) {
       'high' => VibrationEffect.obstacleLevel3,
       'medium' => VibrationEffect.obstacleLevel2,
       _ => VibrationEffect.obstacleLevel1,
     });
 
-    // high → 진행 중인 음성 중단 후 즉시 출력
-    // medium / low → 말하는 중이 아닐 때만 출력
     if (event.guideText.isNotEmpty) {
       TtsService().speak(
         event.guideText,
@@ -118,7 +106,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
 
   @override
   void dispose() {
-    _wsSub?.cancel();
+    _detectionSub?.cancel();
     super.dispose();
   }
 
@@ -129,7 +117,6 @@ class _DetectionScreenState extends State<DetectionScreen> {
     return PopScope(
       canPop: !_isDetecting,
       child: Scaffold(
-        // active 상태일 때 AppBar 없음
         appBar: _isDetecting ? null : const CustomTitleBar(title: '실외 장애물 탐지'),
         body: SafeArea(
           child: _isDetecting
@@ -137,7 +124,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
                   onStop: _stopDetection,
                   detectedCount: _detectedCount,
                   obstacles: _obstacles,
-                  wsConnected: _wsConnected,
+                  wsConnected: _isReady,
                 )
               : DetectionIdleView(onStart: _startDetection),
         ),

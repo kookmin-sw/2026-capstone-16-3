@@ -48,6 +48,8 @@ dependencies:
   audioplayers: ^6.0.0
   permission_handler: ^11.0.0
   vibration: ^2.0.0
+  tflite_flutter: ^0.11.0
+  image: ^4.2.0
 
 dev_dependencies:
   flutter_test:
@@ -81,6 +83,7 @@ flutter:
   assets:
     - assets/images/
     - assets/sounds/
+    - assets/models/
 #    - assets/svgs/
 
   # An image asset can refer to one or more resolution-specific "variants", see

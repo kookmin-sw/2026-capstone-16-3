@@ -14,7 +14,7 @@ import 'package:safepath/common/widgets/camera_debug_overlay.dart';
 import 'package:safepath/features/navigation/navigation_voiceguide_card.dart';
 import 'package:safepath/model/detection_event.dart';
 import 'package:safepath/service/camera_service.dart';
-import 'package:safepath/service/detection_ws_service.dart';
+import 'package:safepath/service/on_device_detection_service.dart';
 import 'package:safepath/service/navigation_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/tts_service.dart';
@@ -97,9 +97,8 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   // ─── 장애물 탐지 시작 ────────────────────────────────────────────────────────
 
   Future<void> _startObstacleDetection() async {
-    await CameraService().start(CameraMode.navigation);
-    await DetectionWsService().connect();
-    _wsSub = DetectionWsService().eventStream?.listen(_onObstacleEvent);
+    await OnDeviceDetectionService().start(CameraMode.navigation);
+    _wsSub = OnDeviceDetectionService().eventStream.listen(_onObstacleEvent);
   }
 
   void _onObstacleEvent(DetectionEvent event) {
@@ -346,8 +345,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   void dispose() {
     _positionSub?.cancel();
     _wsSub?.cancel();
-    CameraService().stop();
-    DetectionWsService().disconnect();
+    OnDeviceDetectionService().stop();
     TtsService().stop();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
