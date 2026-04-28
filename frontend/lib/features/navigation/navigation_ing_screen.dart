@@ -238,6 +238,8 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
           firstStepDirection: direction,
           firstStepInstruction: step.description ?? '',
         );
+        // overview 종료 후 step[0] 서버 안내문 자동 재생
+        NavigationTtsService().speakAfterOverview(step.description ?? '');
       }
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) setState(() => _showStartOverview = false);
