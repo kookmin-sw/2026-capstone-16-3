@@ -61,9 +61,9 @@ class NavigationStepCard extends StatelessWidget {
     };
 
     if (direction == DirectionType.straight) return '계속 직진하세요';
-    if (distance <= 15) return '$action하세요';
-    if (distance <= 30) return '잠시 후 $action하세요';
-    if (distance <= 50) return instruction.isNotEmpty ? instruction : '잠시 후 $action하세요';
+    if (distance <= 8) return '$action하세요';
+    if (distance <= 20) return '잠시 후 $action하세요';
+    if (distance <= 40) return instruction.isNotEmpty ? instruction : '잠시 후 $action하세요';
     return '계속 직진하세요';
   }
 

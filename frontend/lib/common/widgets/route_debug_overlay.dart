@@ -26,6 +26,7 @@ class RouteDebugOverlay extends StatefulWidget {
   final double? distanceToStep;
   final bool outsideThreshold;
   final double threshold;
+  final double minDistanceToStep;
 
   const RouteDebugOverlay({
     super.key,
@@ -34,6 +35,7 @@ class RouteDebugOverlay extends StatefulWidget {
     required this.distanceToStep,
     required this.outsideThreshold,
     required this.threshold,
+    this.minDistanceToStep = double.infinity,
   });
 
   @override
@@ -142,6 +144,9 @@ class _RouteDebugOverlayState extends State<RouteDebugOverlay> {
                           ? widget.outsideThreshold
                           : null,
                       threshold: widget.threshold,
+                      minDistanceToStep: i == widget.currentStepIndex
+                          ? widget.minDistanceToStep
+                          : double.infinity,
                     ),
                 ],
               ),
@@ -159,6 +164,7 @@ class _StepDebugCard extends StatelessWidget {
   final double? distanceToStep;
   final bool? outsideThreshold;
   final double threshold;
+  final double minDistanceToStep;
 
   const _StepDebugCard({
     required this.step,
@@ -166,6 +172,7 @@ class _StepDebugCard extends StatelessWidget {
     required this.distanceToStep,
     required this.outsideThreshold,
     required this.threshold,
+    this.minDistanceToStep = double.infinity,
   });
 
   DirectionType _turnTypeToDirection(int? turnType) {
@@ -265,14 +272,22 @@ class _StepDebugCard extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  outsideThreshold == true ? '진행 중' : '대기 중',
-                  style: TextStyle(
-                    color: outsideThreshold == true
-                        ? Colors.green
-                        : Colors.orange,
-                    fontSize: 9,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      outsideThreshold == true ? '진행 중' : '대기 중',
+                      style: TextStyle(
+                        color: outsideThreshold == true ? Colors.green : Colors.orange,
+                        fontSize: 9,
+                      ),
+                    ),
+                    if (minDistanceToStep != double.infinity && outsideThreshold == true)
+                      Text(
+                        'pass: ${(distanceToStep! - minDistanceToStep).toStringAsFixed(1)}/8m',
+                        style: const TextStyle(color: Colors.cyan, fontSize: 9),
+                      ),
+                  ],
                 ),
               ],
             ),
