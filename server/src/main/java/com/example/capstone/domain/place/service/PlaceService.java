@@ -20,14 +20,16 @@ import java.util.concurrent.TimeoutException;
 public class PlaceService {
 
     private final KakaoLocalClient kakaoLocalClient;
+    private final PlaceAddressResolver placeAddressResolver;
     private final PlaceCache placeCache;
 
     private static final int MAX_PAGE = 45;
     private static final int MAX_SIZE = 15;
     private static final Logger log = LoggerFactory.getLogger(PlaceService.class);
 
-    public PlaceService(KakaoLocalClient kakaoLocalClient, PlaceCache placeCache) {
+    public PlaceService(KakaoLocalClient kakaoLocalClient, PlaceCache placeCache, PlaceAddressResolver placeAddressResolver) {
         this.kakaoLocalClient = kakaoLocalClient;
+        this.placeAddressResolver = placeAddressResolver;
         this.placeCache = placeCache;
     }
 
@@ -155,18 +157,27 @@ public class PlaceService {
         double placeLat = Double.parseDouble(doc.y());
         Long dist = (doc.distance() == null || doc.distance().isBlank()) ? null : Long.parseLong(doc.distance());
 
+        String resolvedAddress = placeAddressResolver.normalizeAddress(doc.addressName());
+
+        String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(
+                doc.addressName(),
+                doc.roadAddressName(),
+                placeLat,
+                placeLng
+        );
+
         return new PlaceDetailResponse(
                 placeId,
                 doc.placeName(),
                 doc.categoryName(),
-                doc.addressName(),
-                doc.roadAddressName(),
+                resolvedAddress,
+                resolvedRoadAddress,
                 placeLat,
                 placeLng,
                 dist,
                 doc.phone(),
                 doc.placeUrl(),
-                null, // openingHours: Kakao Local REST에서 제공되지 않음
+                null,
                 new PlaceDetailResponse.Extra("KAKAO")
         );
     }
@@ -188,11 +199,16 @@ public class PlaceService {
 
         Integer directionClock = toDirectionClock(originLat, originLng, placeLat, placeLng);
 
+        String resolvedRoadAddress = resolveListRoadAddress(
+                d.addressName(),
+                d.roadAddressName()
+        );
+
         return new PlaceResponse(
                 placeId,
                 d.placeName(),
                 d.categoryName(),
-                d.roadAddressName(),
+                resolvedRoadAddress,
                 placeLat,
                 placeLng,
                 dist,
@@ -220,12 +236,20 @@ public class PlaceService {
             double lng = Double.parseDouble(doc.x());
             double lat = Double.parseDouble(doc.y());
 
+            String address = placeAddressResolver.normalizeAddress(doc.addressName());
             String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
+
+            String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(
+                    doc.addressName(),
+                    roadAddress,
+                    lat,
+                    lng
+            );
 
             return new GeocodeResponse(
                     query.trim(),
-                    doc.addressName(),
-                    roadAddress,
+                    address,
+                    resolvedRoadAddress,
                     lat,
                     lng
             );
@@ -246,11 +270,19 @@ public class PlaceService {
             if (addressResp != null && addressResp.documents() != null && !addressResp.documents().isEmpty()) {
                 KakaoCoordToAddressResponse.Document doc = addressResp.documents().getFirst();
 
-                String address = doc.address() != null ? doc.address().addressName() : null;
+                String jibunAddress = doc.address() != null ? doc.address().addressName() : null;
                 String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
 
-                if (hasText(roadAddress) || hasText(address)) {
-                    return ReverseGeocodeResponse.ofAddress(address, roadAddress, lat, lng);
+                String normalizedJibunAddress = placeAddressResolver.normalizeAddress(jibunAddress);
+                String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(jibunAddress, roadAddress, lat, lng);
+
+                if (hasText(resolvedRoadAddress) || hasText(normalizedJibunAddress)) {
+                    return ReverseGeocodeResponse.ofAddress(
+                            normalizedJibunAddress,
+                            resolvedRoadAddress,
+                            lat,
+                            lng
+                    );
                 }
             }
 
@@ -260,7 +292,9 @@ public class PlaceService {
                     .block();
 
             KakaoCoordToRegionCodeResponse.Document regionDoc = selectRegionDocument(regionResp);
-            String regionAddress = regionDoc != null ? regionDoc.addressName() : null;
+            String regionAddress = regionDoc != null
+                    ? placeAddressResolver.normalizeAddress(regionDoc.addressName())
+                    : null;
 
             ReverseGeocodeResponse nearestPlace = findNearestPlaceFallback(regionDoc, regionAddress, lat, lng);
             if (nearestPlace != null) {
@@ -339,10 +373,21 @@ public class PlaceService {
         KakaoCategorySearchResponse.KakaoPlaceDocument place = placeResp.documents().getFirst();
         Long distanceMeters = parseDistance(place.distance());
 
-        return ReverseGeocodeResponse.ofNearestPlace(
+        String resolvedAddress = placeAddressResolver.normalizeAddress(place.addressName());
+
+        String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(
                 place.addressName(),
                 place.roadAddressName(),
-                regionAddress,
+                lat,
+                lng
+        );
+
+        String normalizedRegionAddress = placeAddressResolver.normalizeAddress(regionAddress);
+
+        return ReverseGeocodeResponse.ofNearestPlace(
+                resolvedAddress,
+                resolvedRoadAddress,
+                normalizedRegionAddress,
                 place.placeName(),
                 distanceMeters,
                 lat,
@@ -357,23 +402,15 @@ public class PlaceService {
     }
 
     private void validateLatLng(double lat, double lng) {
-        if (lat < -90 || lat > 90) {
+        // 기본 좌표 범위 검증
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
             throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE);
         }
-        if (lng < -180 || lng > 180) {
-            throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE);
-        }
-    }
 
-    private static long haversineMeters(double lat1, double lon1, double lat2, double lon2) {
-        double R = 6371000.0;
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return (long) (R * c);
+        // 한국 대략 범위 추가 검증
+        if (lat < 33.0 || lat > 39.5 || lng < 124.0 || lng > 132.0) {
+            throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE);
+        }
     }
 
     private static String toExternalPlaceId(String provider, String externalId) {
@@ -384,7 +421,8 @@ public class PlaceService {
         double bearing = bearingDegrees(originLat, originLng, targetLat, targetLng);
 
         // 0도=북(12시), 90도=동(3시) ... 30도 단위로 반올림
-        return (int) Math.floor((bearing + 15.0) / 30.0) % 12;
+        int clock = (int) Math.floor((bearing + 15.0) / 30.0) % 12;
+        return clock == 0 ? 12 : clock;
     }
 
     private static double bearingDegrees(double lat1, double lon1, double lat2, double lon2) {
@@ -417,5 +455,31 @@ public class PlaceService {
 
     private static boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private long haversineMeters(double lat1, double lng1, double lat2, double lng2) {
+        final double earthRadiusMeters = 6_371_000;
+
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1))
+                * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return Math.round(earthRadiusMeters * c);
+    }
+
+    private String resolveListRoadAddress(
+            String jibunAddress,
+            String roadAddress
+    ) {
+        if (hasText(roadAddress)) {
+            return placeAddressResolver.normalizeAddress(roadAddress);
+        }
+
+        return placeAddressResolver.normalizeAddress(jibunAddress);
     }
 }

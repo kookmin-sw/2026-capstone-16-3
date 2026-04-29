@@ -84,6 +84,7 @@ public class PlaceController {
                     userId,
                     result.placeId(),
                     result.name(),
+                    result.roadAddress(),
                     result.address(),
                     result.lat(),
                     result.lng()
