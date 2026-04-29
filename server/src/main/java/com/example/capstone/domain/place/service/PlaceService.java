@@ -270,15 +270,15 @@ public class PlaceService {
             if (addressResp != null && addressResp.documents() != null && !addressResp.documents().isEmpty()) {
                 KakaoCoordToAddressResponse.Document doc = addressResp.documents().getFirst();
 
-                String address = doc.address() != null ? doc.address().addressName() : null;
+                String jibunAddress = doc.address() != null ? doc.address().addressName() : null;
                 String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
 
-                String normalizedAddress = placeAddressResolver.normalizeAddress(address);
-                String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(address, roadAddress, lat, lng);
+                String normalizedJibunAddress = placeAddressResolver.normalizeAddress(jibunAddress);
+                String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(jibunAddress, roadAddress, lat, lng);
 
-                if (hasText(resolvedRoadAddress) || hasText(normalizedAddress)) {
+                if (hasText(resolvedRoadAddress) || hasText(normalizedJibunAddress)) {
                     return ReverseGeocodeResponse.ofAddress(
-                            normalizedAddress,
+                            normalizedJibunAddress,
                             resolvedRoadAddress,
                             lat,
                             lng
@@ -295,6 +295,11 @@ public class PlaceService {
             String regionAddress = regionDoc != null
                     ? placeAddressResolver.normalizeAddress(regionDoc.addressName())
                     : null;
+
+            ReverseGeocodeResponse nearestPlace = findNearestPlaceFallback(regionDoc, regionAddress, lat, lng);
+            if (nearestPlace != null) {
+                return nearestPlace;
+            }
 
             if (hasText(regionAddress)) {
                 return ReverseGeocodeResponse.ofRegion(regionAddress, lat, lng);
@@ -332,6 +337,62 @@ public class PlaceService {
                         .filter(doc -> "B".equals(doc.regionType()))
                         .findFirst())
                 .orElse(regionResp.documents().getFirst());
+    }
+
+    private ReverseGeocodeResponse findNearestPlaceFallback(
+            KakaoCoordToRegionCodeResponse.Document regionDoc,
+            String regionAddress,
+            double lat,
+            double lng
+    ) {
+        String query = null;
+        if (regionDoc != null && hasText(regionDoc.region3DepthName())) {
+            query = regionDoc.region3DepthName();
+        } else if (hasText(regionAddress)) {
+            query = regionAddress;
+        }
+
+        if (!hasText(query)) {
+            return null;
+        }
+
+        final String fallbackQuery = query;
+
+        KakaoCategorySearchResponse placeResp = kakaoLocalClient.searchKeywordByDistance(
+                        fallbackQuery, lat, lng, 500, 1, 1
+                )
+                .doOnSubscribe(s -> log.info("Kakao nearest place fallback start query='{}', lat={}, lng={}", fallbackQuery, lat, lng))
+                .doOnError(e -> log.error("Kakao nearest place fallback fail query='{}', lat={}, lng={}", fallbackQuery, lat, lng, e))
+                .onErrorReturn(new KakaoCategorySearchResponse(null, List.of()))
+                .block();
+
+        if (placeResp == null || placeResp.documents() == null || placeResp.documents().isEmpty()) {
+            return null;
+        }
+
+        KakaoCategorySearchResponse.KakaoPlaceDocument place = placeResp.documents().getFirst();
+        Long distanceMeters = parseDistance(place.distance());
+
+        String resolvedAddress = placeAddressResolver.normalizeAddress(place.addressName());
+
+        String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(
+                place.addressName(),
+                place.roadAddressName(),
+                lat,
+                lng
+        );
+
+        String normalizedRegionAddress = placeAddressResolver.normalizeAddress(regionAddress);
+
+        return ReverseGeocodeResponse.ofNearestPlace(
+                resolvedAddress,
+                resolvedRoadAddress,
+                normalizedRegionAddress,
+                place.placeName(),
+                distanceMeters,
+                lat,
+                lng
+        );
     }
 
     private void validateQuery(String query) {
@@ -378,6 +439,18 @@ public class PlaceService {
 
         // 0~360 정규화
         return (deg + 360.0) % 360.0;
+    }
+
+    private static Long parseDistance(String distance) {
+        if (!hasText(distance)) {
+            return null;
+        }
+
+        try {
+            return Long.parseLong(distance);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static boolean hasText(String value) {
