@@ -29,6 +29,7 @@ public class FavoritePlaceService {
 
     private final FavoritePlaceRepository favoritePlaceRepository;
     private final UserRepository userRepository;
+    private final PlaceAddressResolver placeAddressResolver;
 
     @Transactional(readOnly = true)
     public SliceResponse<FavoritePlaceResponse> getFavorites(Long userId, int page, int size) {
@@ -72,12 +73,18 @@ public class FavoritePlaceService {
             throw new PlaceException(PlaceErrorCode.FAVORITE_LIMIT_EXCEEDED);
         }
 
+        String normalizedAddress = placeAddressResolver.resolveDisplayAddress(
+                request.address(),
+                request.lat(),
+                request.lng()
+        );
+
         FavoritePlace favoritePlace = FavoritePlace.builder()
                 .user(user)
                 .placeId(request.placeId())
                 .name(request.name())
                 .alias(request.alias())
-                .address(request.address())
+                .address(normalizedAddress)
                 .latitude(request.lat())
                 .longitude(request.lng())
                 .category(request.category())
