@@ -41,78 +41,92 @@ class DetectionActiveView extends StatelessWidget {
               // ── 좌측: 버튼 + 상태 + 탐지 수 ──────────────────────────────
               SizedBox(
                 width: 220,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    DetectionButton(
-                      isDetecting: true,
-                      onTap: onStop,
-                      size: 180,
-                    ),
-                    const SizedBox(height: 16),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // 버튼 외 고정 콘텐츠 높이(상태 표시줄 + 탐지 수 박스 + 간격)
+                    const fixedHeight = 110.0;
+                    final buttonSize = min(
+                      180.0,
+                      max(80.0, constraints.maxHeight - fixedHeight),
+                    );
+                    final gap = buttonSize < 130 ? 8.0 : 16.0;
 
-                    // 실시간 감지 활성화
-                    Semantics(
-                      label: '실시간 감지 활성화 중',
-                      excludeSemantics: true,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: const BoxDecoration(
-                              color: ColorCollection.green,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '실시간 감지 활성화',
-                            style: AppTextStyles.labelBold.copyWith(
-                              color: ColorCollection.point,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        DetectionButton(
+                          isDetecting: true,
+                          onTap: onStop,
+                          size: buttonSize,
+                        ),
+                        SizedBox(height: gap),
 
-                    // 탐지된 물체 수 박스
-                    Semantics(
-                      label: '탐지된 물체 $detectedCount개',
-                      excludeSemantics: true,
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          color: ColorCollection.point.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: ColorCollection.main,
-                            width: 3,
+                        // 실시간 감지 활성화
+                        Semantics(
+                          label: '실시간 감지 활성화 중',
+                          excludeSemantics: true,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: const BoxDecoration(
+                                  color: ColorCollection.green,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '실시간 감지 활성화',
+                                style: AppTextStyles.labelBold.copyWith(
+                                  color: ColorCollection.point,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        child: Column(
-                          children: [
-                            Text(
-                              '$detectedCount',
-                              style: AppTextStyles.title1.copyWith(
+                        SizedBox(height: gap * 0.75),
+
+                        // 탐지된 물체 수 박스
+                        Semantics(
+                          label: '탐지된 물체 $detectedCount개',
+                          excludeSemantics: true,
+                          child: Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.symmetric(
+                              vertical: buttonSize < 130 ? 8 : 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: ColorCollection.point.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
                                 color: ColorCollection.main,
+                                width: 3,
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '탐지된 물체',
-                              style: AppTextStyles.labelRegular.copyWith(
-                                color: ColorCollection.point,
-                              ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  '$detectedCount',
+                                  style: AppTextStyles.title1.copyWith(
+                                    color: ColorCollection.main,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '탐지된 물체',
+                                  style: AppTextStyles.labelRegular.copyWith(
+                                    color: ColorCollection.point,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 20),

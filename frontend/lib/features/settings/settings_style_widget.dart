@@ -183,13 +183,12 @@ class _SliderRowState extends State<_SliderRow> {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: '${widget.label} $_displayValue. ${widget.description}',
-      excludeSemantics: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 레이블·현재값은 시각 전용 — 슬라이더가 포커스될 때 읽어줌
+        ExcludeSemantics(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
@@ -207,8 +206,12 @@ class _SliderRowState extends State<_SliderRow> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          SliderTheme(
+        ),
+        const SizedBox(height: 14),
+        // 슬라이더에 label(항목명 + 설명)과 현재값 포맷 제공
+        Semantics(
+          label: '${widget.label}. ${widget.description}',
+          child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
               trackHeight: 13,
               trackShape: _GradientTrackShape(),
@@ -224,11 +227,16 @@ class _SliderRowState extends State<_SliderRow> {
               onChanged: _handleChanged,
               onChangeEnd: widget.onChangeEnd,
               divisions: widget.divisions,
+              semanticFormatterCallback: (v) => widget.valueFormatter != null
+                  ? widget.valueFormatter!(v)
+                  : '${(v * 100).round()}%',
             ),
           ),
-          if (widget.tickLabels != null) ...[
-            const SizedBox(height: 5),
-            Padding(
+        ),
+        if (widget.tickLabels != null) ...[
+          const SizedBox(height: 5),
+          ExcludeSemantics(
+            child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -246,10 +254,12 @@ class _SliderRowState extends State<_SliderRow> {
                     .toList(),
               ),
             ),
-            const SizedBox(height: 8),
-          ],
+          ),
           const SizedBox(height: 8),
-          Text(
+        ],
+        const SizedBox(height: 8),
+        ExcludeSemantics(
+          child: Text(
             widget.description,
             style: AppTextStyles.labelRegular.copyWith(
               color: ColorCollection.point,
@@ -257,8 +267,8 @@ class _SliderRowState extends State<_SliderRow> {
               fontSize: 16,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
