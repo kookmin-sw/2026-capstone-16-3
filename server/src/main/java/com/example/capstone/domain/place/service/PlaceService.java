@@ -199,11 +199,9 @@ public class PlaceService {
 
         Integer directionClock = toDirectionClock(originLat, originLng, placeLat, placeLng);
 
-        String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(
+        String resolvedRoadAddress = resolveListRoadAddress(
                 d.addressName(),
-                d.roadAddressName(),
-                placeLat,
-                placeLng
+                d.roadAddressName()
         );
 
         return new PlaceResponse(
@@ -298,11 +296,6 @@ public class PlaceService {
                     ? placeAddressResolver.normalizeAddress(regionDoc.addressName())
                     : null;
 
-            ReverseGeocodeResponse nearestPlace = findNearestPlaceFallback(regionDoc, regionAddress, lat, lng);
-            if (nearestPlace != null) {
-                return nearestPlace;
-            }
-
             if (hasText(regionAddress)) {
                 return ReverseGeocodeResponse.ofRegion(regionAddress, lat, lng);
             }
@@ -341,62 +334,6 @@ public class PlaceService {
                 .orElse(regionResp.documents().getFirst());
     }
 
-    private ReverseGeocodeResponse findNearestPlaceFallback(
-            KakaoCoordToRegionCodeResponse.Document regionDoc,
-            String regionAddress,
-            double lat,
-            double lng
-    ) {
-        String query = null;
-        if (regionDoc != null && hasText(regionDoc.region3DepthName())) {
-            query = regionDoc.region3DepthName();
-        } else if (hasText(regionAddress)) {
-            query = regionAddress;
-        }
-
-        if (!hasText(query)) {
-            return null;
-        }
-
-        final String fallbackQuery = query;
-
-        KakaoCategorySearchResponse placeResp = kakaoLocalClient.searchKeywordByDistance(
-                        fallbackQuery, lat, lng, 500, 1, 1
-                )
-                .doOnSubscribe(s -> log.info("Kakao nearest place fallback start query='{}', lat={}, lng={}", fallbackQuery, lat, lng))
-                .doOnError(e -> log.error("Kakao nearest place fallback fail query='{}', lat={}, lng={}", fallbackQuery, lat, lng, e))
-                .onErrorReturn(new KakaoCategorySearchResponse(null, List.of()))
-                .block();
-
-        if (placeResp == null || placeResp.documents() == null || placeResp.documents().isEmpty()) {
-            return null;
-        }
-
-        KakaoCategorySearchResponse.KakaoPlaceDocument place = placeResp.documents().getFirst();
-        Long distanceMeters = parseDistance(place.distance());
-
-        String resolvedAddress = placeAddressResolver.normalizeAddress(place.addressName());
-
-        String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(
-                place.addressName(),
-                place.roadAddressName(),
-                lat,
-                lng
-        );
-
-        String normalizedRegionAddress = placeAddressResolver.normalizeAddress(regionAddress);
-
-        return ReverseGeocodeResponse.ofNearestPlace(
-                resolvedAddress,
-                resolvedRoadAddress,
-                normalizedRegionAddress,
-                place.placeName(),
-                distanceMeters,
-                lat,
-                lng
-        );
-    }
-
     private void validateQuery(String query) {
         if (query == null || query.isBlank()) {
             throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST);
@@ -404,10 +341,13 @@ public class PlaceService {
     }
 
     private void validateLatLng(double lat, double lng) {
-        if (lat < -90 || lat > 90) {
+        // 기본 좌표 범위 검증
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
             throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE);
         }
-        if (lng < -180 || lng > 180) {
+
+        // 한국 대략 범위 추가 검증
+        if (lat < 33.0 || lat > 39.5 || lng < 124.0 || lng > 132.0) {
             throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE);
         }
     }
@@ -420,7 +360,8 @@ public class PlaceService {
         double bearing = bearingDegrees(originLat, originLng, targetLat, targetLng);
 
         // 0도=북(12시), 90도=동(3시) ... 30도 단위로 반올림
-        return (int) Math.floor((bearing + 15.0) / 30.0) % 12;
+        int clock = (int) Math.floor((bearing + 15.0) / 30.0) % 12;
+        return clock == 0 ? 12 : clock;
     }
 
     private static double bearingDegrees(double lat1, double lon1, double lat2, double lon2) {
@@ -437,18 +378,6 @@ public class PlaceService {
 
         // 0~360 정규화
         return (deg + 360.0) % 360.0;
-    }
-
-    private static Long parseDistance(String distance) {
-        if (!hasText(distance)) {
-            return null;
-        }
-
-        try {
-            return Long.parseLong(distance);
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 
     private static boolean hasText(String value) {
@@ -468,5 +397,16 @@ public class PlaceService {
 
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return Math.round(earthRadiusMeters * c);
+    }
+
+    private String resolveListRoadAddress(
+            String jibunAddress,
+            String roadAddress
+    ) {
+        if (hasText(roadAddress)) {
+            return placeAddressResolver.normalizeAddress(roadAddress);
+        }
+
+        return placeAddressResolver.normalizeAddress(jibunAddress);
     }
 }
