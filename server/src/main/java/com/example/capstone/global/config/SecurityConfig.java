@@ -27,11 +27,14 @@ public class SecurityConfig {
 
         http
                 .csrf(csrf -> csrf.disable())
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin())) // 임시
                 .cors(Customizer.withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/h2-console/**", // 임시
                                 "/api/auth/**",
+                                "/api/crosswalks/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/api/guide/event"
