@@ -56,14 +56,14 @@ class DetectionEvent {
 
   static const Map<String, String> _objectClassKo = {
     // 차량류
-    'car': '자동차',
+    'car': '차량',
     'bus': '버스',
     'truck': '트럭',
     'motorcycle': '오토바이',
     'scooter': '스쿠터',
     'bicycle': '자전거',
     // 사람·이동 보조
-    'person': '사람',
+    'person': '보행자',
     'wheelchair': '휠체어',
     'stroller': '유모차',
     'carrier': '수레',
@@ -72,14 +72,14 @@ class DetectionEvent {
     'pole': '기둥',
     'barricade': '바리케이드',
     'bench': '벤치',
-    'table': '테이블',
+    'table': '탁자',
     'chair': '의자',
     'fire_hydrant': '소화전',
-    'tree_trunk': '가로수 기둥',
+    'tree_trunk': '가로수',
     'potted_plant': '화분',
     'parking_meter': '주차 미터기',
     'kiosk': '키오스크',
-    'stop': '정류장',
+    'stop': '정지판',
     // 표지·신호
     'traffic_light': '신호등',
     'traffic_sign': '교통 표지판',

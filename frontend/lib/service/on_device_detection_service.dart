@@ -2,26 +2,80 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:safepath/model/detection_event.dart';
+import 'package:safepath/model/detection_result.dart';
 import 'package:safepath/service/camera_service.dart';
-import 'package:safepath/service/surface_tflite_runner.dart';
+import 'package:safepath/service/object_tflite_runner.dart';
 
 /// 온디바이스 장애물 탐지 서비스
 ///
-/// CameraService.frameStream을 구독하여 SurfaceTfliteRunner로 추론하고
+/// CameraService.frameStream을 구독하여 ObjectTfliteRunner로 추론하고
 /// DetectionEvent를 eventStream으로 방출한다.
-///
-/// output0 형식: [1, 300, 38]
-///   det[0..3] = x1,y1,x2,y2 (픽셀 좌표, 0~inputSize)
-///   det[4]    = confidence
-///   det[5]    = class_id (float → int)
-///   det[6..37]= mask coefficients (무시)
 class OnDeviceDetectionService {
   static final OnDeviceDetectionService _instance =
       OnDeviceDetectionService._internal();
   factory OnDeviceDetectionService() => _instance;
   OnDeviceDetectionService._internal();
 
-  final _runner = SurfaceTfliteRunner(inputSize: 640);
+  // objectLabels 순서 = 모델 출력 class_id 순서와 일치해야 함
+  // 모델 학습 YAML의 names 순서와 맞게 재확인 필요
+  static const List<String> _objectLabels = [
+    'wheelchair',               // 0
+    'truck',                    // 1
+    'tree_trunk',               // 2
+    'traffic_sign',             // 3
+    'traffic_light',            // 4
+    'traffic_light_controller', // 5
+    'table',                    // 6
+    'stroller',                 // 7
+    'stop',                     // 8
+    'scooter',                  // 9
+    'potted_plant',             // 10
+    'power_controller',         // 11
+    'pole',                     // 12
+    'person',                   // 13
+    'parking_meter',            // 14
+    'movable_signage',          // 15
+    'motorcycle',               // 16
+    'kiosk',                    // 17
+    'fire_hydrant',             // 18
+    'dog',                      // 19
+    'chair',                    // 20
+    'cat',                      // 21
+    'carrier',                  // 22
+    'car',                      // 23
+    'bus',                      // 24
+    'bollard',                  // 25
+    'bicycle',                  // 26
+    'bench',                    // 27
+    'barricade',                // 28
+  ];
+
+  // 클래스명 기반 위험도 (inference.py SEVERITY_MAP 기준)
+  static const Map<String, int> _severity = {
+    'truck': 3,
+    'scooter': 3,
+    'motorcycle': 3,
+    'car': 3,
+    'bus': 3,
+    'wheelchair': 2,
+    'tree_trunk': 2,
+    'table': 2,
+    'stop': 2,
+    'pole': 2,
+    'person': 2,
+    'fire_hydrant': 2,
+    'bollard': 2,
+    'bicycle': 2,
+    'bench': 2,
+    'barricade': 2,
+    'traffic_light': 1,
+  };
+
+  final _runner = ObjectTfliteRunner(
+    inputSize: 640,
+    labels: _objectLabels,
+    scoreThreshold: 0.25,
+  );
   final _controller = StreamController<DetectionEvent>.broadcast();
   StreamSubscription<Uint8List>? _frameSub;
 
@@ -31,68 +85,6 @@ class OnDeviceDetectionService {
 
   Stream<DetectionEvent> get eventStream => _controller.stream;
   bool get isRunning => _isRunning;
-
-  // ─── 설정값 ───────────────────────────────────────────────────────────────
-
-  static const double _confThreshold = 0.3;
-  static const double _inputSize = 640.0;
-
-  // 클래스 인덱스 → 영문 클래스명
-  static const List<String> _classNames = [
-    'wheelchair',              // 0
-    'truck',                   // 1
-    'tree_trunk',              // 2
-    'traffic_sign',            // 3
-    'traffic_light',           // 4
-    'traffic_light_controller',// 5
-    'table',                   // 6
-    'stroller',                // 7
-    'stop',                    // 8
-    'scooter',                 // 9
-    'potted_plant',            // 10
-    'power_controller',        // 11
-    'pole',                    // 12
-    'person',                  // 13
-    'parking_meter',           // 14
-    'movable_signage',         // 15
-    'motorcycle',              // 16
-    'kiosk',                   // 17
-    'fire_hydrant',            // 18
-    'dog',                     // 19
-    'chair',                   // 20
-    'cat',                     // 21
-    'carrier',                 // 22
-    'car',                     // 23
-    'bus',                     // 24
-    'bollard',                 // 25
-    'bicycle',                 // 26
-    'bench',                   // 27
-    'barricade',               // 28
-  ];
-
-  // 클래스 기반 위험도 기본값 (4=차량류, 3=중간, 2=낮음)
-  static const Map<int, int> _classBase = {
-    1: 4,  // truck
-    9: 4,  // scooter
-    16: 4, // motorcycle
-    23: 4, // car
-    24: 4, // bus
-    26: 4, // bicycle
-    0: 3,  // wheelchair
-    6: 3,  // table
-    7: 3,  // stroller
-    12: 3, // pole
-    13: 3, // person
-    18: 3, // fire_hydrant
-    19: 3, // dog
-    20: 3, // chair
-    21: 3, // cat
-    22: 3, // carrier
-    25: 3, // bollard
-    27: 3, // bench
-    28: 3, // barricade
-    // 나머지 (2: tree_trunk, 3: traffic_sign, 4: traffic_light, ...) → 기본값 2
-  };
 
   // ─── 시작 / 정지 ──────────────────────────────────────────────────────────
 
@@ -129,7 +121,8 @@ class OnDeviceDetectionService {
     try {
       final result = await _runner.runOnImageBytes(bytes);
       debugPrint('🟣 [OnDevice] 추론 완료 (${result["elapsedMs"]}ms)');
-      final event = _parseResult(result);
+      final detections = result['detections'] as List<DetectionResult>;
+      final event = _selectBestEvent(detections);
       if (event != null && !_controller.isClosed) {
         _controller.add(event);
       }
@@ -140,39 +133,27 @@ class OnDeviceDetectionService {
     }
   }
 
-  // ─── 추론 결과 파싱 ───────────────────────────────────────────────────────
+  // ─── 최우선 탐지 이벤트 선택 ──────────────────────────────────────────────
 
-  DetectionEvent? _parseResult(Map<String, dynamic> result) {
-    final rawOutput0 = result['output0'] as List;
-    final detections = rawOutput0[0] as List; // [300, 38]
-
+  DetectionEvent? _selectBestEvent(List<DetectionResult> detections) {
     DetectionEvent? best;
     int bestPriority = 2; // 2 이하는 무시
 
-    for (int i = 0; i < detections.length; i++) {
-      final det = detections[i] as List;
-
-      final conf = (det[4] as num).toDouble();
-      if (conf < _confThreshold) continue;
-
-      final classId = (det[5] as num).toInt();
-      if (classId < 0 || classId >= _classNames.length) continue;
-
-      // 픽셀 좌표 → 정규화 (0~1)
-      final x1 = (det[0] as num).toDouble() / _inputSize;
-      final y1 = (det[1] as num).toDouble() / _inputSize;
-      final x2 = (det[2] as num).toDouble() / _inputSize;
-      final y2 = (det[3] as num).toDouble() / _inputSize;
-
-      final cx = (x1 + x2) / 2.0;
-      final w = (x2 - x1).abs();
-      final h = (y2 - y1).abs();
+    for (final det in detections) {
+      final cx = (det.x1 + det.x2) / 2.0;
+      final w = (det.x2 - det.x1).abs();
+      final h = (det.y2 - det.y1).abs();
       final area = w * h;
 
       final distance = _distanceFromArea(area);
-      final priority = (_classBase[classId] ?? 2)
-          + _distanceScore(distance)
-          + _pathScore(cx);
+      final hRegion = _hRegion(cx);
+
+      final severity = _severity[det.label] ?? 1;
+      final immediacy = _immediacy(distance);
+      final isNearOrMid = distance == 'near' || distance == 'mid';
+      final onPath = (hRegion == 'center' && isNearOrMid) ? 1 : 0;
+      final narrowsPath = isNearOrMid ? 1 : 0;
+      final priority = severity + immediacy + onPath + narrowsPath;
 
       if (priority <= 2) continue;
       if (priority <= bestPriority) continue;
@@ -181,13 +162,12 @@ class OnDeviceDetectionService {
 
       final alertLevel = _alertLevel(priority);
       final clockDir = _clockDirection(cx);
-      final className = _classNames[classId];
-      final objectName = DetectionEvent.koName(className);
+      final objectName = DetectionEvent.koName(det.label);
       final particle = _trailingConsonant(objectName) ? '이' : '가';
 
       best = DetectionEvent(
         guideText: _guideText(clockDir, objectName, particle, alertLevel),
-        primaryObjectClass: className,
+        primaryObjectClass: det.label,
         clockDirection: clockDir,
         distance: distance,
         alertLevel: alertLevel,
@@ -207,23 +187,22 @@ class OnDeviceDetectionService {
   // ─── 헬퍼 ─────────────────────────────────────────────────────────────────
 
   String _distanceFromArea(double area) {
-    if (area > 0.10) return 'near';
-    if (area > 0.02) return 'mid';
+    if (area >= 0.10) return 'near';
+    if (area >= 0.03) return 'mid';
     return 'far';
   }
 
-  int _distanceScore(String distance) => switch (distance) {
+  String _hRegion(double cx) {
+    if (cx < 0.33) return 'left';
+    if (cx < 0.66) return 'center';
+    return 'right';
+  }
+
+  int _immediacy(String distance) => switch (distance) {
     'near' => 3,
     'mid' => 2,
     _ => 1,
   };
-
-  // 화면 중앙 경로 점유 여부
-  int _pathScore(double cx) {
-    if (cx >= 0.40 && cx <= 0.60) return 2; // on_path
-    if (cx >= 0.25 && cx <= 0.75) return 1; // narrows_path
-    return 0;
-  }
 
   String _alertLevel(int priority) {
     if (priority >= 7) return 'high';
@@ -231,15 +210,12 @@ class OnDeviceDetectionService {
     return 'low';
   }
 
-  // 화면 x 비율 → 시계 방향 (9시~3시)
   String _clockDirection(double cx) {
-    if (cx < 1 / 7) return '9시';
-    if (cx < 2 / 7) return '10시';
-    if (cx < 3 / 7) return '11시';
-    if (cx < 4 / 7) return '12시';
-    if (cx < 5 / 7) return '1시';
-    if (cx < 6 / 7) return '2시';
-    return '3시';
+    if (cx < 0.2) return '10시';
+    if (cx < 0.4) return '11시';
+    if (cx < 0.6) return '12시';
+    if (cx < 0.8) return '1시';
+    return '2시';
   }
 
   String _guideText(
@@ -250,9 +226,9 @@ class OnDeviceDetectionService {
   ) {
     final base = '$clockDir 방향에 $objectName$particle 있습니다.';
     return switch (alertLevel) {
-      'high' => '$base 즉시 멈추거나 피하세요.',
-      'medium' => '$base 주의하세요.',
-      _ => base,
+      'high' => '$base 즉시 이동하세요.',
+      'medium' => '$base 피해 주세요.',
+      _ => '$base 주의하며 이동하세요.',
     };
   }
 
