@@ -33,10 +33,11 @@ public class RecentPlaceService {
     @Transactional(readOnly = true)
     public SliceResponse<RecentPlaceResponse> getRecent(Long userId, int page, int size) {
         // PageRequest.of()는 0부터 시작
-        var pageable = PageRequest.of(
-                Math.max(page, 1) - 1,
-                Math.min(Math.max(size, 1), MAX_KEEP)
-        );
+
+        int requestPage = Math.max(page, 1);
+        int requestSize = Math.min(Math.max(size, 1), MAX_KEEP);
+
+        var pageable = PageRequest.of(requestPage - 1, requestSize);
 
         var result = repository.findByUserIdOrderBySearchedAtDesc(userId, pageable);
 
@@ -56,13 +57,13 @@ public class RecentPlaceService {
             String name,
             String roadAddress,
             String jibunAddress,
-            Double latitude,
-            Double longitude
+            Double lat,
+            Double lng
     ) {
         if (userId == null) return;
         if (placeId == null || placeId.isBlank()) return;
         if (name == null || name.isBlank()) return;
-        if (latitude == null || longitude == null) return;
+        if (lat == null || lng == null) return;
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
@@ -72,8 +73,8 @@ public class RecentPlaceService {
         String normalizedRoadAddress = placeAddressResolver.resolveRoadAddress(
                 jibunAddress,
                 roadAddress,
-                latitude,
-                longitude,
+                lat,
+                lng,
                 new HashMap<>()
         );
 
@@ -85,8 +86,8 @@ public class RecentPlaceService {
                                 name,
                                 normalizedRoadAddress,
                                 normalizedJibunAddress,
-                                latitude,
-                                longitude,
+                                lat,
+                                lng,
                                 now
                         ),
                         () -> repository.save(
@@ -96,8 +97,8 @@ public class RecentPlaceService {
                                         .name(name)
                                         .roadAddress(normalizedRoadAddress)
                                         .jibunAddress(normalizedJibunAddress)
-                                        .latitude(latitude)
-                                        .longitude(longitude)
+                                        .latitude(lat)
+                                        .longitude(lng)
                                         .searchedAt(now)
                                         .build()
                         )
@@ -139,16 +140,13 @@ public class RecentPlaceService {
     }
 
     private void trimIfNeeded(Long userId) {
-        long count = repository.countByUserId(userId);
-        if (count <= MAX_KEEP) {
+        List<RecentPlace> all = repository.findAllByUserIdOrderBySearchedAtDesc(userId);
+
+        if (all.size() <= MAX_KEEP) {
             return;
         }
 
-        var overflow = repository.findByUserIdOrderBySearchedAtDesc(userId, PageRequest.of(MAX_KEEP, Integer.MAX_VALUE))
-                .getContent();
-
-        if (!overflow.isEmpty()) {
-            repository.deleteAll(overflow);
-        }
+        List<RecentPlace> overflow = all.subList(MAX_KEEP, all.size());
+        repository.deleteAll(overflow);
     }
 }
