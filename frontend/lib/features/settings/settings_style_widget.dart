@@ -208,29 +208,38 @@ class _SliderRowState extends State<_SliderRow> {
           ),
         ),
         const SizedBox(height: 14),
-        // 슬라이더에 label(항목명 + 설명)과 현재값 포맷 제공
-        Semantics(
-          label: '${widget.label}. ${widget.description}',
-          child: SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 13,
-              trackShape: _GradientTrackShape(),
-              thumbShape: const _RoundedRectThumbShape(),
-              overlayShape: SliderComponentShape.noOverlay,
-              inactiveTrackColor: ColorCollection.point.withValues(alpha: 0.15),
-              tickMarkShape: widget.tickLabels != null
-                  ? null
-                  : SliderTickMarkShape.noTickMark,
-            ),
-            child: Slider(
-              value: widget.value,
-              onChanged: _handleChanged,
-              onChangeEnd: widget.onChangeEnd,
-              divisions: widget.divisions,
-              semanticFormatterCallback: (v) => widget.valueFormatter != null
-                  ? widget.valueFormatter!(v)
-                  : '${(v * 100).round()}%',
-            ),
+        // MergeSemantics: 슬라이더의 value/action + label/설명을 하나의 노드로 병합
+        MergeSemantics(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Semantics(
+                label: '${widget.label}. ${widget.description}',
+              ),
+              SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 13,
+                  trackShape: _GradientTrackShape(),
+                  thumbShape: const _RoundedRectThumbShape(),
+                  overlayShape: SliderComponentShape.noOverlay,
+                  inactiveTrackColor:
+                      ColorCollection.point.withValues(alpha: 0.15),
+                  tickMarkShape: widget.tickLabels != null
+                      ? null
+                      : SliderTickMarkShape.noTickMark,
+                ),
+                child: Slider(
+                  value: widget.value,
+                  onChanged: _handleChanged,
+                  onChangeEnd: widget.onChangeEnd,
+                  divisions: widget.divisions,
+                  semanticFormatterCallback: (v) =>
+                      widget.valueFormatter != null
+                          ? widget.valueFormatter!(v)
+                          : '${(v * 100).round()}%',
+                ),
+              ),
+            ],
           ),
         ),
         if (widget.tickLabels != null) ...[
