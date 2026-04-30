@@ -5,6 +5,8 @@ import com.example.capstone.domain.place.dto.response.kakao.KakaoAddressSearchRe
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCategorySearchResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToAddressResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToRegionCodeResponse;
+import com.example.capstone.domain.place.dto.response.naver.NaverAddressCandidate;
+import com.example.capstone.domain.place.dto.response.naver.NaverGeocodeResponse;
 import com.example.capstone.domain.place.exception.PlaceErrorCode;
 import com.example.capstone.domain.place.exception.PlaceException;
 import org.slf4j.Logger;
@@ -13,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -20,15 +24,23 @@ import java.util.concurrent.TimeoutException;
 public class PlaceService {
 
     private final KakaoLocalClient kakaoLocalClient;
+    private final NaverMapClient naverMapClient;
     private final PlaceAddressResolver placeAddressResolver;
     private final PlaceCache placeCache;
 
     private static final int MAX_PAGE = 45;
     private static final int MAX_SIZE = 15;
+    private static final List<Integer> NEAREST_PLACE_FALLBACK_RADII_M = List.of(5, 10, 15);
+    private static final int NEAREST_PLACE_SEARCH_SIZE = 5;
     private static final Logger log = LoggerFactory.getLogger(PlaceService.class);
 
-    public PlaceService(KakaoLocalClient kakaoLocalClient, PlaceCache placeCache, PlaceAddressResolver placeAddressResolver) {
+    public PlaceService(
+            KakaoLocalClient kakaoLocalClient,
+            NaverMapClient naverMapClient,
+            PlaceCache placeCache,
+            PlaceAddressResolver placeAddressResolver) {
         this.kakaoLocalClient = kakaoLocalClient;
+        this.naverMapClient = naverMapClient;
         this.placeAddressResolver = placeAddressResolver;
         this.placeCache = placeCache;
     }
@@ -96,7 +108,7 @@ public class PlaceService {
         int kakaoSize = Math.min(Math.max(size, 1), MAX_SIZE); // Kakao limit
 
         try {
-            KakaoCategorySearchResponse resp = kakaoLocalClient.searchKeyword(
+            KakaoCategorySearchResponse resp = kakaoLocalClient.searchKeywordByAccuracy(
                             query.trim(), lat, lng, radiusM, kakaoSize, kakaoPage
                     )
                     .doOnSubscribe(s -> log.info("[place search] start query='{}', page={}, size={}, lat={}, lng={}, radius={}",
@@ -216,6 +228,19 @@ public class PlaceService {
         );
     }
 
+    private record ReverseAddressCandidate(
+            String roadAddress,
+            String jibunAddress,
+            String source,
+            Double lat,
+            Double lng,
+            Long distanceM
+    ) {
+        String finalAddress() {
+            return hasText(roadAddress) ? roadAddress : jibunAddress;
+        }
+    }
+
     public GeocodeResponse geocode(String query) {
         if (query == null || query.isBlank()) {
             throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST);
@@ -262,6 +287,9 @@ public class PlaceService {
         validateLatLng(lat, lng);
 
         try {
+            ReverseAddressCandidate kakaoJibunCandidate = null;
+            String coordRoadName = null;
+
             KakaoCoordToAddressResponse addressResp = kakaoLocalClient.coordToAddress(lat, lng)
                     .doOnSubscribe(s -> log.info("Kakao reverse geocode start lat={}, lng={}", lat, lng))
                     .doOnError(e -> log.error("Kakao reverse geocode fail lat={}, lng={}", lat, lng, e))
@@ -272,17 +300,71 @@ public class PlaceService {
 
                 String jibunAddress = doc.address() != null ? doc.address().addressName() : null;
                 String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
+                coordRoadName = doc.roadAddress() != null ? doc.roadAddress().roadName() : null;
 
                 String normalizedJibunAddress = placeAddressResolver.normalizeAddress(jibunAddress);
-                String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(jibunAddress, roadAddress, lat, lng);
+                String normalizedRoadAddress = placeAddressResolver.normalizeAddress(roadAddress);
 
-                if (hasText(resolvedRoadAddress) || hasText(normalizedJibunAddress)) {
+                if (hasText(normalizedRoadAddress)) {
                     return ReverseGeocodeResponse.ofAddress(
+                            normalizedRoadAddress,
                             normalizedJibunAddress,
-                            resolvedRoadAddress,
                             lat,
                             lng
                     );
+                }
+
+                if (hasText(normalizedJibunAddress)) {
+                    kakaoJibunCandidate = new ReverseAddressCandidate(
+                            null,
+                            normalizedJibunAddress,
+                            "KAKAO_JIBUN_ADDRESS",
+                            null,
+                            null,
+                            null
+                    );
+                }
+            }
+
+            if (kakaoJibunCandidate != null) {
+                ReverseAddressCandidate naverCandidate =
+                        findNaverReverseGeocodeCandidate(lat, lng);
+
+                if (naverCandidate != null) {
+                    ReverseAddressCandidate enrichedKakao =
+                            enrichKakaoCandidateDistance(kakaoJibunCandidate, lat, lng);
+
+                    ReverseAddressCandidate enrichedNaver =
+                            enrichNaverCandidateDistance(naverCandidate, lat, lng);
+
+                    ReverseAddressCandidate selected =
+                            selectBetterReverseAddressCandidate(enrichedKakao, enrichedNaver);
+
+                    ReverseGeocodeResponse selectedResponse =
+                            toReverseGeocodeResponse(selected, lat, lng);
+
+                    if (selectedResponse != null) {
+                        return selectedResponse;
+                    }
+                }
+
+                return ReverseGeocodeResponse.ofAddress(
+                        null,
+                        kakaoJibunCandidate.jibunAddress(),
+                        lat,
+                        lng
+                );
+            }
+
+            ReverseAddressCandidate naverCandidate =
+                    findNaverReverseGeocodeCandidate(lat, lng);
+
+            if (naverCandidate != null) {
+                ReverseGeocodeResponse naverResponse =
+                        toReverseGeocodeResponse(naverCandidate, lat, lng);
+
+                if (naverResponse != null) {
+                    return naverResponse;
                 }
             }
 
@@ -296,7 +378,18 @@ public class PlaceService {
                     ? placeAddressResolver.normalizeAddress(regionDoc.addressName())
                     : null;
 
-            ReverseGeocodeResponse nearestPlace = findNearestPlaceFallback(regionDoc, regionAddress, lat, lng);
+            List<String> fallbackQueries = buildReverseGeocodeFallbackQueries(
+                    coordRoadName,
+                    regionResp
+            );
+
+            ReverseGeocodeResponse nearestPlace = findNearestPlaceFallback(
+                    fallbackQueries,
+                    regionAddress,
+                    lat,
+                    lng
+            );
+
             if (nearestPlace != null) {
                 return nearestPlace;
             }
@@ -323,6 +416,161 @@ public class PlaceService {
         }
     }
 
+    private ReverseAddressCandidate enrichKakaoCandidateDistance(
+            ReverseAddressCandidate candidate,
+            double originLat,
+            double originLng
+    ) {
+        if (candidate == null || !hasText(candidate.finalAddress())) {
+            return candidate;
+        }
+
+        KakaoAddressSearchResponse resp = kakaoLocalClient.searchAddress(candidate.finalAddress())
+                .doOnSubscribe(s -> log.info(
+                        "[kakao candidate geocode] source={}, address='{}'",
+                        candidate.source(),
+                        candidate.finalAddress()
+                ))
+                .doOnError(e -> log.error(
+                        "[kakao candidate geocode fail] source={}, address='{}'",
+                        candidate.source(),
+                        candidate.finalAddress(),
+                        e
+                ))
+                .onErrorReturn(new KakaoAddressSearchResponse(null, List.of()))
+                .block();
+
+        if (resp == null || resp.documents() == null || resp.documents().isEmpty()) {
+            return candidate;
+        }
+
+        KakaoAddressSearchResponse.Document doc = resp.documents().getFirst();
+
+        try {
+            double candidateLng = Double.parseDouble(doc.x());
+            double candidateLat = Double.parseDouble(doc.y());
+            long distanceM = haversineMeters(originLat, originLng, candidateLat, candidateLng);
+
+            return new ReverseAddressCandidate(
+                    candidate.roadAddress(),
+                    candidate.jibunAddress(),
+                    candidate.source(),
+                    candidateLat,
+                    candidateLng,
+                    distanceM
+            );
+        } catch (Exception e) {
+            return candidate;
+        }
+    }
+
+    private ReverseAddressCandidate enrichNaverCandidateDistance(
+            ReverseAddressCandidate candidate,
+            double originLat,
+            double originLng
+    ) {
+        if (candidate == null || !hasText(candidate.finalAddress())) {
+            return candidate;
+        }
+
+        NaverGeocodeResponse resp = naverMapClient.geocode(candidate.finalAddress())
+                .doOnSubscribe(s -> log.info(
+                        "[naver candidate geocode] source={}, address='{}'",
+                        candidate.source(),
+                        candidate.finalAddress()
+                ))
+                .doOnError(e -> log.error(
+                        "[naver candidate geocode fail] source={}, address='{}'",
+                        candidate.source(),
+                        candidate.finalAddress(),
+                        e
+                ))
+                .onErrorReturn(new NaverGeocodeResponse("ERROR", null, List.of(), "fallback failed"))
+                .block();
+
+        if (resp == null || resp.addresses() == null || resp.addresses().isEmpty()) {
+            return candidate;
+        }
+
+        NaverGeocodeResponse.Address address = resp.addresses().getFirst();
+
+        try {
+            double candidateLng = Double.parseDouble(address.x());
+            double candidateLat = Double.parseDouble(address.y());
+            long distanceM = haversineMeters(originLat, originLng, candidateLat, candidateLng);
+
+            return new ReverseAddressCandidate(
+                    candidate.roadAddress(),
+                    candidate.jibunAddress(),
+                    candidate.source(),
+                    candidateLat,
+                    candidateLng,
+                    distanceM
+            );
+        } catch (Exception e) {
+            return candidate;
+        }
+    }
+
+    private ReverseAddressCandidate selectBetterReverseAddressCandidate(
+            ReverseAddressCandidate kakaoCandidate,
+            ReverseAddressCandidate naverCandidate
+    ) {
+        if (kakaoCandidate == null) {
+            return naverCandidate;
+        }
+
+        if (naverCandidate == null) {
+            return kakaoCandidate;
+        }
+
+        if (kakaoCandidate.distanceM() != null && naverCandidate.distanceM() != null) {
+            if (!kakaoCandidate.distanceM().equals(naverCandidate.distanceM())) {
+                return kakaoCandidate.distanceM() < naverCandidate.distanceM()
+                        ? kakaoCandidate
+                        : naverCandidate;
+            }
+        }
+
+        if (kakaoCandidate.distanceM() != null && naverCandidate.distanceM() == null) {
+            return kakaoCandidate;
+        }
+
+        if (kakaoCandidate.distanceM() == null && naverCandidate.distanceM() != null) {
+            return naverCandidate;
+        }
+
+        return sourcePriority(kakaoCandidate.source()) <= sourcePriority(naverCandidate.source())
+                ? kakaoCandidate
+                : naverCandidate;
+    }
+
+    private int sourcePriority(String source) {
+        return switch (source) {
+            case "NAVER_ROAD_ADDRESS" -> 1;
+            case "KAKAO_JIBUN_ADDRESS" -> 2;
+            case "NAVER_JIBUN_ADDRESS" -> 3;
+            default -> 99;
+        };
+    }
+
+    private ReverseGeocodeResponse toReverseGeocodeResponse(
+            ReverseAddressCandidate candidate,
+            double lat,
+            double lng
+    ) {
+        if (candidate == null || !hasText(candidate.finalAddress())) {
+            return null;
+        }
+
+        return ReverseGeocodeResponse.ofResolvedAddress(
+                candidate.finalAddress(),
+                candidate.source(),
+                lat,
+                lng
+        );
+    }
+
     private KakaoCoordToRegionCodeResponse.Document selectRegionDocument(
             KakaoCoordToRegionCodeResponse regionResp
     ) {
@@ -339,60 +587,255 @@ public class PlaceService {
                 .orElse(regionResp.documents().getFirst());
     }
 
+    private ReverseAddressCandidate findNaverReverseGeocodeCandidate(
+            double lat,
+            double lng
+    ) {
+        NaverAddressCandidate naverCandidate = naverMapClient.reverseGeocode(lat, lng)
+                .doOnSubscribe(s -> log.info("Naver reverse geocode start lat={}, lng={}", lat, lng))
+                .doOnError(e -> log.error("Naver reverse geocode fail lat={}, lng={}", lat, lng, e))
+                .onErrorReturn(new NaverAddressCandidate(null, null))
+                .block();
+
+        if (naverCandidate == null) {
+            return null;
+        }
+
+        String roadAddress = placeAddressResolver.normalizeAddress(naverCandidate.roadAddress());
+        String jibunAddress = placeAddressResolver.normalizeAddress(naverCandidate.jibunAddress());
+
+        if (hasText(roadAddress)) {
+            return new ReverseAddressCandidate(
+                    roadAddress,
+                    jibunAddress,
+                    "NAVER_ROAD_ADDRESS",
+                    null,
+                    null,
+                    null
+            );
+        }
+
+        if (hasText(jibunAddress)) {
+            return new ReverseAddressCandidate(
+                    null,
+                    jibunAddress,
+                    "NAVER_JIBUN_ADDRESS",
+                    null,
+                    null,
+                    null
+            );
+        }
+
+        return null;
+    }
+
     private ReverseGeocodeResponse findNearestPlaceFallback(
-            KakaoCoordToRegionCodeResponse.Document regionDoc,
+            List<String> fallbackQueries,
             String regionAddress,
             double lat,
             double lng
     ) {
-        String query = null;
-        if (regionDoc != null && hasText(regionDoc.region3DepthName())) {
-            query = regionDoc.region3DepthName();
-        } else if (hasText(regionAddress)) {
-            query = regionAddress;
-        }
-
-        if (!hasText(query)) {
+        if (fallbackQueries == null || fallbackQueries.isEmpty()) {
             return null;
         }
 
-        final String fallbackQuery = query;
+        for (String fallbackQuery : fallbackQueries) {
+            for (int radiusM : NEAREST_PLACE_FALLBACK_RADII_M) {
+                KakaoCategorySearchResponse placeResp = kakaoLocalClient.searchKeywordByDistance(
+                                fallbackQuery,
+                                lat,
+                                lng,
+                                radiusM,
+                                NEAREST_PLACE_SEARCH_SIZE,
+                                1
+                        )
+                        .doOnSubscribe(s -> log.info(
+                                "Kakao nearest address fallback start query='{}', lat={}, lng={}, radius={}m",
+                                fallbackQuery,
+                                lat,
+                                lng,
+                                radiusM
+                        ))
+                        .doOnError(e -> log.error(
+                                "Kakao nearest address fallback fail query='{}', lat={}, lng={}, radius={}m",
+                                fallbackQuery,
+                                lat,
+                                lng,
+                                radiusM,
+                                e
+                        ))
+                        .onErrorReturn(new KakaoCategorySearchResponse(null, List.of()))
+                        .block();
 
-        KakaoCategorySearchResponse placeResp = kakaoLocalClient.searchKeywordByDistance(
-                        fallbackQuery, lat, lng, 500, 1, 1
-                )
-                .doOnSubscribe(s -> log.info("Kakao nearest place fallback start query='{}', lat={}, lng={}", fallbackQuery, lat, lng))
-                .doOnError(e -> log.error("Kakao nearest place fallback fail query='{}', lat={}, lng={}", fallbackQuery, lat, lng, e))
-                .onErrorReturn(new KakaoCategorySearchResponse(null, List.of()))
-                .block();
+                logNearestPlaceFallbackCandidates(fallbackQuery, radiusM, placeResp);
 
+                KakaoCategorySearchResponse.KakaoPlaceDocument nearestPlace =
+                        selectNearestAddressPlace(placeResp, radiusM);
+
+                if (nearestPlace == null) {
+                    continue;
+                }
+
+                Long distanceM = parseDistance(nearestPlace.distance());
+                if (distanceM == null) {
+                    continue;
+                }
+
+                String normalizedRoadAddress = placeAddressResolver.normalizeAddress(
+                        nearestPlace.roadAddressName()
+                );
+
+                String normalizedJibunAddress = placeAddressResolver.normalizeAddress(
+                        nearestPlace.addressName()
+                );
+
+                String nearestAddress = hasText(normalizedRoadAddress)
+                        ? normalizedRoadAddress
+                        : normalizedJibunAddress;
+
+                if (!hasText(nearestAddress)) {
+                    continue;
+                }
+
+                String normalizedRegionAddress = placeAddressResolver.normalizeAddress(regionAddress);
+
+                return ReverseGeocodeResponse.ofNearestPlace(
+                        normalizedRoadAddress,
+                        normalizedJibunAddress,
+                        normalizedRegionAddress,
+                        nearestPlace.placeName(),
+                        distanceM,
+                        lat,
+                        lng
+                );
+            }
+        }
+
+        return null;
+    }
+
+    private void logNearestPlaceFallbackCandidates(
+            String query,
+            int radiusM,
+            KakaoCategorySearchResponse placeResp
+    ) {
+        int resultCount = placeResp == null || placeResp.documents() == null
+                ? 0
+                : placeResp.documents().size();
+
+        log.info(
+                "[nearest fallback] query='{}', radius={}m, resultCount={}",
+                query,
+                radiusM,
+                resultCount
+        );
+
+        if (placeResp == null || placeResp.documents() == null) {
+            return;
+        }
+
+        for (KakaoCategorySearchResponse.KakaoPlaceDocument place : placeResp.documents()) {
+            log.info(
+                    "[nearest fallback candidate] query='{}', radius={}m, name='{}', road='{}', jibun='{}', distance='{}', lat={}, lng={}",
+                    query,
+                    radiusM,
+                    place.placeName(),
+                    place.roadAddressName(),
+                    place.addressName(),
+                    place.distance(),
+                    place.y(),
+                    place.x()
+            );
+        }
+    }
+
+    private KakaoCategorySearchResponse.KakaoPlaceDocument selectNearestAddressPlace(
+            KakaoCategorySearchResponse placeResp,
+            int radiusM
+    ) {
         if (placeResp == null || placeResp.documents() == null || placeResp.documents().isEmpty()) {
             return null;
         }
 
-        KakaoCategorySearchResponse.KakaoPlaceDocument place = placeResp.documents().getFirst();
-        Long distanceMeters = parseDistance(place.distance());
+        KakaoCategorySearchResponse.KakaoPlaceDocument nearest = null;
+        Long nearestDistance = null;
 
-        String resolvedAddress = placeAddressResolver.normalizeAddress(place.addressName());
+        for (KakaoCategorySearchResponse.KakaoPlaceDocument place : placeResp.documents()) {
+            Long distanceM = parseDistance(place.distance());
 
-        String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(
-                place.addressName(),
-                place.roadAddressName(),
-                lat,
-                lng
-        );
+            if (distanceM == null || distanceM > radiusM) {
+                continue;
+            }
 
-        String normalizedRegionAddress = placeAddressResolver.normalizeAddress(regionAddress);
+            if (!hasText(place.roadAddressName()) && !hasText(place.addressName())) {
+                continue;
+            }
 
-        return ReverseGeocodeResponse.ofNearestPlace(
-                resolvedAddress,
-                resolvedRoadAddress,
-                normalizedRegionAddress,
-                place.placeName(),
-                distanceMeters,
-                lat,
-                lng
-        );
+            if (nearestDistance == null || distanceM < nearestDistance) {
+                nearest = place;
+                nearestDistance = distanceM;
+            }
+        }
+
+        return nearest;
+    }
+
+    private List<String> buildReverseGeocodeFallbackQueries(
+            String roadName,
+            KakaoCoordToRegionCodeResponse regionResp
+    ) {
+        LinkedHashSet<String> queries = new LinkedHashSet<>();
+
+        // 1. 도로명 일부: 예) 솔샘로16길
+        addIfHasText(queries, roadName);
+
+        KakaoCoordToRegionCodeResponse.Document legalRegionDoc =
+                selectRegionDocumentByType(regionResp, "B");
+
+        KakaoCoordToRegionCodeResponse.Document administrativeRegionDoc =
+                selectRegionDocumentByType(regionResp, "H");
+
+        // 2. 지번/법정동: 예) 정릉동
+        if (legalRegionDoc != null) {
+            addIfHasText(queries, legalRegionDoc.region3DepthName());
+        }
+
+        // 3. 행정동: 예) 정릉3동
+        if (administrativeRegionDoc != null) {
+            addIfHasText(queries, administrativeRegionDoc.region3DepthName());
+        }
+
+        // 4. 구 단위 포함: 예) 성북구 정릉동
+        if (legalRegionDoc != null
+                && hasText(legalRegionDoc.region2DepthName())
+                && hasText(legalRegionDoc.region3DepthName())) {
+            addIfHasText(
+                    queries,
+                    legalRegionDoc.region2DepthName() + " " + legalRegionDoc.region3DepthName()
+            );
+        }
+
+        return new ArrayList<>(queries);
+    }
+
+    private KakaoCoordToRegionCodeResponse.Document selectRegionDocumentByType(
+            KakaoCoordToRegionCodeResponse regionResp,
+            String regionType
+    ) {
+        if (regionResp == null || regionResp.documents() == null || regionResp.documents().isEmpty()) {
+            return null;
+        }
+
+        return regionResp.documents().stream()
+                .filter(doc -> regionType.equals(doc.regionType()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private static void addIfHasText(LinkedHashSet<String> values, String value) {
+        if (hasText(value)) {
+            values.add(value.trim());
+        }
     }
 
     private void validateQuery(String query) {
