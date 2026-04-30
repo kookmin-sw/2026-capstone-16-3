@@ -1,36 +1,49 @@
 package com.example.capstone.domain.place.service;
 
-import com.example.capstone.domain.place.dto.response.*;
+import com.example.capstone.domain.place.dto.response.GeocodeResponse;
+import com.example.capstone.domain.place.dto.response.PlaceDetailResponse;
+import com.example.capstone.domain.place.dto.response.PlaceResponse;
+import com.example.capstone.domain.place.dto.response.ReverseGeocodeResponse;
+import com.example.capstone.domain.place.dto.response.SliceResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoAddressSearchResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCategorySearchResponse;
-import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToAddressResponse;
-import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToRegionCodeResponse;
 import com.example.capstone.domain.place.exception.PlaceErrorCode;
 import com.example.capstone.domain.place.exception.PlaceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClientRequestException;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 @Service
 public class PlaceService {
 
+    private static final Logger log = LoggerFactory.getLogger(PlaceService.class);
+
     private final KakaoLocalClient kakaoLocalClient;
     private final PlaceAddressResolver placeAddressResolver;
     private final PlaceCache placeCache;
+    private final PlaceSearchMapper placeSearchMapper;
+    private final PlaceRequestValidator placeRequestValidator;
+    private final PlaceReverseGeocodeResolver placeReverseGeocodeResolver;
+    private final PlaceGeoCalculator placeGeoCalculator;
 
-    private static final int MAX_PAGE = 45;
-    private static final int MAX_SIZE = 15;
-    private static final Logger log = LoggerFactory.getLogger(PlaceService.class);
-
-    public PlaceService(KakaoLocalClient kakaoLocalClient, PlaceCache placeCache, PlaceAddressResolver placeAddressResolver) {
+    public PlaceService(
+            KakaoLocalClient kakaoLocalClient,
+            PlaceAddressResolver placeAddressResolver,
+            PlaceCache placeCache,
+            PlaceSearchMapper placeSearchMapper,
+            PlaceRequestValidator placeRequestValidator,
+            PlaceReverseGeocodeResolver placeReverseGeocodeResolver,
+            PlaceGeoCalculator placeGeoCalculator
+    ) {
         this.kakaoLocalClient = kakaoLocalClient;
         this.placeAddressResolver = placeAddressResolver;
         this.placeCache = placeCache;
+        this.placeSearchMapper = placeSearchMapper;
+        this.placeRequestValidator = placeRequestValidator;
+        this.placeReverseGeocodeResolver = placeReverseGeocodeResolver;
+        this.placeGeoCalculator = placeGeoCalculator;
     }
 
     public SliceResponse<PlaceResponse> searchNearbyByCategory(
@@ -41,44 +54,33 @@ public class PlaceService {
             int page,
             int size
     ) {
-        validateQuery(categoryCode);
-        String normalizedCode = categoryCode.trim().toUpperCase();
-        if (normalizedCode.contains(",")) {
-            throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST);
-        }
+        String normalizedCode = placeRequestValidator.requireSingleCategoryCode(categoryCode);
+        placeRequestValidator.validateLatLng(lat, lng);
 
-        validateLatLng(lat, lng);
+        int kakaoPage = placeRequestValidator.normalizeKakaoPage(page);
+        int kakaoSize = placeRequestValidator.normalizeKakaoSize(size);
 
-        int kakaoPage = Math.min(Math.max(page, 1), MAX_PAGE);
-        int kakaoSize = Math.min(Math.max(size, 1), MAX_SIZE); // Kakao limit
+        KakaoCategorySearchResponse response = kakaoLocalClient.searchCategory(
+                        normalizedCode,
+                        lat,
+                        lng,
+                        radiusM,
+                        kakaoSize,
+                        kakaoPage
+                )
+                .doOnSubscribe(s -> log.info(
+                        "[category search] start categoryCode='{}', page={}, size={}, lat={}, lng={}, radius={}",
+                        normalizedCode,
+                        kakaoPage,
+                        kakaoSize,
+                        lat,
+                        lng,
+                        radiusM
+                ))
+                .doOnError(e -> log.error("[category search] fail categoryCode='{}'", normalizedCode, e))
+                .block();
 
-        try {
-            KakaoCategorySearchResponse resp = kakaoLocalClient.searchCategory(
-                            normalizedCode, lat, lng, radiusM, kakaoSize, kakaoPage
-                    )
-                    .doOnSubscribe(s -> log.info("[category search] start categoryCode='{}', page={}, size={}, lat={}, lng={}, radius={}",
-                            categoryCode, kakaoPage, kakaoSize, lat, lng, radiusM))
-                    .doOnError(e -> log.error("[category search] fail categoryCode='{}'", categoryCode, e))
-                    .block();
-
-            if (resp == null) {
-                return new SliceResponse<>(List.of(), kakaoPage, kakaoSize, false, null);
-            }
-
-            boolean hasNext = resp.meta() != null && !resp.meta().isEnd();
-
-            List<PlaceResponse> items =
-                    (resp.documents() == null ? List.<KakaoCategorySearchResponse.KakaoPlaceDocument>of() : resp.documents())
-                            .stream()
-                            .map(doc -> toSearchPlace(doc, lat, lng))
-                            .toList();
-
-            return SliceResponse.of(items, page, kakaoSize, hasNext);
-        } catch (PlaceException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR);
-        }
+        return toPlaceSliceResponse(response, page, kakaoSize, lat, lng);
     }
 
     public SliceResponse<PlaceResponse> searchPlaces(
@@ -89,58 +91,33 @@ public class PlaceService {
             int page,
             int size
     ) {
-        validateQuery(query);
-        validateLatLng(lat, lng);
+        String normalizedQuery = placeRequestValidator.requireQuery(query);
+        placeRequestValidator.validateLatLng(lat, lng);
 
-        int kakaoPage = Math.min(Math.max(page, 1), MAX_PAGE);
-        int kakaoSize = Math.min(Math.max(size, 1), MAX_SIZE); // Kakao limit
+        int kakaoPage = placeRequestValidator.normalizeKakaoPage(page);
+        int kakaoSize = placeRequestValidator.normalizeKakaoSize(size);
 
-        try {
-            KakaoCategorySearchResponse resp = kakaoLocalClient.searchKeyword(
-                            query.trim(), lat, lng, radiusM, kakaoSize, kakaoPage
-                    )
-                    .doOnSubscribe(s -> log.info("[place search] start query='{}', page={}, size={}, lat={}, lng={}, radius={}",
-                            query, kakaoPage, kakaoSize, lat, lng, radiusM))
-                    .doOnError(e -> log.error("[place search] fail query='{}'", query, e))
-                    .block();
+        KakaoCategorySearchResponse response = kakaoLocalClient.searchKeywordByAccuracy(
+                        normalizedQuery,
+                        lat,
+                        lng,
+                        radiusM,
+                        kakaoSize,
+                        kakaoPage
+                )
+                .doOnSubscribe(s -> log.info(
+                        "[place search] start query='{}', page={}, size={}, lat={}, lng={}, radius={}",
+                        normalizedQuery,
+                        kakaoPage,
+                        kakaoSize,
+                        lat,
+                        lng,
+                        radiusM
+                ))
+                .doOnError(e -> log.error("[place search] fail query='{}'", normalizedQuery, e))
+                .block();
 
-            if (resp == null) {
-                return new SliceResponse<>(List.of(), page, kakaoSize, false, null);
-            }
-
-            boolean hasNext = resp.meta() != null && !resp.meta().isEnd();
-
-            List<PlaceResponse> items =
-                    (resp.documents() == null ? List.<KakaoCategorySearchResponse.KakaoPlaceDocument>of() : resp.documents())
-                            .stream()
-                            .map(doc -> toSearchPlace(doc, lat, lng))
-                            .toList();
-            return SliceResponse.of(items, page, kakaoSize, hasNext);
-        } catch (WebClientResponseException e) {
-            throw new PlaceException(
-                    e.getStatusCode().is4xxClientError()
-                    ? PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_4XX
-                    : PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_5XX
-            );
-        } catch (WebClientRequestException e) {
-            throw new PlaceException(
-                    PlaceErrorCode.PLACE_EXTERNAL_API_CONNECTION_ERROR
-            );
-        } catch (PlaceException e) {
-            throw e;
-        } catch (Exception e) {
-            Throwable cause = e.getCause();
-
-            if (cause instanceof TimeoutException) {
-                throw new PlaceException(
-                        PlaceErrorCode.PLACE_EXTERNAL_API_TIMEOUT
-                );
-            }
-
-            throw new PlaceException(
-                    PlaceErrorCode.PLACE_EXTERNAL_API_ERROR
-            );
-        }
+        return toPlaceSliceResponse(response, page, kakaoSize, lat, lng);
     }
 
     public PlaceDetailResponse getPlaceDetail(String placeId) {
@@ -148,338 +125,117 @@ public class PlaceService {
             throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST);
         }
 
-        KakaoCategorySearchResponse.KakaoPlaceDocument doc = placeCache.get(placeId)
-                .orElseThrow(() -> new PlaceException(
-                        PlaceErrorCode.PLACE_CACHE_MISS
-                ));
+        KakaoCategorySearchResponse.KakaoPlaceDocument document = placeCache.get(placeId)
+                .orElseThrow(() -> new PlaceException(PlaceErrorCode.PLACE_CACHE_MISS));
 
-        double placeLng = Double.parseDouble(doc.x());
-        double placeLat = Double.parseDouble(doc.y());
-        Long dist = (doc.distance() == null || doc.distance().isBlank()) ? null : Long.parseLong(doc.distance());
+        double placeLng = parseRequiredDouble(document.x());
+        double placeLat = parseRequiredDouble(document.y());
+        Long distanceM = placeGeoCalculator.parseDistance(document.distance());
 
-        String resolvedAddress = placeAddressResolver.normalizeAddress(doc.addressName());
+        String resolvedAddress = placeAddressResolver.normalizeAddress(document.addressName());
 
         String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(
-                doc.addressName(),
-                doc.roadAddressName(),
+                document.addressName(),
+                document.roadAddressName(),
                 placeLat,
                 placeLng
         );
 
         return new PlaceDetailResponse(
                 placeId,
-                doc.placeName(),
-                doc.categoryName(),
+                document.placeName(),
+                document.categoryName(),
                 resolvedAddress,
                 resolvedRoadAddress,
                 placeLat,
                 placeLng,
-                dist,
-                doc.phone(),
-                doc.placeUrl(),
+                distanceM,
+                document.phone(),
+                document.placeUrl(),
                 null,
                 new PlaceDetailResponse.Extra("KAKAO")
         );
     }
 
-    private PlaceResponse toSearchPlace(
-            KakaoCategorySearchResponse.KakaoPlaceDocument d,
-            double originLat,
-            double originLng
-    ) {
-        String placeId = toExternalPlaceId("KAKAO", d.id());
-        placeCache.put(placeId, d);
-
-        double placeLng = Double.parseDouble(d.x());
-        double placeLat = Double.parseDouble(d.y());
-        Long dist = (d.distance() == null || d.distance().isBlank()) ? null : Long.parseLong(d.distance());
-        if (dist == null) {
-            dist = haversineMeters(originLat, originLng, placeLat, placeLng);
-        }
-
-        Integer directionClock = toDirectionClock(originLat, originLng, placeLat, placeLng);
-
-        String resolvedRoadAddress = resolveListRoadAddress(
-                d.addressName(),
-                d.roadAddressName()
-        );
-
-        return new PlaceResponse(
-                placeId,
-                d.placeName(),
-                d.categoryName(),
-                resolvedRoadAddress,
-                placeLat,
-                placeLng,
-                dist,
-                directionClock
-        );
-    }
-
     public GeocodeResponse geocode(String query) {
-        if (query == null || query.isBlank()) {
-            throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST);
-        }
+        String normalizedQuery = placeRequestValidator.requireQuery(query);
 
-        KakaoAddressSearchResponse resp = kakaoLocalClient.searchAddress(query.trim())
-                .doOnSubscribe(s -> log.info("Kakao geocode start query='{}'", query))
-                .doOnError(e -> log.error("Kakao geocode fail query='{}'", query, e))
+        KakaoAddressSearchResponse response = kakaoLocalClient.searchAddress(normalizedQuery)
+                .doOnSubscribe(s -> log.info("Kakao geocode start query='{}'", normalizedQuery))
+                .doOnError(e -> log.error("Kakao geocode fail query='{}'", normalizedQuery, e))
                 .block();
 
-        if (resp == null || resp.documents() == null || resp.documents().isEmpty()) {
+        if (response == null || response.documents() == null || response.documents().isEmpty()) {
             throw new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND);
         }
 
-        KakaoAddressSearchResponse.Document doc = resp.documents().getFirst();
+        KakaoAddressSearchResponse.Document document = response.documents().getFirst();
 
-        try {
-            double lng = Double.parseDouble(doc.x());
-            double lat = Double.parseDouble(doc.y());
+        double lng = parseRequiredDouble(document.x());
+        double lat = parseRequiredDouble(document.y());
 
-            String address = placeAddressResolver.normalizeAddress(doc.addressName());
-            String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
+        String address = placeAddressResolver.normalizeAddress(document.addressName());
+        String roadAddress = document.roadAddress() != null
+                ? document.roadAddress().addressName()
+                : null;
 
-            String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(
-                    doc.addressName(),
-                    roadAddress,
-                    lat,
-                    lng
-            );
+        String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(
+                document.addressName(),
+                roadAddress,
+                lat,
+                lng
+        );
 
-            return new GeocodeResponse(
-                    query.trim(),
-                    address,
-                    resolvedRoadAddress,
-                    lat,
-                    lng
-            );
-        } catch (Exception e) {
-            throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR);
-        }
+        return new GeocodeResponse(
+                normalizedQuery,
+                address,
+                resolvedRoadAddress,
+                lat,
+                lng
+        );
     }
 
     public ReverseGeocodeResponse reverseGeocode(double lat, double lng) {
-        validateLatLng(lat, lng);
+        placeRequestValidator.validateLatLng(lat, lng);
+        return placeReverseGeocodeResolver.resolve(lat, lng);
+    }
 
-        try {
-            KakaoCoordToAddressResponse addressResp = kakaoLocalClient.coordToAddress(lat, lng)
-                    .doOnSubscribe(s -> log.info("Kakao reverse geocode start lat={}, lng={}", lat, lng))
-                    .doOnError(e -> log.error("Kakao reverse geocode fail lat={}, lng={}", lat, lng, e))
-                    .block();
+    private SliceResponse<PlaceResponse> toPlaceSliceResponse(
+            KakaoCategorySearchResponse response,
+            int requestedPage,
+            int kakaoSize,
+            double originLat,
+            double originLng
+    ) {
+        if (response == null) {
+            return SliceResponse.of(List.of(), requestedPage, kakaoSize, false);
+        }
 
-            if (addressResp != null && addressResp.documents() != null && !addressResp.documents().isEmpty()) {
-                KakaoCoordToAddressResponse.Document doc = addressResp.documents().getFirst();
+        boolean hasNext = response.meta() != null && !response.meta().isEnd();
 
-                String jibunAddress = doc.address() != null ? doc.address().addressName() : null;
-                String roadAddress = doc.roadAddress() != null ? doc.roadAddress().addressName() : null;
+        List<PlaceResponse> items = safeDocuments(response).stream()
+                .map(document -> placeSearchMapper.toPlaceResponse(document, originLat, originLng))
+                .toList();
 
-                String normalizedJibunAddress = placeAddressResolver.normalizeAddress(jibunAddress);
-                String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(jibunAddress, roadAddress, lat, lng);
+        return SliceResponse.of(items, requestedPage, kakaoSize, hasNext);
+    }
 
-                if (hasText(resolvedRoadAddress) || hasText(normalizedJibunAddress)) {
-                    return ReverseGeocodeResponse.ofAddress(
-                            normalizedJibunAddress,
-                            resolvedRoadAddress,
-                            lat,
-                            lng
-                    );
-                }
-            }
+    private List<KakaoCategorySearchResponse.KakaoPlaceDocument> safeDocuments(
+            KakaoCategorySearchResponse response
+    ) {
+        if (response == null || response.documents() == null) {
+            return List.of();
+        }
 
-            KakaoCoordToRegionCodeResponse regionResp = kakaoLocalClient.coordToRegionCode(lat, lng)
-                    .doOnSubscribe(s -> log.info("Kakao coord2region start lat={}, lng={}", lat, lng))
-                    .doOnError(e -> log.error("Kakao coord2region fail lat={}, lng={}", lat, lng, e))
-                    .block();
+        return response.documents();
+    }
 
-            KakaoCoordToRegionCodeResponse.Document regionDoc = selectRegionDocument(regionResp);
-            String regionAddress = regionDoc != null
-                    ? placeAddressResolver.normalizeAddress(regionDoc.addressName())
-                    : null;
-
-            ReverseGeocodeResponse nearestPlace = findNearestPlaceFallback(regionDoc, regionAddress, lat, lng);
-            if (nearestPlace != null) {
-                return nearestPlace;
-            }
-
-            if (hasText(regionAddress)) {
-                return ReverseGeocodeResponse.ofRegion(regionAddress, lat, lng);
-            }
-
-            throw new PlaceException(PlaceErrorCode.PLACE_NOT_FOUND);
-        } catch (PlaceException e) {
-            throw e;
-        } catch (WebClientResponseException e) {
-            if (e.getStatusCode().is4xxClientError()) {
-                throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_4XX);
-            }
-            if (e.getStatusCode().is5xxServerError()) {
-                throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_HTTP_5XX);
-            }
-            throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR);
-        } catch (WebClientRequestException e) {
-            throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_CONNECTION_ERROR);
-        } catch (Exception e) {
+    private double parseRequiredDouble(String value) {
+        Double parsed = placeGeoCalculator.parseDoubleOrNull(value);
+        if (parsed == null) {
             throw new PlaceException(PlaceErrorCode.PLACE_EXTERNAL_API_ERROR);
         }
-    }
 
-    private KakaoCoordToRegionCodeResponse.Document selectRegionDocument(
-            KakaoCoordToRegionCodeResponse regionResp
-    ) {
-        if (regionResp == null || regionResp.documents() == null || regionResp.documents().isEmpty()) {
-            return null;
-        }
-
-        return regionResp.documents().stream()
-                .filter(doc -> "H".equals(doc.regionType()))
-                .findFirst()
-                .or(() -> regionResp.documents().stream()
-                        .filter(doc -> "B".equals(doc.regionType()))
-                        .findFirst())
-                .orElse(regionResp.documents().getFirst());
-    }
-
-    private ReverseGeocodeResponse findNearestPlaceFallback(
-            KakaoCoordToRegionCodeResponse.Document regionDoc,
-            String regionAddress,
-            double lat,
-            double lng
-    ) {
-        String query = null;
-        if (regionDoc != null && hasText(regionDoc.region3DepthName())) {
-            query = regionDoc.region3DepthName();
-        } else if (hasText(regionAddress)) {
-            query = regionAddress;
-        }
-
-        if (!hasText(query)) {
-            return null;
-        }
-
-        final String fallbackQuery = query;
-
-        KakaoCategorySearchResponse placeResp = kakaoLocalClient.searchKeywordByDistance(
-                        fallbackQuery, lat, lng, 500, 1, 1
-                )
-                .doOnSubscribe(s -> log.info("Kakao nearest place fallback start query='{}', lat={}, lng={}", fallbackQuery, lat, lng))
-                .doOnError(e -> log.error("Kakao nearest place fallback fail query='{}', lat={}, lng={}", fallbackQuery, lat, lng, e))
-                .onErrorReturn(new KakaoCategorySearchResponse(null, List.of()))
-                .block();
-
-        if (placeResp == null || placeResp.documents() == null || placeResp.documents().isEmpty()) {
-            return null;
-        }
-
-        KakaoCategorySearchResponse.KakaoPlaceDocument place = placeResp.documents().getFirst();
-        Long distanceMeters = parseDistance(place.distance());
-
-        String resolvedAddress = placeAddressResolver.normalizeAddress(place.addressName());
-
-        String resolvedRoadAddress = placeAddressResolver.resolveRoadAddress(
-                place.addressName(),
-                place.roadAddressName(),
-                lat,
-                lng
-        );
-
-        String normalizedRegionAddress = placeAddressResolver.normalizeAddress(regionAddress);
-
-        return ReverseGeocodeResponse.ofNearestPlace(
-                resolvedAddress,
-                resolvedRoadAddress,
-                normalizedRegionAddress,
-                place.placeName(),
-                distanceMeters,
-                lat,
-                lng
-        );
-    }
-
-    private void validateQuery(String query) {
-        if (query == null || query.isBlank()) {
-            throw new PlaceException(PlaceErrorCode.PLACE_BAD_REQUEST);
-        }
-    }
-
-    private void validateLatLng(double lat, double lng) {
-        // 기본 좌표 범위 검증
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-            throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE);
-        }
-
-        // 한국 대략 범위 추가 검증
-        if (lat < 33.0 || lat > 39.5 || lng < 124.0 || lng > 132.0) {
-            throw new PlaceException(PlaceErrorCode.PLACE_INVALID_COORDINATE);
-        }
-    }
-
-    private static String toExternalPlaceId(String provider, String externalId) {
-        return "ext:" + provider + ":" + externalId;
-    }
-
-    private static Integer toDirectionClock(double originLat, double originLng, double targetLat, double targetLng) {
-        double bearing = bearingDegrees(originLat, originLng, targetLat, targetLng);
-
-        // 0도=북(12시), 90도=동(3시) ... 30도 단위로 반올림
-        int clock = (int) Math.floor((bearing + 15.0) / 30.0) % 12;
-        return clock == 0 ? 12 : clock;
-    }
-
-    private static double bearingDegrees(double lat1, double lon1, double lat2, double lon2) {
-        double phi1 = Math.toRadians(lat1);
-        double phi2 = Math.toRadians(lat2);
-        double dLon = Math.toRadians(lon2 - lon1);
-
-        double y = Math.sin(dLon) * Math.cos(phi2);
-        double x = Math.cos(phi1) * Math.sin(phi2)
-                - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLon);
-
-        double theta = Math.atan2(y, x);
-        double deg = Math.toDegrees(theta);
-
-        // 0~360 정규화
-        return (deg + 360.0) % 360.0;
-    }
-
-    private static Long parseDistance(String distance) {
-        if (!hasText(distance)) {
-            return null;
-        }
-
-        try {
-            return Long.parseLong(distance);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private static boolean hasText(String value) {
-        return value != null && !value.isBlank();
-    }
-
-    private long haversineMeters(double lat1, double lng1, double lat2, double lng2) {
-        final double earthRadiusMeters = 6_371_000;
-
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLng = Math.toRadians(lng2 - lng1);
-
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1))
-                * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return Math.round(earthRadiusMeters * c);
-    }
-
-    private String resolveListRoadAddress(
-            String jibunAddress,
-            String roadAddress
-    ) {
-        if (hasText(roadAddress)) {
-            return placeAddressResolver.normalizeAddress(roadAddress);
-        }
-
-        return placeAddressResolver.normalizeAddress(jibunAddress);
+        return parsed;
     }
 }

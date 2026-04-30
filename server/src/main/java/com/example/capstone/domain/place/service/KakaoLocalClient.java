@@ -33,9 +33,7 @@ public class KakaoLocalClient {
 
     private final WebClient webClient;
 
-    public KakaoLocalClient(@Qualifier("kakaoLocalWebClient") WebClient webClient) {
-        this.webClient = webClient;
-    }
+    public KakaoLocalClient(@Qualifier("kakaoWebClient") WebClient kakaoWebClient) { this.webClient = kakaoWebClient; }
 
     public Mono<KakaoCategorySearchResponse> searchCategory(
             String categoryCode,
@@ -60,7 +58,7 @@ public class KakaoLocalClient {
         );
     }
 
-    public Mono<KakaoCategorySearchResponse> searchKeyword(
+    public Mono<KakaoCategorySearchResponse> searchKeywordByAccuracy(
             String query,
             double lat,
             double lng,

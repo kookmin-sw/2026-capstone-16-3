@@ -82,16 +82,36 @@ public class WebClientConfig {
                 .build();
     }
   
-    @Bean(name = "kakaoLocalWebClient")
-    public WebClient kakaoLocalWebClient(
-            WebClient.Builder builder,
+    @Bean
+    @Qualifier("kakaoWebClient")
+    public WebClient kakaoWebClient(
             @Value("${kakao.local.base-url:https://dapi.kakao.com}") String baseUrl,
             @Value("${kakao.local.rest-api-key}") String restApiKey
     ) {
-        return builder
+        return WebClient.builder()
                 .baseUrl(baseUrl)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK " + restApiKey) // ✅ 공백 포함
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK " + restApiKey)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+    }
+
+    @Bean
+    @Qualifier("naverWebClient")
+    public WebClient naverWebClient(
+            @Value("${naver.map.base-url}") String baseUrl,
+            @Value("${naver.map.connect-timeout-millis}") int connectTimeoutMillis,
+            @Value("${naver.map.read-timeout-seconds}") int readTimeoutSeconds
+    ) {
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis)
+                .responseTimeout(Duration.ofSeconds(readTimeoutSeconds))
+                .doOnConnected(conn ->
+                        conn.addHandlerLast(new ReadTimeoutHandler(readTimeoutSeconds, TimeUnit.SECONDS)));
+
+        return WebClient.builder()
+                .baseUrl(baseUrl)
+                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
     }
 
