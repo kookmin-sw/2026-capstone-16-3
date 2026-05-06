@@ -4,6 +4,8 @@ import com.example.capstone.domain.crosswalk.entity.Crosswalk;
 import com.example.capstone.domain.crosswalk.enums.DataSourceType;
 import com.example.capstone.domain.crosswalk.exception.CrosswalkErrorCode;
 import com.example.capstone.domain.crosswalk.repository.CrosswalkRepository;
+import com.example.capstone.domain.crosswalk.service.sync.CrosswalkSyncStats;
+import com.example.capstone.domain.crosswalk.service.sync.FailureReason;
 import com.example.capstone.domain.crosswalk.service.sync.PublicDataCollector;
 import com.example.capstone.global.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -56,7 +58,9 @@ public class SeoulCrosswalkCollector implements PublicDataCollector {
     }
 
     @Override
-    public void collectAndSave() {
+    public CrosswalkSyncStats collectAndSave() {
+        CrosswalkSyncStats stats = new CrosswalkSyncStats("서울 횡단보도");
+
         int startIndex = 1;
         int endIndex = PAGE_SIZE;
         int totalCount = Integer.MAX_VALUE;
@@ -68,12 +72,13 @@ public class SeoulCrosswalkCollector implements PublicDataCollector {
             String resultMessage = serviceNode.path("RESULT").path("MESSAGE").asText();
 
             if ("INFO-200".equals(resultCode)) {
-                log.info("[SEOUL CROSSWALK COLLECT] no more data. startIndex={}, endIndex={}", startIndex, endIndex);
+                log.debug("[SEOUL CROSSWALK COLLECT] no more data. startIndex={}, endIndex={}", startIndex, endIndex);
                 break;
             }
 
             if (!"INFO-000".equals(resultCode)) {
-                log.error("[SEOUL CROSSWALK COLLECT] open api error. code={}, message={}", resultCode, resultMessage);
+                stats.increaseFailure(FailureReason.OPEN_API_ERROR);
+                log.warn("[SEOUL CROSSWALK COLLECT] open api error. code={}, message={}", resultCode, resultMessage);
                 throw new BusinessException(CrosswalkErrorCode.CROSSWALK_API_ERROR);
             }
 
@@ -81,23 +86,39 @@ public class SeoulCrosswalkCollector implements PublicDataCollector {
             JsonNode rows = serviceNode.path("row");
 
             if (!rows.isArray() || rows.isEmpty()) {
-                log.info("[SEOUL CROSSWALK COLLECT] empty rows. startIndex={}, endIndex={}", startIndex, endIndex);
+                log.debug("[SEOUL CROSSWALK COLLECT] empty rows. startIndex={}, endIndex={}", startIndex, endIndex);
                 break;
             }
 
             int savedCount = 0;
+
             for (JsonNode row : rows) {
-                if (upsertCrosswalk(row)) {
+                stats.increaseTotal();
+
+                if (upsertCrosswalk(row, stats)) {
+                    stats.increaseSuccess();
                     savedCount++;
                 }
             }
 
-            log.info("[SEOUL CROSSWALK COLLECT] fetched range={}~{}, saved={}, totalCount={}",
-                    startIndex, endIndex, savedCount, totalCount);
+            log.debug(
+                    "[SEOUL CROSSWALK COLLECT PAGE] range={}~{}, saved={}, totalCount={}",
+                    startIndex, endIndex, savedCount, totalCount
+            );
 
             startIndex += PAGE_SIZE;
             endIndex = startIndex + PAGE_SIZE - 1;
         }
+
+        log.info(
+                "[SEOUL CROSSWALK COLLECT SUMMARY] total={}, success={}, failure={}, failureReasons={}",
+                stats.totalCount(),
+                stats.successCount(),
+                stats.failureCount(),
+                stats.failureSummary()
+        );
+
+        return stats;
     }
 
     private JsonNode requestServiceNode(int startIndex, int endIndex) {
@@ -160,7 +181,7 @@ public class SeoulCrosswalkCollector implements PublicDataCollector {
         return root.path(SERVICE_NAME);
     }
 
-    private boolean upsertCrosswalk(JsonNode row) {
+    private boolean upsertCrosswalk(JsonNode row, CrosswalkSyncStats stats) {
         String type = firstNonBlank(
                 text(row, "NODE_LINK_TYPE"),
                 text(row, "노드링크 유형")
@@ -168,12 +189,14 @@ public class SeoulCrosswalkCollector implements PublicDataCollector {
 
         String crosswalkCode = buildCrosswalkCode(row, type);
         if (crosswalkCode == null) {
-            log.warn("[SEOUL CROSSWALK SKIP] missing code. row={}", row);
+            stats.increaseFailure(FailureReason.MISSING_CODE);
+            log.debug("[SEOUL CROSSWALK SKIP] missing code. row={}", row);
             return false;
         }
 
         Wgs84Point point = extractPoint(row, type);
         if (point == null) {
+            stats.increaseFailure(FailureReason.INVALID_GEOMETRY);
             log.debug("[SEOUL CROSSWALK SKIP] invalid geometry. code={}, type={}, nodeWkt={}, linkWkt={}",
                     crosswalkCode, type,
                     firstNonBlank(text(row, "NODE_WKT"), text(row, "노드 WKT")),
@@ -373,7 +396,7 @@ public class SeoulCrosswalkCollector implements PublicDataCollector {
         try {
             return Double.parseDouble(value);
         } catch (NumberFormatException e) {
-            log.warn("[SEOUL CROSSWALK PARSE DOUBLE FAIL] field={}, value={}", fieldName, value);
+            log.debug("[SEOUL CROSSWALK PARSE DOUBLE FAIL] field={}, value={}", fieldName, value);
             return null;
         }
     }

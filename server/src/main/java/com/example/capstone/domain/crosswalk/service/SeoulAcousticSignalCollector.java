@@ -4,6 +4,8 @@ import com.example.capstone.domain.crosswalk.entity.AcousticSignal;
 import com.example.capstone.domain.crosswalk.enums.DataSourceType;
 import com.example.capstone.domain.crosswalk.exception.CrosswalkErrorCode;
 import com.example.capstone.domain.crosswalk.repository.AcousticSignalRepository;
+import com.example.capstone.domain.crosswalk.service.sync.CrosswalkSyncStats;
+import com.example.capstone.domain.crosswalk.service.sync.FailureReason;
 import com.example.capstone.domain.crosswalk.service.sync.PublicDataCollector;
 import com.example.capstone.global.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -163,7 +165,7 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
         return root.path(SERVICE_NAME);
     }
 
-    private boolean upsertAcousticSignal(JsonNode row) {
+    private boolean upsertAcousticSignal(JsonNode row, CrosswalkSyncStats stats) {
         String acousticSignalCode = firstText(
                 row,
                 "SUD_SGN_MNG_NO1",
@@ -172,42 +174,30 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
         );
 
         if (!hasText(acousticSignalCode)) {
-            log.warn("[SEOUL ACOUSTIC SIGNAL SKIP] missing acoustic signal code. fields={}, row={}",
+            stats.increaseFailure(FailureReason.MISSING_CODE);
+            log.debug("[SEOUL ACOUSTIC SIGNAL SKIP] missing acoustic signal code. fields={}, row={}",
                     fieldNames(row), row);
             return false;
         }
 
-        Double x = firstDouble(
-                row,
-                "XCRD",
-                "X좌표",
-                "XCE"
-        );
-
-        Double y = firstDouble(
-                row,
-                "YCRD",
-                "Y좌표",
-                "YCE"
-        );
+        Double x = firstDouble(row, "XCRD", "X좌표", "XCE");
+        Double y = firstDouble(row, "YCRD", "Y좌표", "YCE");
 
         if (x == null || y == null) {
-            log.warn(
-                    "[SEOUL ACOUSTIC SIGNAL SKIP] empty or unreadable coordinates. code={}, fields={}, XCRD={}, YCRD={}, X좌표={}, Y좌표={}, row={}",
+            stats.increaseFailure(FailureReason.MISSING_COORDINATE);
+            log.debug(
+                    "[SEOUL ACOUSTIC SIGNAL SKIP] empty or unreadable coordinates. code={}, XCRD={}, YCRD={}",
                     acousticSignalCode,
-                    fieldNames(row),
                     text(row, "XCRD"),
-                    text(row, "YCRD"),
-                    text(row, "X좌표"),
-                    text(row, "Y좌표"),
-                    row
+                    text(row, "YCRD")
             );
             return false;
         }
 
-        Wgs84Point point = convertSeoulTmToWgs84(x, y);
+        Wgs84Point point = convertSeoulTmToWgs84(x, y, stats);
         if (point == null) {
-            log.warn("[SEOUL ACOUSTIC SIGNAL SKIP] coordinate transform failed. code={}, x={}, y={}",
+            stats.increaseFailure(FailureReason.COORDINATE_TRANSFORM_FAILED);
+            log.debug("[SEOUL ACOUSTIC SIGNAL SKIP] coordinate transform failed. code={}, x={}, y={}",
                     acousticSignalCode, x, y);
             return false;
         }
@@ -297,14 +287,14 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
             double latitude = target.y;
 
             if (!isValidKoreaWgs84(latitude, longitude)) {
-                log.warn("[SEOUL ACOUSTIC SIGNAL SKIP] transformed coordinate out of range. x={}, y={}, lat={}, lon={}",
+                log.debug("[SEOUL ACOUSTIC SIGNAL SKIP] transformed coordinate out of range. x={}, y={}, lat={}, lon={}",
                         x, y, latitude, longitude);
                 return null;
             }
 
             return new Wgs84Point(latitude, longitude);
         } catch (Exception e) {
-            log.error("[SEOUL ACOUSTIC SIGNAL COORDINATE TRANSFORM ERROR] x={}, y={}", x, y, e);
+            log.debug("[SEOUL ACOUSTIC SIGNAL COORDINATE TRANSFORM ERROR] x={}, y={}", x, y, e);
             return null;
         }
     }
@@ -402,7 +392,7 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
             try {
                 return Double.parseDouble(value.trim());
             } catch (NumberFormatException e) {
-                log.warn("[SEOUL ACOUSTIC SIGNAL PARSE DOUBLE FAIL] field={}, value={}",
+                log.debug("[SEOUL ACOUSTIC SIGNAL PARSE DOUBLE FAIL] field={}, value={}",
                         fieldName, value);
             }
         }
@@ -437,10 +427,10 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
                 return LocalDate.parse(normalized);
             }
 
-            log.warn("[SEOUL ACOUSTIC SIGNAL] unsupported date format. value={}", value);
+            log.debug("[SEOUL ACOUSTIC SIGNAL] unsupported date format. value={}", value);
             return null;
         } catch (DateTimeParseException e) {
-            log.warn("[SEOUL ACOUSTIC SIGNAL] invalid date. value={}", value);
+            log.debug("[SEOUL ACOUSTIC SIGNAL] invalid date. value={}", value);
             return null;
         }
     }

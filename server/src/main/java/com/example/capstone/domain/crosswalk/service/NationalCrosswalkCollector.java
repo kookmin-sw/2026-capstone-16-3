@@ -4,6 +4,8 @@ import com.example.capstone.domain.crosswalk.entity.Crosswalk;
 import com.example.capstone.domain.crosswalk.enums.DataSourceType;
 import com.example.capstone.domain.crosswalk.exception.CrosswalkErrorCode;
 import com.example.capstone.domain.crosswalk.repository.CrosswalkRepository;
+import com.example.capstone.domain.crosswalk.service.sync.CrosswalkSyncStats;
+import com.example.capstone.domain.crosswalk.service.sync.FailureReason;
 import com.example.capstone.domain.crosswalk.service.sync.PublicDataCollector;
 import com.example.capstone.global.exception.BusinessException;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -59,7 +61,9 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
     private String signguNm;
 
     @Override
-    public void collectAndSave() {
+    public CrosswalkSyncStats collectAndSave() {
+        CrosswalkSyncStats stats = new CrosswalkSyncStats("전국 횡단보도");
+
         int pageNo = 1;
         int totalCount = Integer.MAX_VALUE;
 
@@ -72,8 +76,10 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
 
             CrosswalkErrorCode mappedError = CrosswalkErrorCode.fromOpenApiCode(resultCode);
             if (mappedError != null) {
+                stats.increaseFailure(FailureReason.OPEN_API_ERROR);
+
                 if (mappedError == CrosswalkErrorCode.CROSSWALK_NO_DATA) {
-                    log.error(
+                    log.debug(
                             "[NATIONAL CROSSWALK COLLECT] unexpected no data. pageNo={}, code={}, msg={}",
                             pageNo,
                             resultCode,
@@ -82,7 +88,7 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
                     throw new BusinessException(CrosswalkErrorCode.CROSSWALK_NO_DATA);
                 }
 
-                log.error("[NATIONAL CROSSWALK COLLECT] open api error. code={}, msg={}", resultCode, resultMsg);
+                log.debug("[NATIONAL CROSSWALK COLLECT] open api error. code={}, msg={}", resultCode, resultMsg);
                 throw new BusinessException(mappedError);
             }
 
@@ -92,7 +98,9 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
             JsonNode items = extractItems(bodyNode);
 
             if (isEmptyItems(items)) {
-                log.warn(
+                stats.increaseFailure(FailureReason.EMPTY_ITEMS);
+
+                log.debug(
                         "[NATIONAL CROSSWALK COLLECT] empty items. pageNo={}, totalCount={}, bodyNode={}",
                         pageNo,
                         totalCount,
@@ -110,23 +118,39 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
 
             if (items.isArray()) {
                 for (JsonNode item : items) {
-                    if (upsertCrosswalk(item)) {
+                    stats.increaseTotal();
+
+                    if (upsertCrosswalk(item, stats)) {
+                        stats.increaseSuccess();
                         savedCount++;
                     }
                 }
             } else {
-                if (upsertCrosswalk(items)) {
+                stats.increaseTotal();
+
+                if (upsertCrosswalk(items, stats)) {
+                    stats.increaseSuccess();
                     savedCount++;
                 }
             }
 
-            log.info(
-                    "[NATIONAL CROSSWALK COLLECT] pageNo={}, pageSize={}, saved={}, totalCount={}",
+            log.debug(
+                    "[NATIONAL CROSSWALK COLLECT PAGE] pageNo={}, pageSize={}, saved={}, totalCount={}",
                     pageNo, pageSize, savedCount, totalCount
             );
 
             pageNo++;
         }
+
+        log.info(
+                "[NATIONAL CROSSWALK COLLECT SUMMARY] total={}, success={}, failure={}, failureReasons={}",
+                stats.totalCount(),
+                stats.successCount(),
+                stats.failureCount(),
+                stats.failureSummary()
+        );
+
+        return stats;
     }
 
     private JsonNode extractItems(JsonNode bodyNode) {
@@ -213,7 +237,7 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
                 throw new BusinessException(CrosswalkErrorCode.CROSSWALK_API_EMPTY_BODY);
             }
 
-            log.info("[NATIONAL CROSSWALK RAW RESPONSE] pageNo={}, response={}",
+            log.debug("[NATIONAL CROSSWALK RAW RESPONSE] pageNo={}, response={}",
                     pageNo, shrink(body));
 
             return objectMapper.readTree(body);
@@ -306,10 +330,11 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
         return uri.toString();
     }
 
-    private boolean upsertCrosswalk(JsonNode item) {
+    private boolean upsertCrosswalk(JsonNode item, CrosswalkSyncStats stats) {
         String crosswalkCode = text(item, "crslkManageNo");
         if (!hasText(crosswalkCode)) {
-            log.warn("[NATIONAL CROSSWALK SKIP] missing crslkManageNo. item={}", item);
+            stats.increaseFailure(FailureReason.MISSING_CODE);
+            log.debug("[NATIONAL CROSSWALK SKIP] missing crslkManageNo. item={}", item);
             return false;
         }
 
@@ -317,7 +342,8 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
         Double longitude = parseDouble(item, "longitude");
 
         if (latitude == null || longitude == null) {
-            log.warn("[NATIONAL CROSSWALK SKIP] invalid coordinates. code={}, latitude={}, longitude={}",
+            stats.increaseFailure(FailureReason.MISSING_COORDINATE);
+            log.debug("[NATIONAL CROSSWALK SKIP] invalid coordinates. code={}, latitude={}, longitude={}",
                     crosswalkCode, text(item, "latitude"), text(item, "longitude"));
             return false;
         }
@@ -419,7 +445,7 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
         try {
             return Double.parseDouble(value);
         } catch (NumberFormatException e) {
-            log.warn("[NATIONAL CROSSWALK PARSE DOUBLE FAIL] field={}, value={}", fieldName, value);
+            log.debug("[NATIONAL CROSSWALK PARSE DOUBLE FAIL] field={}, value={}", fieldName, value);
             return null;
         }
     }
@@ -432,7 +458,7 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
         try {
             return Integer.parseInt(value);
         } catch (NumberFormatException e) {
-            log.warn("[NATIONAL CROSSWALK PARSE INTEGER FAIL] field={}, value={}", fieldName, value);
+            log.debug("[NATIONAL CROSSWALK PARSE INTEGER FAIL] field={}, value={}", fieldName, value);
             return null;
         }
     }
@@ -459,7 +485,7 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
         try {
             return LocalDate.parse(value);
         } catch (Exception e) {
-            log.warn("[NATIONAL CROSSWALK PARSE DATE FAIL] field={}, value={}", fieldName, value);
+            log.debug("[NATIONAL CROSSWALK PARSE DATE FAIL] field={}, value={}", fieldName, value);
             return null;
         }
     }
