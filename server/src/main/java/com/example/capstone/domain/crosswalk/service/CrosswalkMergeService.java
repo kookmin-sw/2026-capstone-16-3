@@ -31,25 +31,48 @@ public class CrosswalkMergeService {
 
         int mergedCount = 0;
         int deletedNationalCount = 0;
+        int missingSigunguCount = 0;
+        int noNationalCandidateCount = 0;
+        int noDistanceMatchCount = 0;
 
         for (Crosswalk seoul : seoulCrosswalks) {
-            Optional<MatchedCrosswalk> matched = findNearestNationalCrosswalk(seoul);
+            if (!hasText(seoul.getSigungu())) {
+                missingSigunguCount++;
+                continue;
+            }
+
+            List<Crosswalk> nationalCandidates = crosswalkRepository.findByBaseSourceAndSigungu(
+                    DataSourceType.NATIONAL_STANDARD_CROSSWALK,
+                    seoul.getSigungu()
+            );
+
+            if (nationalCandidates.isEmpty()) {
+                noNationalCandidateCount++;
+                continue;
+            }
+
+            Optional<MatchedCrosswalk> matched = nationalCandidates.stream()
+                    .filter(national -> isSameRegion(seoul, national))
+                    .map(national -> new MatchedCrosswalk(
+                            national,
+                            calculateDistanceMeters(
+                                    seoul.getLatitude(),
+                                    seoul.getLongitude(),
+                                    national.getLatitude(),
+                                    national.getLongitude()
+                            )
+                    ))
+                    .filter(match -> match.distanceMeters() <= MATCH_DISTANCE_METERS)
+                    .min(Comparator.comparingDouble(MatchedCrosswalk::distanceMeters));
 
             if (matched.isEmpty()) {
+                noDistanceMatchCount++;
                 continue;
             }
 
             Crosswalk national = matched.get().crosswalk();
 
             seoul.mergeWithNationalAttributes(national, LocalDateTime.now());
-
-            /*
-             * 이미 서울 Crosswalk에 전국 속성을 보강했으므로
-             * 매칭된 전국 원본 데이터는 삭제한다.
-             *
-             * 삭제하지 않으면 /api/crosswalks/nearby 조회 시
-             * 같은 횡단보도가 서울 데이터와 전국 데이터로 중복 반환될 수 있다.
-             */
             crosswalkRepository.delete(national);
 
             mergedCount++;
@@ -64,10 +87,14 @@ public class CrosswalkMergeService {
         }
 
         log.info(
-                "[CROSSWALK MERGE COMPLETE] seoulCount={}, mergedCount={}, deletedNationalCount={}",
+                "[CROSSWALK MERGE SUMMARY] seoulCount={}, mergedCount={}, deletedNationalCount={}, missingSigungu={}, noNationalCandidate={}, noDistanceMatch={}, maxDistanceMeters={}",
                 seoulCrosswalks.size(),
                 mergedCount,
-                deletedNationalCount
+                deletedNationalCount,
+                missingSigunguCount,
+                noNationalCandidateCount,
+                noDistanceMatchCount,
+                MATCH_DISTANCE_METERS
         );
     }
 

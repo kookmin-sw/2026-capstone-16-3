@@ -35,10 +35,10 @@ public class SeoulCrosswalkCollector implements PublicDataCollector {
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
 
     private static final Pattern POINT_WKT_PATTERN =
-            Pattern.compile("POINT\\s*\\(([-\\d.]+)\\s+([-\\d.]+)\\)");
+            Pattern.compile("POINT\\s*\\(\\s*([-+\\d.]+)\\s+([-+\\d.]+)\\s*\\)", Pattern.CASE_INSENSITIVE);
 
     private static final Pattern LINESTRING_WKT_PATTERN =
-            Pattern.compile("LINESTRING\\s*\\((.+)\\)");
+            Pattern.compile("LINESTRING\\s*\\(\\s*(.+?)\\s*\\)", Pattern.CASE_INSENSITIVE);
 
     private final WebClient webClient;
     private final CrosswalkRepository crosswalkRepository;
@@ -314,17 +314,26 @@ public class SeoulCrosswalkCollector implements PublicDataCollector {
         String linkWkt = firstNonBlank(text(row, "LINK_WKT"), text(row, "링크 WKT"));
 
         if ("NODE".equalsIgnoreCase(type)) {
-            return parsePointWkt(nodeWkt);
+            Wgs84Point point = parsePointWkt(nodeWkt);
+            if (point != null) {
+                return point;
+            }
+            return parseLineStringMidPoint(linkWkt);
         }
 
         if ("LINK".equalsIgnoreCase(type)) {
-            return parseLineStringMidPoint(linkWkt);
+            Wgs84Point point = parseLineStringMidPoint(linkWkt);
+            if (point != null) {
+                return point;
+            }
+            return parsePointWkt(nodeWkt);
         }
 
         Wgs84Point point = parsePointWkt(nodeWkt);
         if (point != null) {
             return point;
         }
+
         return parseLineStringMidPoint(linkWkt);
     }
 

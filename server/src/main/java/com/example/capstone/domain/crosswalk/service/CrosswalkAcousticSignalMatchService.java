@@ -64,8 +64,13 @@ public class CrosswalkAcousticSignalMatchService {
         }
 
         log.info(
-                "[CROSSWALK ACOUSTIC SIGNAL MATCH COMPLETE] signalCount={}, matchedCount={}, skippedCount={}, maxDistanceMeters={}",
-                signals.size(), matchedCount, skippedCount, MATCH_DISTANCE_METERS
+                "[CROSSWALK ACOUSTIC SIGNAL MATCH SUMMARY] signalCount={}, crosswalkCount={}, matchedCount={}, skippedCount={}, failureReasons={{NO_NEARBY_CROSSWALK={}}}, maxDistanceMeters={}",
+                signals.size(),
+                crosswalkRepository.count(),
+                matchedCount,
+                skippedCount,
+                skippedCount,
+                MATCH_DISTANCE_METERS
         );
     }
 

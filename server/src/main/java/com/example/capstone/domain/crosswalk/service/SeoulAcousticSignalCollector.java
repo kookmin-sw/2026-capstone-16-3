@@ -285,14 +285,14 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
 
             CoordinateReferenceSystem sourceCrs = crsFactory.createFromParameters(
                     "EPSG:5186",
-                    "+proj=tmerc +lat_0=38 +lng_0=127 +k=1 "
+                    "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 "
                             + "+x_0=200000 +y_0=600000 "
                             + "+ellps=GRS80 +units=m +no_defs"
             );
 
             CoordinateReferenceSystem targetCrs = crsFactory.createFromParameters(
                     "EPSG:4326",
-                    "+proj=lnglat +ellps=WGS84 +datum=WGS84 +no_defs"
+                    "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
             );
 
             CoordinateTransformFactory ctFactory = new CoordinateTransformFactory();
