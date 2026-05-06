@@ -59,7 +59,9 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
     private String seoulOpenDataBaseUrl;
 
     @Override
-    public void collectAndSave() {
+    public CrosswalkSyncStats collectAndSave() {
+        CrosswalkSyncStats stats = new CrosswalkSyncStats("서울 음향신호기");
+
         int startIndex = 1;
         int endIndex = PAGE_SIZE;
         int totalCount = Integer.MAX_VALUE;
@@ -71,12 +73,15 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
             String resultMessage = serviceNode.path("RESULT").path("MESSAGE").asText();
 
             if ("INFO-200".equals(resultCode)) {
-                log.info("[SEOUL ACOUSTIC SIGNAL COLLECT] no more data. startIndex={}, endIndex={}", startIndex, endIndex);
+                log.debug("[SEOUL ACOUSTIC SIGNAL COLLECT] no more data. startIndex={}, endIndex={}",
+                        startIndex, endIndex);
                 break;
             }
 
             if (!"INFO-000".equals(resultCode)) {
-                log.error("[SEOUL ACOUSTIC SIGNAL COLLECT] open api error. code={}, message={}", resultCode, resultMessage);
+                stats.increaseFailure(FailureReason.OPEN_API_ERROR);
+                log.warn("[SEOUL ACOUSTIC SIGNAL COLLECT] open api error. code={}, message={}",
+                        resultCode, resultMessage);
                 throw new BusinessException(CrosswalkErrorCode.CROSSWALK_API_ERROR);
             }
 
@@ -84,25 +89,41 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
             JsonNode rows = serviceNode.path("row");
 
             if (!rows.isArray() || rows.isEmpty()) {
-                log.info("[SEOUL ACOUSTIC SIGNAL COLLECT] empty rows. startIndex={}, endIndex={}", startIndex, endIndex);
+                stats.increaseFailure(FailureReason.EMPTY_ITEMS);
+                log.debug("[SEOUL ACOUSTIC SIGNAL COLLECT] empty rows. startIndex={}, endIndex={}",
+                        startIndex, endIndex);
                 break;
             }
 
             int savedCount = 0;
+
             for (JsonNode row : rows) {
-                if (upsertAcousticSignal(row)) {
+                stats.increaseTotal();
+
+                if (upsertAcousticSignal(row, stats)) {
+                    stats.increaseSuccess();
                     savedCount++;
                 }
             }
 
-            log.info(
-                    "[SEOUL ACOUSTIC SIGNAL COLLECT] fetched range={}~{}, saved={}, totalCount={}",
+            log.debug(
+                    "[SEOUL ACOUSTIC SIGNAL COLLECT PAGE] range={}~{}, saved={}, totalCount={}",
                     startIndex, endIndex, savedCount, totalCount
             );
 
             startIndex += PAGE_SIZE;
             endIndex = startIndex + PAGE_SIZE - 1;
         }
+
+        log.info(
+                "[SEOUL ACOUSTIC SIGNAL COLLECT SUMMARY] total={}, success={}, failure={}, failureReasons={}",
+                stats.totalCount(),
+                stats.successCount(),
+                stats.failureCount(),
+                stats.failureSummary()
+        );
+
+        return stats;
     }
 
     private JsonNode requestServiceNode(int startIndex, int endIndex) {
@@ -196,7 +217,6 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
 
         Wgs84Point point = convertSeoulTmToWgs84(x, y, stats);
         if (point == null) {
-            stats.increaseFailure(FailureReason.COORDINATE_TRANSFORM_FAILED);
             log.debug("[SEOUL ACOUSTIC SIGNAL SKIP] coordinate transform failed. code={}, x={}, y={}",
                     acousticSignalCode, x, y);
             return false;
@@ -259,20 +279,20 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
                 && longitude >= 124.0 && longitude <= 132.0;
     }
 
-    private Wgs84Point convertSeoulTmToWgs84(double x, double y) {
+    private Wgs84Point convertSeoulTmToWgs84(double x, double y, CrosswalkSyncStats stats) {
         try {
             CRSFactory crsFactory = new CRSFactory();
 
             CoordinateReferenceSystem sourceCrs = crsFactory.createFromParameters(
                     "EPSG:5186",
-                    "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 "
+                    "+proj=tmerc +lat_0=38 +lng_0=127 +k=1 "
                             + "+x_0=200000 +y_0=600000 "
                             + "+ellps=GRS80 +units=m +no_defs"
             );
 
             CoordinateReferenceSystem targetCrs = crsFactory.createFromParameters(
                     "EPSG:4326",
-                    "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+                    "+proj=lnglat +ellps=WGS84 +datum=WGS84 +no_defs"
             );
 
             CoordinateTransformFactory ctFactory = new CoordinateTransformFactory();
@@ -287,13 +307,15 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
             double latitude = target.y;
 
             if (!isValidKoreaWgs84(latitude, longitude)) {
-                log.debug("[SEOUL ACOUSTIC SIGNAL SKIP] transformed coordinate out of range. x={}, y={}, lat={}, lon={}",
+                stats.increaseFailure(FailureReason.COORDINATE_OUT_OF_RANGE);
+                log.debug("[SEOUL ACOUSTIC SIGNAL SKIP] transformed coordinate out of range. x={}, y={}, lat={}, lng={}",
                         x, y, latitude, longitude);
                 return null;
             }
 
             return new Wgs84Point(latitude, longitude);
         } catch (Exception e) {
+            stats.increaseFailure(FailureReason.COORDINATE_TRANSFORM_FAILED);
             log.debug("[SEOUL ACOUSTIC SIGNAL COORDINATE TRANSFORM ERROR] x={}, y={}", x, y, e);
             return null;
         }

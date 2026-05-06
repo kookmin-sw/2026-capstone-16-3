@@ -358,7 +358,7 @@ public class SeoulCrosswalkCollector implements PublicDataCollector {
             return null;
         }
 
-        double sumLon = 0.0;
+        double sumLng = 0.0;
         double sumLat = 0.0;
         int count = 0;
 
@@ -367,7 +367,7 @@ public class SeoulCrosswalkCollector implements PublicDataCollector {
             if (parts.length < 2) {
                 continue;
             }
-            sumLon += Double.parseDouble(parts[0]);
+            sumLng += Double.parseDouble(parts[0]);
             sumLat += Double.parseDouble(parts[1]);
             count++;
         }
@@ -376,7 +376,7 @@ public class SeoulCrosswalkCollector implements PublicDataCollector {
             return null;
         }
 
-        return new Wgs84Point(sumLat / count, sumLon / count);
+        return new Wgs84Point(sumLat / count, sumLng / count);
     }
 
     private String text(JsonNode row, String fieldName) {
