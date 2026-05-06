@@ -1,6 +1,5 @@
 package com.example.capstone.domain.crosswalk.service;
 
-import com.example.capstone.domain.crosswalk.service.sync.CrosswalkAcousticSignalMatchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,15 +20,15 @@ public class CrosswalkDataSyncService {
     public void syncAll() {
         boolean nationalSuccess = runCollector("전국 횡단보도", nationalCrosswalkCollector::collectAndSave);
         boolean seoulSuccess = runCollector("서울 횡단보도", seoulCrosswalkCollector::collectAndSave);
-//        boolean acousticSuccess = runCollector("서울 음향신호기", seoulAcousticSignalCollector::collectAndSave);
+        boolean acousticSuccess = runCollector("서울 음향신호기", seoulAcousticSignalCollector::collectAndSave);
 
         if (seoulSuccess || nationalSuccess) {
             crosswalkMergeService.mergeCrosswalkData();
         }
 
-//        if ((seoulSuccess || nationalSuccess) && acousticSuccess) {
-//            matchService.matchCrosswalkAndSignals();
-//        }
+        if ((seoulSuccess || nationalSuccess) && acousticSuccess) {
+            matchService.matchCrosswalkAndSignals();
+        }
     }
 
     private boolean runCollector(String name, Runnable collector) {

@@ -24,6 +24,10 @@ import org.locationtech.proj4j.ProjCoordinate;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 
@@ -32,7 +36,7 @@ import java.util.concurrent.TimeoutException;
 public class SeoulAcousticSignalCollector implements PublicDataCollector {
 
     private static final String SERVICE_NAME = "trafficSafetyA073PInfo";
-    private static final int PAGE_SIZE = 1000;
+    private static final int PAGE_SIZE = 100;
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
 
     private final WebClient webClient;
@@ -160,35 +164,75 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
     }
 
     private boolean upsertAcousticSignal(JsonNode row) {
-        String acousticSignalCode = text(row, "SUD_SGN_MNG_NO1");
+        String acousticSignalCode = firstText(
+                row,
+                "SUD_SGN_MNG_NO1",
+                "음향신호관리번호",
+                "MGRNU"
+        );
+
         if (!hasText(acousticSignalCode)) {
-            log.warn("[SEOUL ACOUSTIC SIGNAL SKIP] missing SUD_SGN_MNG_NO1. row={}", row);
+            log.warn("[SEOUL ACOUSTIC SIGNAL SKIP] missing acoustic signal code. fields={}, row={}",
+                    fieldNames(row), row);
             return false;
         }
 
-        Double xcrd = parseDouble(row, "XCRD");
-        Double ycrd = parseDouble(row, "YCRD");
-        if (xcrd == null || ycrd == null) {
-            log.warn("[SEOUL ACOUSTIC SIGNAL SKIP] invalid coordinates. code={}, XCRD={}, YCRD={}",
-                    acousticSignalCode, text(row, "XCRD"), text(row, "YCRD"));
+        Double x = firstDouble(
+                row,
+                "XCRD",
+                "X좌표",
+                "XCE"
+        );
+
+        Double y = firstDouble(
+                row,
+                "YCRD",
+                "Y좌표",
+                "YCE"
+        );
+
+        if (x == null || y == null) {
+            log.warn(
+                    "[SEOUL ACOUSTIC SIGNAL SKIP] empty or unreadable coordinates. code={}, fields={}, XCRD={}, YCRD={}, X좌표={}, Y좌표={}, row={}",
+                    acousticSignalCode,
+                    fieldNames(row),
+                    text(row, "XCRD"),
+                    text(row, "YCRD"),
+                    text(row, "X좌표"),
+                    text(row, "Y좌표"),
+                    row
+            );
             return false;
         }
 
-        // 서울 음향신호기 API 좌표는 EPSG:5186으로 정리되어 있으므로 WGS84 변환 필요. :contentReference[oaicite:1]{index=1}
-        Wgs84Point point = convertEpsg5186ToWgs84(xcrd, ycrd);
+        Wgs84Point point = convertSeoulTmToWgs84(x, y);
         if (point == null) {
-            log.warn("[SEOUL ACOUSTIC SIGNAL SKIP] coordinate transform failed. code={}", acousticSignalCode);
+            log.warn("[SEOUL ACOUSTIC SIGNAL SKIP] coordinate transform failed. code={}, x={}, y={}",
+                    acousticSignalCode, x, y);
             return false;
         }
 
-        String direction = text(row, "DRCT");
-        String status = text(row, "STTS_CD");
-        String positionInfo = text(row, "PSTN_INFO");
+        String direction = normalizeDirection(
+                firstText(row, "DRCT", "방향 (공통)", "DRN_CDE")
+        );
 
-        LocalDate referenceDate = LocalDate.now();
+        String status = normalizeStatus(
+                firstText(row, "STTS_CD", "상태 (공통)", "STAT_CDE")
+        );
+
+        String positionInfo = normalizePositionInfo(
+                firstText(row, "PSTN_INFO", "위치정보", "POS")
+        );
+
+        LocalDate referenceDate = firstValidDateOrToday(
+                firstText(row, "RPLC_YMD", "교체일", "CAE_YMD"),
+                firstText(row, "INSTL_YMD", "설치일", "ESB_YMD")
+        );
+
         LocalDateTime lastSyncedAt = LocalDateTime.now();
 
-        Optional<AcousticSignal> optional = acousticSignalRepository.findByAcousticSignalCode(acousticSignalCode);
+        Optional<AcousticSignal> optional =
+                acousticSignalRepository.findByAcousticSignalCode(acousticSignalCode);
 
         if (optional.isPresent()) {
             optional.get().updateFrom(
@@ -225,7 +269,7 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
                 && longitude >= 124.0 && longitude <= 132.0;
     }
 
-    private Wgs84Point convertEpsg5186ToWgs84(double x, double y) {
+    private Wgs84Point convertSeoulTmToWgs84(double x, double y) {
         try {
             CRSFactory crsFactory = new CRSFactory();
 
@@ -274,17 +318,137 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
         return hasText(text) ? text.trim() : null;
     }
 
-    private Double parseDouble(JsonNode row, String fieldName) {
-        String value = text(row, fieldName);
+    private String normalizeDirection(String value) {
         if (!hasText(value)) {
             return null;
         }
-        try {
-            return Double.parseDouble(value);
-        } catch (NumberFormatException e) {
-            log.warn("[SEOUL ACOUSTIC SIGNAL PARSE DOUBLE FAIL] field={}, value={}", fieldName, value);
+
+        String normalized = stripDecimalZero(value).trim();
+
+        return switch (normalized) {
+            case "001" -> "0";
+            case "002" -> "45";
+            case "003" -> "90";
+            case "004" -> "135";
+            case "005", "006" -> "180";
+            case "007" -> "225";
+            case "008" -> "270";
+            case "009" -> "315";
+            default -> normalized;
+        };
+    }
+
+    private String normalizeStatus(String value) {
+        if (!hasText(value)) {
             return null;
         }
+
+        String normalized = stripDecimalZero(value).trim();
+
+        return switch (normalized) {
+            case "001", "1" -> "양호";
+            case "002", "2" -> "파손";
+            case "003", "3" -> "도색";
+            case "004", "4" -> "노후";
+            default -> normalized;
+        };
+    }
+
+    private String normalizePositionInfo(String value) {
+        if (!hasText(value)) {
+            return null;
+        }
+
+        return stripDecimalZero(value).trim();
+    }
+
+    private String stripDecimalZero(String value) {
+        String trimmed = value.trim();
+
+        if (trimmed.endsWith(".0")) {
+            return trimmed.substring(0, trimmed.length() - 2);
+        }
+
+        return trimmed;
+    }
+
+    private String firstText(JsonNode row, String... fieldNames) {
+        for (String fieldName : fieldNames) {
+            String value = text(row, fieldName);
+            if (hasText(value)) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private Double firstDouble(JsonNode row, String... fieldNames) {
+        for (String fieldName : fieldNames) {
+            JsonNode valueNode = row.get(fieldName);
+
+            if (valueNode == null || valueNode.isNull()) {
+                continue;
+            }
+
+            if (valueNode.isNumber()) {
+                return valueNode.asDouble();
+            }
+
+            String value = valueNode.asText();
+            if (!hasText(value)) {
+                continue;
+            }
+
+            try {
+                return Double.parseDouble(value.trim());
+            } catch (NumberFormatException e) {
+                log.warn("[SEOUL ACOUSTIC SIGNAL PARSE DOUBLE FAIL] field={}, value={}",
+                        fieldName, value);
+            }
+        }
+
+        return null;
+    }
+
+    private LocalDate firstValidDateOrToday(String... values) {
+        for (String value : values) {
+            LocalDate parsed = parseDate(value);
+            if (parsed != null) {
+                return parsed;
+            }
+        }
+
+        return LocalDate.now();
+    }
+
+    private LocalDate parseDate(String value) {
+        if (!hasText(value)) {
+            return null;
+        }
+
+        String normalized = value.trim();
+
+        try {
+            if (normalized.matches("\\d{8}")) {
+                return LocalDate.parse(normalized, DateTimeFormatter.BASIC_ISO_DATE);
+            }
+
+            if (normalized.matches("\\d{4}-\\d{2}-\\d{2}")) {
+                return LocalDate.parse(normalized);
+            }
+
+            log.warn("[SEOUL ACOUSTIC SIGNAL] unsupported date format. value={}", value);
+            return null;
+        } catch (DateTimeParseException e) {
+            log.warn("[SEOUL ACOUSTIC SIGNAL] invalid date. value={}", value);
+            return null;
+        }
+    }
+
+    private List<String> fieldNames(JsonNode row) {
+        List<String> names = new ArrayList<>();
+        row.fieldNames().forEachRemaining(names::add);
+        return names;
     }
 
     private boolean hasText(String value) {
