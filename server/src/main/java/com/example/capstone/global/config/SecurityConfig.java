@@ -37,7 +37,8 @@ public class SecurityConfig {
                                 "/api/crosswalks/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/api/guide/event"
+                                "/api/guide/event",
+                                "/actuator/health"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/places/**").permitAll()
                         .requestMatchers(
