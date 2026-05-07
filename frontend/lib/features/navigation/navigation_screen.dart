@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/theme/color_collection.dart';
@@ -47,6 +47,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
   Timer? _debounce;
   Timer? _reverseGeocodeRetry;
   Position? _currentPosition;
+  int _fallbackCount = 0;
+  static const int _maxFallbackCount = 3;
   bool isLoading = false;
   List<SavedPlace> _savedPlaces = [];
   List<Map<String, dynamic>> _recentPlaces = [];
@@ -107,28 +109,51 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   Future<void> _fetchAddress(Position position) async {
-    final address = await PlaceService.reverseGeocode(
+    _fallbackCount = 0;
+    _reverseGeocodeRetry?.cancel();
+
+    final result = await PlaceService.reverseGeocode(
       lat: position.latitude,
       lng: position.longitude,
     );
     if (!mounted) return;
-    if (address != null) {
-      _reverseGeocodeRetry?.cancel();
-      setState(() => currentLocation = address);
-    } else {
-      _reverseGeocodeRetry?.cancel();
-      _reverseGeocodeRetry = Timer.periodic(const Duration(seconds: 5), (_) async {
-        final retryAddress = await PlaceService.reverseGeocode(
-          lat: position.latitude,
-          lng: position.longitude,
-        );
-        if (!mounted) return;
-        if (retryAddress != null) {
-          _reverseGeocodeRetry?.cancel();
-          setState(() => currentLocation = retryAddress);
-        }
-      });
+
+    if (_applyGeocodeResult(result)) return;
+
+    // exactAddress 미획득 → 5초마다 재시도
+    _reverseGeocodeRetry = Timer.periodic(const Duration(seconds: 5), (_) async {
+      final retryResult = await PlaceService.reverseGeocode(
+        lat: _currentPosition?.latitude ?? position.latitude,
+        lng: _currentPosition?.longitude ?? position.longitude,
+      );
+      if (!mounted) {
+        _reverseGeocodeRetry?.cancel();
+        return;
+      }
+      if (_applyGeocodeResult(retryResult)) {
+        _reverseGeocodeRetry?.cancel();
+      }
+    });
+  }
+
+  /// 결과 적용 후 retry 종료 여부 반환
+  bool _applyGeocodeResult(ReverseGeocodeResult? result) {
+    if (result == null) return false;
+
+    if (result.source == ReverseGeocodeSource.exactAddress) {
+      setState(() => currentLocation = result.address);
+      return true;
     }
+
+    if (result.source == ReverseGeocodeSource.nearestPlace) {
+      _fallbackCount++;
+      setState(() => currentLocation = result.address);
+      // nearestPlace 3회 수신 시 최선값으로 확정
+      if (_fallbackCount >= _maxFallbackCount) return true;
+    }
+
+    // regionAddress → 표시 안 하고 계속 retry
+    return false;
   }
 
   /// destinationController의 listener 해제
