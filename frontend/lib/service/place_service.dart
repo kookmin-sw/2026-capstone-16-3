@@ -3,11 +3,24 @@ import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart' as http;
 import 'package:safepath/service/token_storage.dart';
 
+enum ReverseGeocodeSource {
+  exactAddress,   // KAKAO_ROAD_ADDRESS, KAKAO_JIBUN_ADDRESS, NAVER_ROAD_ADDRESS, NAVER_JIBUN_ADDRESS
+  nearestPlace,   // KAKAO_NEAREST_PLACE
+  regionAddress,  // KAKAO_REGION_ADDRESS
+}
+
+class ReverseGeocodeResult {
+  final String address;
+  final ReverseGeocodeSource source;
+
+  const ReverseGeocodeResult({required this.address, required this.source});
+}
+
 class PlaceService {
   static const String _baseUrl = String.fromEnvironment('BASE_URL');
 
   /// 역지오코딩 API
-  static Future<String?> reverseGeocode({
+  static Future<ReverseGeocodeResult?> reverseGeocode({
     required double lat,
     required double lng,
   }) async {
@@ -24,9 +37,24 @@ class PlaceService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        if (data['success'] == true) {
+          final d = data['data'];
+          final address = d['address'] as String? ?? '';
+          final sourceStr = d['source'] as String? ?? '';
+          debugPrint('🟡 [Place] reverseGeocode source: $sourceStr');
 
-        if (data['success']) {
-          return data['data']['roadAddress'] ?? data['data']['address'];
+          if (sourceStr == 'KAKAO_ADDRESS_NOT_FOUND' || address.isEmpty) return null;
+
+          final source = switch (sourceStr) {
+            'KAKAO_ROAD_ADDRESS' ||
+            'KAKAO_JIBUN_ADDRESS' ||
+            'NAVER_ROAD_ADDRESS' ||
+            'NAVER_JIBUN_ADDRESS' => ReverseGeocodeSource.exactAddress,
+            'KAKAO_NEAREST_PLACE' => ReverseGeocodeSource.nearestPlace,
+            _ => ReverseGeocodeSource.regionAddress,
+          };
+
+          return ReverseGeocodeResult(address: address, source: source);
         }
       }
 
