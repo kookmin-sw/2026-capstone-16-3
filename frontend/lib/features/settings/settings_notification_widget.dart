@@ -191,7 +191,13 @@ class _ToggleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: '$label: ${value ? '켜짐' : '꺼짐'}. $description',
+      toggled: value,
+      label: '$label, $description',
+      onTap: () {
+        SoundEffectService().play(SoundEffect.buttonTap);
+        VibrationService().vibrate(VibrationEffect.buttonTap);
+        onChanged(!value);
+      },
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
