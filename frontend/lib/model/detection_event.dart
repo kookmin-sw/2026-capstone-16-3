@@ -4,14 +4,17 @@ import 'package:safepath/features/detection/obstacle_card_widget.dart';
 ///
 /// 수신 형식:
 /// {
-///   "status": "success",
-///   "guideText": "1시 방향에 오토바이가 있습니다. 중앙을 유지하며 천천히 직진하세요.",
-///   "primaryObjectClass": "motorcycle",
-///   "clockDirection": "1시",
+///   "user_id": "string",          ← 장애물 식별자 (위젯 생명주기 관리 키)
+///   "status": "success" | "exit", ← "exit" 이면 해당 위젯 제거
+///   "guide_text": "string",
+///   "primary_object_class": "string",
+///   "clock_direction": "string",
 ///   "distance": "near" | "mid" | "far",
-///   "alertLevel": "high" | "medium" | "low"
+///   "alert_level": "high" | "medium" | "low"
 /// }
 class DetectionEvent {
+  final String userId;
+  final String status;
   final String guideText;
   final String primaryObjectClass;
   final String clockDirection;
@@ -19,6 +22,8 @@ class DetectionEvent {
   final String alertLevel; // "high" | "medium" | "low"
 
   const DetectionEvent({
+    required this.userId,
+    required this.status,
     required this.guideText,
     required this.primaryObjectClass,
     required this.clockDirection,
@@ -26,13 +31,22 @@ class DetectionEvent {
     required this.alertLevel,
   });
 
+  /// 활성 탐지 이벤트 여부 (false 이면 해당 userId 위젯 제거)
+  bool get isActive => status == 'success';
+
   factory DetectionEvent.fromJson(Map<String, dynamic> json) {
     return DetectionEvent(
-      guideText: json['guideText'] as String? ?? '',
-      primaryObjectClass: json['primaryObjectClass'] as String? ?? '',
-      clockDirection: json['clockDirection'] as String? ?? '',
-      distance: json['distance'] as String? ?? 'far',
-      alertLevel: json['alertLevel'] as String? ?? 'low',
+      userId: (json['user_id'] ?? '') as String,
+      status: (json['status'] ?? '') as String,
+      guideText: (json['guide_text'] ?? json['guideText'] ?? '') as String,
+      primaryObjectClass:
+          (json['primary_object_class'] ?? json['primaryObjectClass'] ?? '')
+              as String,
+      clockDirection:
+          (json['clock_direction'] ?? json['clockDirection'] ?? '') as String,
+      distance: (json['distance'] ?? 'far') as String,
+      alertLevel:
+          (json['alert_level'] ?? json['alertLevel'] ?? 'low') as String,
     );
   }
 

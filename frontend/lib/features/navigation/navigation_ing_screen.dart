@@ -107,10 +107,24 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
 
   void _onObstacleEvent(DetectionEvent event) {
     setState(() {
-      _obstacles.insert(0, event);
-      if (_obstacles.length > 3) _obstacles.removeLast();
+      if (!event.isActive) {
+        // 종료 이벤트: 해당 userId 카드 제거
+        _obstacles.removeWhere((e) => e.userId == event.userId);
+      } else {
+        final idx = _obstacles.indexWhere((e) => e.userId == event.userId);
+        if (idx != -1) {
+          // 동일 ID 갱신: 위치 유지, 데이터만 업데이트
+          _obstacles[idx] = event;
+        } else {
+          // 신규 장애물: 목록 맨 앞에 추가, 최대 3개 유지
+          _obstacles.insert(0, event);
+          if (_obstacles.length > 3) _obstacles.removeLast();
+        }
+      }
       _routeStatus = _computeRouteStatus();
     });
+
+    if (!event.isActive) return;
 
     VibrationService().vibrate(switch (event.alertLevel) {
       'high' => VibrationEffect.obstacleLevel3,
