@@ -19,18 +19,6 @@ layout: single
   </div>
 
   <div class="team-card">
-    <img src="{{ '/assets/images/team/hwangyeonju.png' | relative_url }}" alt="황연주">
-
-    <h3>황연주</h3>
-
-    <p>
-      프론트엔드 개발<br>
-      카메라 기반 이미지 전송 및<br>
-      AI 결과 연동 기능 개발
-    </p>
-  </div>
-
-  <div class="team-card">
     <img src="{{ '/assets/images/team/yangnarae.png' | relative_url }}" alt="양나래">
 
     <h3>양나래</h3>
@@ -43,18 +31,6 @@ layout: single
   </div>
 
   <div class="team-card">
-    <img src="{{ '/assets/images/team/jeonyechan.png' | relative_url }}" alt="전예찬">
-
-    <h3>전예찬</h3>
-
-    <p>
-      백엔드 개발<br>
-      장소 검색·상세 조회·즐겨찾기 등<br>
-      위치 기반 기능 개발
-    </p>
-  </div>
-
-  <div class="team-card">
     <img src="{{ '/assets/images/team/leeilhwan.png' | relative_url }}" alt="이일환">
 
     <h3>이일환 <span>(부팀장)</span></h3>
@@ -63,6 +39,30 @@ layout: single
       AI 개발<br>
       장애물 탐지 모델 개발<br>
       안내 문장 생성
+    </p>
+  </div>
+  
+  <div class="team-card">
+    <img src="{{ '/assets/images/team/hwangyeonju.png' | relative_url }}" alt="황연주">
+
+    <h3>황연주</h3>
+
+    <p>
+      프론트엔드 개발<br>
+      카메라 기반 이미지 전송 및<br>
+      AI 결과 연동 기능 개발
+    </p>
+  </div>
+
+  <div class="team-card">
+    <img src="{{ '/assets/images/team/jeonyechan.png' | relative_url }}" alt="전예찬">
+
+    <h3>전예찬</h3>
+
+    <p>
+      백엔드 개발<br>
+      장소 검색·상세 조회·즐겨찾기 등<br>
+      위치 기반 기능 개발
     </p>
   </div>
 
