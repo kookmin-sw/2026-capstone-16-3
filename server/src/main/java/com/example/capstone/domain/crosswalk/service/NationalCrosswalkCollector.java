@@ -29,6 +29,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
+import static org.apache.commons.lang3.StringUtils.firstNonBlank;
+
 
 @Slf4j
 @Service
@@ -160,12 +162,7 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
             return items;
         }
 
-        JsonNode item = items.path("item");
-        if (item.isArray() || item.isObject()) {
-            return item;
-        }
-
-        return item;
+        return items.path("item");
     }
 
     private boolean isEmptyItems(JsonNode items) {
@@ -350,7 +347,13 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
 
         String sido = text(item, "ctprvnNm");
         String sigungu = text(item, "signguNm");
+        String jibunAddress = text(item,  "lnmadr");
         String roadAddress = text(item, "rdnmadr");
+        AdministrativeRegionParser.AdministrativeRegion jibunRegion =
+                AdministrativeRegionParser.parse(jibunAddress);
+        String emd = firstNonBlank(
+                jibunRegion.emd()
+        );
 
         String kind = text(item, "crslkKnd");
         Double width = parseDouble(item, "bt");
@@ -365,11 +368,7 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
         Boolean trafficIsland = parseYn(item, "tfcilndYn");
         Boolean safetyLighting = parseYn(item, "cnctrLghtFcltyYn");
 
-        LocalDate referenceDate = parseLocalDate(item, "referenceDate");
-        if (referenceDate == null) {
-            referenceDate = LocalDate.now();
-        }
-
+        LocalDate referenceDate = parseLocalDate(item);
         LocalDateTime lastSyncedAt = LocalDateTime.now();
 
         Optional<Crosswalk> optional = crosswalkRepository.findByCrosswalkCode(crosswalkCode);
@@ -381,7 +380,7 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
                     roadAddress,
                     sido,
                     sigungu,
-                    null,
+                    emd,
                     kind,
                     width,
                     length,
@@ -406,7 +405,7 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
                             .roadAddress(roadAddress)
                             .sido(sido)
                             .sigungu(sigungu)
-                            .emd(null)
+                            .emd(emd)
                             .kind(kind)
                             .width(width)
                             .length(length)
@@ -476,17 +475,17 @@ public class NationalCrosswalkCollector implements PublicDataCollector {
         };
     }
 
-    private LocalDate parseLocalDate(JsonNode node, String fieldName) {
-        String value = text(node, fieldName);
+    private LocalDate parseLocalDate(JsonNode node) {
+        String value = text(node, "referenceDate");
         if (!hasText(value)) {
-            return null;
+            return LocalDate.now();
         }
 
         try {
             return LocalDate.parse(value);
         } catch (Exception e) {
-            log.debug("[NATIONAL CROSSWALK PARSE DATE FAIL] field={}, value={}", fieldName, value);
-            return null;
+            log.debug("[NATIONAL CROSSWALK PARSE DATE FAIL] field=referenceDate, value={}", value);
+            return LocalDate.now();
         }
     }
 

@@ -19,6 +19,12 @@ public interface CrosswalkRepository extends JpaRepository<Crosswalk, Long> {
 
     List<Crosswalk> findByBaseSourceAndSigungu(DataSourceType baseSource, String sigungu);
 
+    List<Crosswalk> findByBaseSourceAndSidoAndSigungu(
+            DataSourceType baseSource,
+            String sido,
+            String sigungu
+    );
+
     @Query("""
             select crosswalk
             from Crosswalk crosswalk

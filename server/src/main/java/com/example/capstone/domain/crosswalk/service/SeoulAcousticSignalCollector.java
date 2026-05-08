@@ -281,44 +281,52 @@ public class SeoulAcousticSignalCollector implements PublicDataCollector {
 
     private Wgs84Point convertSeoulTmToWgs84(double x, double y, CrosswalkSyncStats stats) {
         try {
-            CRSFactory crsFactory = new CRSFactory();
+            Wgs84Point point = transformSeoulTmToWgs84(x, y);
 
-            CoordinateReferenceSystem sourceCrs = crsFactory.createFromParameters(
-                    "EPSG:5186",
-                    "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 "
-                            + "+x_0=200000 +y_0=600000 "
-                            + "+ellps=GRS80 +units=m +no_defs"
-            );
-
-            CoordinateReferenceSystem targetCrs = crsFactory.createFromParameters(
-                    "EPSG:4326",
-                    "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
-            );
-
-            CoordinateTransformFactory ctFactory = new CoordinateTransformFactory();
-            CoordinateTransform transform = ctFactory.createTransform(sourceCrs, targetCrs);
-
-            ProjCoordinate source = new ProjCoordinate(x, y);
-            ProjCoordinate target = new ProjCoordinate();
-
-            transform.transform(source, target);
-
-            double longitude = target.x;
-            double latitude = target.y;
-
-            if (!isValidKoreaWgs84(latitude, longitude)) {
+            if (!isValidKoreaWgs84(point.latitude(), point.longitude())) {
                 stats.increaseFailure(FailureReason.COORDINATE_OUT_OF_RANGE);
-                log.debug("[SEOUL ACOUSTIC SIGNAL SKIP] transformed coordinate out of range. x={}, y={}, lat={}, lng={}",
-                        x, y, latitude, longitude);
+                log.debug(
+                        "[SEOUL ACOUSTIC SIGNAL SKIP] transformed coordinate out of range. x={}, y={}, lat={}, lng={}",
+                        x,
+                        y,
+                        point.latitude(),
+                        point.longitude()
+                );
                 return null;
             }
 
-            return new Wgs84Point(latitude, longitude);
+            return point;
         } catch (Exception e) {
             stats.increaseFailure(FailureReason.COORDINATE_TRANSFORM_FAILED);
             log.debug("[SEOUL ACOUSTIC SIGNAL COORDINATE TRANSFORM ERROR] x={}, y={}", x, y, e);
             return null;
         }
+    }
+
+    private Wgs84Point transformSeoulTmToWgs84(double x, double y) {
+        CRSFactory crsFactory = new CRSFactory();
+
+        CoordinateReferenceSystem sourceCrs = crsFactory.createFromParameters(
+                "EPSG:5186",
+                "+proj=tmerc +lat_0=38 +lon_0=127 +k=1 "
+                        + "+x_0=200000 +y_0=600000 "
+                        + "+ellps=GRS80 +units=m +no_defs"
+        );
+
+        CoordinateReferenceSystem targetCrs = crsFactory.createFromParameters(
+                "EPSG:4326",
+                "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
+        );
+
+        CoordinateTransformFactory ctFactory = new CoordinateTransformFactory();
+        CoordinateTransform transform = ctFactory.createTransform(sourceCrs, targetCrs);
+
+        ProjCoordinate source = new ProjCoordinate(x, y);
+        ProjCoordinate target = new ProjCoordinate();
+
+        transform.transform(source, target);
+
+        return new Wgs84Point(target.y, target.x);
     }
 
     private String text(JsonNode row, String fieldName) {

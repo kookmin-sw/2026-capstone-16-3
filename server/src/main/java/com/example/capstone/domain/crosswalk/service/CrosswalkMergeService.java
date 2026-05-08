@@ -36,14 +36,18 @@ public class CrosswalkMergeService {
         int noDistanceMatchCount = 0;
 
         for (Crosswalk seoul : seoulCrosswalks) {
-            if (!hasText(seoul.getSigungu())) {
+            String seoulSido = AdministrativeRegionParser.normalizeSido(seoul.getSido());
+            String seoulSigungu = AdministrativeRegionParser.normalizeSigungu(seoul.getSigungu());
+
+            if (!hasText(seoulSido) || !hasText(seoulSigungu)) {
                 missingSigunguCount++;
                 continue;
             }
 
-            List<Crosswalk> nationalCandidates = crosswalkRepository.findByBaseSourceAndSigungu(
+            List<Crosswalk> nationalCandidates = crosswalkRepository.findByBaseSourceAndSidoAndSigungu(
                     DataSourceType.NATIONAL_STANDARD_CROSSWALK,
-                    seoul.getSigungu()
+                    seoulSido,
+                    seoulSigungu
             );
 
             if (nationalCandidates.isEmpty()) {
@@ -79,9 +83,11 @@ public class CrosswalkMergeService {
             deletedNationalCount++;
 
             log.debug(
-                    "[CROSSWALK MERGE] seoulCode={}, nationalCode={}, distanceMeters={}",
+                    "[CROSSWALK MERGE] seoulCode={}, nationalCode={}, seoulEmd={}, nationalEmd={}, distanceMeters={}",
                     seoul.getCrosswalkCode(),
                     national.getCrosswalkCode(),
+                    seoul.getEmd(),
+                    national.getEmd(),
                     matched.get().distanceMeters()
             );
         }
@@ -98,42 +104,14 @@ public class CrosswalkMergeService {
         );
     }
 
-    private Optional<MatchedCrosswalk> findNearestNationalCrosswalk(Crosswalk seoul) {
-        if (!hasText(seoul.getSigungu())) {
-            return Optional.empty();
-        }
-
-        List<Crosswalk> nationalCandidates = crosswalkRepository.findByBaseSourceAndSigungu(
-                DataSourceType.NATIONAL_STANDARD_CROSSWALK,
-                seoul.getSigungu()
-        );
-
-        return nationalCandidates.stream()
-                .filter(national -> isSameRegion(seoul, national))
-                .map(national -> new MatchedCrosswalk(
-                        national,
-                        calculateDistanceMeters(
-                                seoul.getLatitude(),
-                                seoul.getLongitude(),
-                                national.getLatitude(),
-                                national.getLongitude()
-                        )
-                ))
-                .filter(match -> match.distanceMeters() <= MATCH_DISTANCE_METERS)
-                .min(Comparator.comparingDouble(MatchedCrosswalk::distanceMeters));
-    }
-
     private boolean isSameRegion(Crosswalk seoul, Crosswalk national) {
-        return Objects.equals(normalizeRegion(seoul.getSido()), normalizeRegion(national.getSido()))
-                && Objects.equals(normalizeRegion(seoul.getSigungu()), normalizeRegion(national.getSigungu()));
-    }
-
-    private String normalizeRegion(String value) {
-        if (!hasText(value)) {
-            return null;
-        }
-
-        return value.replace(" ", "").trim();
+        return Objects.equals(
+                AdministrativeRegionParser.normalizeSido(seoul.getSido()),
+                AdministrativeRegionParser.normalizeSido(national.getSido())
+        ) && Objects.equals(
+                AdministrativeRegionParser.normalizeSigungu(seoul.getSigungu()),
+                AdministrativeRegionParser.normalizeSigungu(national.getSigungu())
+        );
     }
 
     private double calculateDistanceMeters(double lat1, double lng1, double lat2, double lng2) {

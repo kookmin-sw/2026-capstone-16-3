@@ -77,8 +77,7 @@ public class CrosswalkAcousticSignalMatchService {
     private Optional<MatchedCrosswalk> findNearestCrosswalk(AcousticSignal signal) {
         BoundingBox box = createBoundingBox(
                 signal.getLatitude(),
-                signal.getLongitude(),
-                MATCH_DISTANCE_METERS
+                signal.getLongitude()
         );
 
         List<Crosswalk> candidates = crosswalkRepository.findCandidatesByBoundingBox(
@@ -102,10 +101,10 @@ public class CrosswalkAcousticSignalMatchService {
                 .min(Comparator.comparingDouble(MatchedCrosswalk::distanceMeters));
     }
 
-    private BoundingBox createBoundingBox(double lat, double lng, double radiusM) {
-        double latDelta = Math.toDegrees(radiusM / EARTH_RADIUS_METERS);
+    private BoundingBox createBoundingBox(double lat, double lng) {
+        double latDelta = Math.toDegrees(MATCH_DISTANCE_METERS / EARTH_RADIUS_METERS);
         double lngDelta = Math.toDegrees(
-                radiusM / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(lat)))
+                MATCH_DISTANCE_METERS / (EARTH_RADIUS_METERS * Math.cos(Math.toRadians(lat)))
         );
 
         return new BoundingBox(
