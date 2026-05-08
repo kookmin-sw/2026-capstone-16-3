@@ -111,11 +111,17 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
     height: 28,
   );
 
+  String _speedLabel(double speed) =>
+      '${speed.toStringAsFixed(1).replaceAll('.', '점')}배속';
+
   void _decreaseSpeed() {
     final next = (_ttsSpeed - _ttsStep).clamp(_ttsMin, _ttsMax);
     setState(() => _ttsSpeed = next);
     TtsService().setSpeechRate(next);
-    TtsService().speak('${next.toStringAsFixed(1)}배속', interrupt: true);
+    TtsService().speak(
+      '${_speedLabel(next)}. 안내 음성 속도 조절 중입니다. 이 속도로 안내를 받게 됩니다.',
+      interrupt: true,
+    );
     widget.onGuidanceSpeedChanged?.call(next);
   }
 
@@ -123,7 +129,10 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
     final next = (_ttsSpeed + _ttsStep).clamp(_ttsMin, _ttsMax);
     setState(() => _ttsSpeed = next);
     TtsService().setSpeechRate(next);
-    TtsService().speak('${next.toStringAsFixed(1)}배속', interrupt: true);
+    TtsService().speak(
+      '${_speedLabel(next)}. 안내 음성 속도 조절 중입니다. 이 속도로 안내를 받게 됩니다.',
+      interrupt: true,
+    );
     widget.onGuidanceSpeedChanged?.call(next);
   }
 
