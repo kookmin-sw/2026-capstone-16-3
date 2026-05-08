@@ -21,7 +21,7 @@ layout: single
     </div>
 
     <div class="team-member">
-      <img src="{{ '/assets/images/team/hwangyeonju.png' | relative_url }}" alt="황연주">
+      <img src="{{ '/assets/images/team/yeonju.png' | relative_url }}" alt="황연주">
       <div>
         <h3>황연주</h3>
         <hr>
@@ -34,7 +34,7 @@ layout: single
     <h2>| Backend</h2>
 
     <div class="team-member">
-      <img src="{{ '/assets/images/team/yangnarae.png' | relative_url }}" alt="양나래">
+      <img src="{{ '/assets/images/team/narae.png' | relative_url }}" alt="양나래">
       <div>
         <h3>양나래</h3>
         <hr>
@@ -43,7 +43,7 @@ layout: single
     </div>
 
     <div class="team-member">
-      <img src="{{ '/assets/images/team/jeonyechan.png' | relative_url }}" alt="전예찬">
+      <img src="{{ '/assets/images/team/yechan.png' | relative_url }}" alt="전예찬">
       <div>
         <h3>전예찬</h3>
         <hr>
@@ -56,7 +56,7 @@ layout: single
     <h2>| AI</h2>
 
     <div class="team-member">
-      <img src="{{ '/assets/images/team/leeilhwan.png' | relative_url }}" alt="이일환">
+      <img src="{{ '/assets/images/team/ilhwan.png' | relative_url }}" alt="이일환">
       <div>
         <h3>이일환 <span>(부팀장)</span></h3>
         <hr>
@@ -65,7 +65,7 @@ layout: single
     </div>
 
     <div class="team-member">
-      <img src="{{ '/assets/images/team/kimyeji.png' | relative_url }}" alt="김예지">
+      <img src="{{ '/assets/images/team/yeji.png' | relative_url }}" alt="김예지">
       <div>
         <h3>김예지</h3>
         <hr>
