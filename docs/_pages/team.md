@@ -5,6 +5,8 @@ layout: single
 classes: wide
 ---
 
+<!-- markdownlint-disable MD033 -->
+
 <div class="team-grid">
 
   <div class="team-card">

@@ -21,6 +21,8 @@ feature_row:
     excerpt: "TTS와 햅틱 피드백으로 화면 확인 없이 위험 상황과 이동 방향을 전달한다."
 ---
 
+<!-- markdownlint-disable MD025 MD033 -->
+
 # 길벗
 
 길벗은 스마트폰 카메라와 AI 기반 객체 탐지 기술을 활용하여  
