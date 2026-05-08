@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import 'package:safepath/common/theme/color_collection.dart';
@@ -194,9 +195,11 @@ class _ToggleRow extends StatelessWidget {
       toggled: value,
       label: '$label, $description',
       onTap: () {
+        final newValue = !value;
         SoundEffectService().play(SoundEffect.buttonTap);
         VibrationService().vibrate(VibrationEffect.buttonTap);
-        onChanged(!value);
+        SemanticsService.announce('$label ${newValue ? '켜짐' : '꺼짐'}', TextDirection.ltr);
+        onChanged(newValue);
       },
       excludeSemantics: true,
       child: Padding(
@@ -238,7 +241,8 @@ class _ToggleRow extends StatelessWidget {
               value: value,
               onChanged: (v) {
                 SoundEffectService().play(SoundEffect.buttonTap);
-              VibrationService().vibrate(VibrationEffect.buttonTap);
+                VibrationService().vibrate(VibrationEffect.buttonTap);
+                SemanticsService.announce('$label ${v ? '켜짐' : '꺼짐'}', TextDirection.ltr);
                 onChanged(v);
               },
               activeThumbColor: Colors.white,
