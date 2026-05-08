@@ -1,9 +1,11 @@
 from __future__ import annotations
+
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 import logging
 import time
+
 import cv2
 import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -19,12 +21,32 @@ router = APIRouter(prefix="/api", tags=["analyze"])
 # user별 frame index. tracking/cooldown 판단에 사용.
 _user_frame_counter: dict[str, int] = defaultdict(int)
 
+VALID_SENTENCE_LENGTHS = {"SHORT", "MEDIUM", "LONG"}
+
+
+def normalize_sentence_length(sentence_length: str | None) -> str:
+    """
+    백엔드에서 넘어온 sentence_length 값을 정규화한다.
+    허용값: SHORT, MEDIUM, LONG
+    잘못된 값이 오면 기본값 MEDIUM 사용.
+    """
+    if not sentence_length:
+        return "MEDIUM"
+
+    value = str(sentence_length).strip().upper()
+
+    if value not in VALID_SENTENCE_LENGTHS:
+        return "MEDIUM"
+
+    return value
+
 
 def build_backend_event_payload(
     user_id: str,
     processed_at: str,
     processing_time_ms: int,
     gt: dict,
+    sentence_length: str,
 ) -> dict:
     """
     백엔드와 합의한 전송용 payload.
@@ -42,6 +64,7 @@ def build_backend_event_payload(
         "clock_direction": gt.get("clock_direction"),
         "distance": gt.get("distance"),
         "alert_level": gt.get("alert_level", "safe"),
+        "sentence_length": sentence_length,
     }
 
 
@@ -49,16 +72,19 @@ def build_backend_event_payload(
 async def analyze_image(
     user_id: str = Form(...),
     captured_at: str = Form(...),
+    sentence_length: str = Form("MEDIUM"),
     image: UploadFile = File(...),
 ):
     start_time = time.perf_counter()
+    sentence_length = normalize_sentence_length(sentence_length)
 
     logger.info(
-        "analyze request received | user_id=%s | filename=%s | content_type=%s | captured_at=%s",
+        "analyze request received | user_id=%s | filename=%s | content_type=%s | captured_at=%s | sentence_length=%s",
         user_id,
         image.filename,
         image.content_type,
         captured_at,
+        sentence_length,
     )
 
     # =========================================================
@@ -125,19 +151,24 @@ async def analyze_image(
             frame_bgr=frame_bgr,
             image_id=image_id,
             frame_idx=frame_idx,
+            sentence_length=sentence_length,
         )
 
         scene_json = result["scene_json"]
         gt = result["gt"]
         timings_ms = result.get("timings_ms", {})
 
+        # guide_builder에서 gt에 sentence_length를 넣지 않았더라도 응답 일관성 유지
+        gt["sentence_length"] = sentence_length
+
         logger.info(
-            "추론 완료 | user_id=%s | frame_idx=%d | det_count=%d | alert_level=%s | action=%s | guide_text=%s",
+            "추론 완료 | user_id=%s | frame_idx=%d | det_count=%d | alert_level=%s | action=%s | sentence_length=%s | guide_text=%s",
             user_id,
             frame_idx,
             result.get("det_count", 0),
             gt.get("alert_level"),
             gt.get("action"),
+            sentence_length,
             gt.get("voice_guide", ""),
         )
 
@@ -174,13 +205,15 @@ async def analyze_image(
                 processing_time_ms=processing_time_ms,
             )
             payload["alert_level"] = gt_alert_level
+            payload["sentence_length"] = sentence_length
 
             logger.warning(
-                "AI timeout | user_id=%s | frame_idx=%d | processing_time_ms=%d | alert_level=%s | gt=%s | timings_ms=%s",
+                "AI timeout | user_id=%s | frame_idx=%d | processing_time_ms=%d | alert_level=%s | sentence_length=%s | gt=%s | timings_ms=%s",
                 user_id,
                 frame_idx,
                 processing_time_ms,
                 gt_alert_level,
+                sentence_length,
                 gt,
                 timings_ms,
             )
@@ -191,6 +224,7 @@ async def analyze_image(
                 processed_at=processed_at,
                 processing_time_ms=processing_time_ms,
                 gt=gt,
+                sentence_length=sentence_length,
             )
 
     except Exception as exc:
@@ -216,13 +250,18 @@ async def analyze_image(
                 backend_url=BACKEND_GUIDE_EVENT_URL,
             )
             logger.info(
-                "백엔드 전송 성공 | user_id=%s | alert_level=%s | backend_url=%s",
+                "백엔드 전송 성공 | user_id=%s | alert_level=%s | sentence_length=%s | backend_url=%s",
                 user_id,
                 gt_alert_level,
+                sentence_length,
                 BACKEND_GUIDE_EVENT_URL,
             )
         except Exception as exc:
-            logger.warning("백엔드 /api/guide/event 전송 실패 (무시하고 계속) | user_id=%s | error=%s", user_id, exc)
+            logger.warning(
+                "백엔드 /api/guide/event 전송 실패 (무시하고 계속) | user_id=%s | error=%s",
+                user_id,
+                exc,
+            )
             backend_response = {"status": "failed", "reason": str(exc)}
     else:
         backend_response = {
@@ -238,6 +277,7 @@ async def analyze_image(
     return {
         "status": "forwarded" if should_send else "skipped",
         "saved_filename": save_filename,
+        "sentence_length": sentence_length,
         "scene_json": scene_json,
         "gt": gt,
         "timings_ms": timings_ms,

@@ -198,6 +198,7 @@ def run_single_image_inference(
     frame_bgr: np.ndarray,
     image_id: str | None = None,
     frame_idx: int = 0,
+    sentence_length: str = "MEDIUM",
 ) -> dict[str, Any]:
     """Run the integrated pipeline for a single frame.
 
@@ -266,6 +267,7 @@ def run_single_image_inference(
 
     # =====================================================
     # 4. Scene + guide build
+    # sentence_length를 guide_builder까지 전달
     # =====================================================
     t0 = time.perf_counter()
     packed = build_scene_from_model_outputs(
@@ -277,6 +279,7 @@ def run_single_image_inference(
         seg_result=seg_result,
         depth_m=depth_m,
         det_class_names=det_model.names,
+        sentence_length=sentence_length,
     )
     timings["scene_guide_build"] = (time.perf_counter() - t0) * 1000
 
@@ -288,6 +291,9 @@ def run_single_image_inference(
         "scene": packed["scene"],
     }
     gt = packed["gt"]
+
+    # 혹시 guide_builder에서 sentence_length를 gt에 넣지 않았을 경우 대비
+    gt["sentence_length"] = str(sentence_length).strip().upper()
 
     det_count = len(scene_json["scene"].get("objects", []))
 
