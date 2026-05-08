@@ -314,7 +314,8 @@ class _StepperRow extends StatelessWidget {
               onTap: onDecrease,
             ),
             Expanded(
-              child: ExcludeSemantics(
+              child: Semantics(
+                label: '현재 $label $displayValue',
                 child: Container(
                   height: 52,
                   alignment: Alignment.center,
@@ -324,12 +325,14 @@ class _StepperRow extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: ColorCollection.main, width: 2),
                   ),
-                  child: Text(
-                    displayValue,
-                    style: AppTextStyles.labelBold.copyWith(
-                      color: ColorCollection.main,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 20,
+                  child: ExcludeSemantics(
+                    child: Text(
+                      displayValue,
+                      style: AppTextStyles.labelBold.copyWith(
+                        color: ColorCollection.main,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                      ),
                     ),
                   ),
                 ),
