@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
@@ -8,10 +9,7 @@ import 'package:safepath/service/vibration_service.dart';
 
 /// 안내 스타일 개인화 섹션 (접근성 개선 버전)
 ///
-/// 슬라이더 대신 탭 한 번으로 조작 가능한 버튼 UI 사용:
-///  - 안내 문장 길이 → 3개 세그먼트 버튼 (간결 / 보통 / 상세)
-///  - 안내 문장 빠르기 → − / + 스테퍼 (0.5배속 단위)
-///  - 진동 강도 → − / + 스테퍼 (10% 단위)
+/// 읽기 순서: 제목(header) → 현재 설정값 → 조작 버튼 → 설명(시각 전용)
 class SettingsStyleWidget extends StatefulWidget {
   final UserSettings initialSettings;
   final void Function(MessageLength)? onSentenceLengthChanged;
@@ -83,6 +81,7 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
           _divider(),
           _StepperRow(
             label: '안내 문장 빠르기',
+            buttonLabel: '빠르기',
             description: '안내 메시지의 재생 속도를 조절합니다.',
             displayValue: '${_ttsSpeed.toStringAsFixed(1)}배속',
             canDecrease: _ttsSpeed > _ttsMin,
@@ -93,6 +92,7 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
           _divider(),
           _StepperRow(
             label: '진동 강도',
+            buttonLabel: '강도',
             description: '경고 진동의 강도를 조절합니다.',
             displayValue: '$_vibration%',
             canDecrease: _vibration > 0,
@@ -118,10 +118,7 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
     final next = (_ttsSpeed - _ttsStep).clamp(_ttsMin, _ttsMax);
     setState(() => _ttsSpeed = next);
     TtsService().setSpeechRate(next);
-    TtsService().speak(
-      '${_speedLabel(next)}. 안내 음성 속도 조절 중입니다. 이 속도로 안내를 받게 됩니다.',
-      interrupt: true,
-    );
+    TtsService().speak('${_speedLabel(next)}으로 변경됐습니다.', interrupt: true);
     widget.onGuidanceSpeedChanged?.call(next);
   }
 
@@ -129,10 +126,7 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
     final next = (_ttsSpeed + _ttsStep).clamp(_ttsMin, _ttsMax);
     setState(() => _ttsSpeed = next);
     TtsService().setSpeechRate(next);
-    TtsService().speak(
-      '${_speedLabel(next)}. 안내 음성 속도 조절 중입니다. 이 속도로 안내를 받게 됩니다.',
-      interrupt: true,
-    );
+    TtsService().speak('${_speedLabel(next)}으로 변경됐습니다.', interrupt: true);
     widget.onGuidanceSpeedChanged?.call(next);
   }
 
@@ -154,6 +148,8 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
 }
 
 // ─── 세그먼트 선택 버튼 (안내 문장 길이) ──────────────────────────────────────────
+//
+// 읽기 순서: "제목" → "현재 설정: 간결" → "간결, 선택됨, 버튼" … → (설명, 시각 전용)
 
 class _SegmentedRow<T> extends StatelessWidget {
   final String label;
@@ -174,10 +170,15 @@ class _SegmentedRow<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentLabel = labelOf(selected);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ExcludeSemantics(
+        // 1. 제목 + 현재값 (시각: 레이블만, TalkBack: "제목, 현재 값")
+        Semantics(
+          header: true,
+          label: '$label, 현재 $currentLabel',
+          excludeSemantics: true,
           child: Text(
             label,
             style: AppTextStyles.labelBold.copyWith(
@@ -187,6 +188,7 @@ class _SegmentedRow<T> extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
+        // 3. 선택 버튼
         Row(
           children: options.map((option) {
             final isSelected = option == selected;
@@ -195,12 +197,18 @@ class _SegmentedRow<T> extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Semantics(
-                  label: '$label: $optLabel',
+                  label: optLabel,
                   selected: isSelected,
                   button: true,
                   excludeSemantics: true,
                   child: GestureDetector(
-                    onTap: () => onSelected(option),
+                    onTap: () {
+                      onSelected(option);
+                      SemanticsService.announce(
+                        '$optLabel 선택됨',
+                        TextDirection.ltr,
+                      );
+                    },
                     child: Container(
                       height: 52,
                       alignment: Alignment.center,
@@ -231,6 +239,7 @@ class _SegmentedRow<T> extends StatelessWidget {
           }).toList(),
         ),
         const SizedBox(height: 8),
+        // 4. 설명 (시각 전용 — 제목만으로 충분히 유추 가능)
         ExcludeSemantics(
           child: Text(
             description,
@@ -247,9 +256,13 @@ class _SegmentedRow<T> extends StatelessWidget {
 }
 
 // ─── + / − 스테퍼 (빠르기·진동 강도) ─────────────────────────────────────────────
+//
+// 읽기 순서: "제목" → "현재 설정: N" → "줄이기 버튼" → "현재값" → "늘리기 버튼"
+//           → (설명, 시각 전용)
 
 class _StepperRow extends StatelessWidget {
   final String label;
+  final String buttonLabel; // 버튼 레이블 단축형 (e.g. "빠르기", "강도")
   final String description;
   final String displayValue;
   final bool canDecrease;
@@ -259,6 +272,7 @@ class _StepperRow extends StatelessWidget {
 
   const _StepperRow({
     required this.label,
+    required this.buttonLabel,
     required this.description,
     required this.displayValue,
     required this.canDecrease,
@@ -272,7 +286,11 @@ class _StepperRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ExcludeSemantics(
+        // 1. 제목 + 현재값 (시각: 레이블만, TalkBack: "제목, 현재 값")
+        Semantics(
+          header: true,
+          label: '$label, 현재 $displayValue',
+          excludeSemantics: true,
           child: Text(
             label,
             style: AppTextStyles.labelBold.copyWith(
@@ -282,17 +300,18 @@ class _StepperRow extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
+        // 3. 스테퍼 (− 값 +)
         Row(
           children: [
             _StepButton(
               icon: Icons.remove,
-              semanticsLabel: '$label 줄이기',
+              semanticsLabel: '$buttonLabel 감소',
               enabled: canDecrease,
               onTap: onDecrease,
             ),
             Expanded(
               child: Semantics(
-                label: '$label: $displayValue',
+                label: displayValue,
                 child: Container(
                   height: 52,
                   alignment: Alignment.center,
@@ -317,13 +336,14 @@ class _StepperRow extends StatelessWidget {
             ),
             _StepButton(
               icon: Icons.add,
-              semanticsLabel: '$label 늘리기',
+              semanticsLabel: '$buttonLabel 증가',
               enabled: canIncrease,
               onTap: onIncrease,
             ),
           ],
         ),
         const SizedBox(height: 8),
+        // 4. 설명 (시각 전용)
         ExcludeSemantics(
           child: Text(
             description,
