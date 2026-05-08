@@ -82,6 +82,9 @@ WALKING_VIEW_HOURS = {9, 10, 11, 12, 1, 2, 3}
 # bbox 하단 영역 중 점자블록 mask와 5% 이상 겹치면 점자블록 위 장애물로 판단
 TACTILE_OVERLAP_THRESH = 0.05
 
+# 안내문 길이 옵션
+VALID_SENTENCE_LENGTHS = {"SHORT", "MEDIUM", "LONG"}
+
 # 서버 프로세스가 살아있는 동안 tracking/cooldown 유지
 track_history: dict[int, deque] = defaultdict(lambda: deque(maxlen=TRACK_HISTORY_LEN))
 last_announced_frame: dict[int, int] = {}
@@ -192,6 +195,102 @@ def horiz_region(x_ratio: float) -> str:
     if x_ratio < 2 / 3:
         return "center"
     return "right"
+
+
+# =========================================================
+# Sentence length / guide formatting
+# =========================================================
+def normalize_sentence_length(sentence_length: str | None) -> str:
+    if not sentence_length:
+        return "MEDIUM"
+
+    value = str(sentence_length).strip().upper()
+    if value not in VALID_SENTENCE_LENGTHS:
+        return "MEDIUM"
+
+    return value
+
+
+def opposite_detour_text(clock_direction: str | None) -> str:
+    """
+    위험 객체 방향을 기준으로 간단한 우회 방향을 정한다.
+    오른쪽에 위험이 있으면 왼쪽, 왼쪽에 위험이 있으면 오른쪽.
+    중앙이면 기본 오른쪽.
+    """
+    if not clock_direction:
+        return "오른쪽"
+
+    try:
+        hour = clock_to_int(clock_direction)
+    except Exception:
+        return "오른쪽"
+
+    if hour in {1, 2, 3}:
+        return "왼쪽"
+    if hour in {9, 10, 11}:
+        return "오른쪽"
+
+    return "오른쪽"
+
+
+def format_tactile_object_guide(
+    clock_direction: str,
+    object_ko: str,
+    sentence_length: str = "MEDIUM",
+    detour_text: str | None = None,
+) -> str:
+    """
+    점자블록 위 객체 안내문.
+    SHORT:  12시 점자블록 위 스쿠터.
+    MEDIUM: 주의. 12시 점자블록 위 스쿠터, 오른쪽 우회.
+    LONG:   주의. 12시 방향 점자블록 위에 스쿠터가 있습니다. 오른쪽으로 우회하세요.
+    """
+    sentence_length = normalize_sentence_length(sentence_length)
+    detour_text = detour_text or opposite_detour_text(clock_direction)
+
+    if sentence_length == "SHORT":
+        return f"{clock_direction} 점자블록 위 {object_ko}."
+
+    if sentence_length == "LONG":
+        return (
+            f"주의. {clock_direction} 방향 점자블록 위에 {jo_iga(object_ko)} 있습니다. "
+            f"{detour_text}으로 우회하세요."
+        )
+
+    return f"주의. {clock_direction} 점자블록 위 {object_ko}, {detour_text} 우회."
+
+
+def format_tactile_unknown_guide(
+    clock_direction: str,
+    sentence_length: str = "MEDIUM",
+) -> str:
+    sentence_length = normalize_sentence_length(sentence_length)
+    detour_text = opposite_detour_text(clock_direction)
+
+    if sentence_length == "SHORT":
+        return f"{clock_direction} 점자블록 가림."
+
+    if sentence_length == "LONG":
+        return (
+            f"주의. {clock_direction} 방향 점자블록 위에 장애물이 있거나 "
+            f"점자블록이 가려져 있습니다. {detour_text}으로 우회하세요."
+        )
+
+    return f"주의. {clock_direction} 점자블록 가림, {detour_text} 우회."
+
+
+def format_tactile_broken_guide(
+    sentence_length: str = "MEDIUM",
+) -> str:
+    sentence_length = normalize_sentence_length(sentence_length)
+
+    if sentence_length == "SHORT":
+        return "전방 점자블록 끊김."
+
+    if sentence_length == "LONG":
+        return "주의. 전방 점자블록이 끊겨 있습니다. 주변 보행로를 확인하며 천천히 이동하세요."
+
+    return "주의. 전방 점자블록 끊김, 천천히 이동."
 
 
 # =========================================================
@@ -763,7 +862,10 @@ def build_scene_from_model_outputs(
     seg_result: Any,
     depth_m: np.ndarray,
     det_class_names: dict[int, str],
+    sentence_length: str = "MEDIUM",
 ) -> dict[str, Any]:
+    sentence_length = normalize_sentence_length(sentence_length)
+
     seg_info = analyze_segmentation(seg_result, img_w, img_h)
     zones = analyze_zones(depth_m)
 
@@ -882,7 +984,13 @@ def build_scene_from_model_outputs(
         "_zones": zones,
     }
 
-    gt = build_voice_guide(scene, frame_idx, img_w, img_h)
+    gt = build_voice_guide(
+        scene=scene,
+        frame_idx=frame_idx,
+        img_w=img_w,
+        img_h=img_h,
+        sentence_length=sentence_length,
+    )
 
     # 내부 계산용 키 제거
     for obj in scene["objects"]:
@@ -971,21 +1079,39 @@ def compute_risk_score(obj: dict[str, Any], scene_img_area: float) -> float:
     return base + dist_bonus + size_bonus + view_bonus + path_bonus + road_penalty + approach_bonus + tactile_bonus
 
 
-def build_voice_guide(scene: dict[str, Any], frame_idx: int, img_w: int, img_h: int) -> dict[str, Any]:
+def build_voice_guide(
+    scene: dict[str, Any],
+    frame_idx: int,
+    img_w: int,
+    img_h: int,
+    sentence_length: str = "MEDIUM",
+) -> dict[str, Any]:
+    sentence_length = normalize_sentence_length(sentence_length)
+
     # 점자블록 위 장애물/가림/끊김은 일반 객체 안내보다 우선
-    tactile_gt = _decide_tactile_guide_once(scene, frame_idx)
+    tactile_gt = _decide_tactile_guide_once(
+        scene=scene,
+        frame_idx=frame_idx,
+        sentence_length=sentence_length,
+    )
     if tactile_gt is not None:
         tactile_gt["scene_info_added"] = []
+        tactile_gt["sentence_length"] = sentence_length
         tactile_gt["alert_level"] = alert_level_from_gt(tactile_gt)
         return tactile_gt
 
     gt = _decide_primary_guide(scene, frame_idx, img_w, img_h)
     gt = _append_scene_info(gt, scene, frame_idx)
+    gt["sentence_length"] = sentence_length
     gt["alert_level"] = alert_level_from_gt(gt)
     return gt
 
 
-def _decide_tactile_guide_once(scene: dict[str, Any], frame_idx: int) -> dict[str, Any] | None:
+def _decide_tactile_guide_once(
+    scene: dict[str, Any],
+    frame_idx: int,
+    sentence_length: str = "MEDIUM",
+) -> dict[str, Any] | None:
     """
     점자블록 관련 위험은 최초 1회만 안내한다.
 
@@ -993,6 +1119,7 @@ def _decide_tactile_guide_once(scene: dict[str, Any], frame_idx: int) -> dict[st
     2. detection 객체는 없지만 점자블록 mask가 중간에서 끊기거나 가려짐
     3. 점자블록이 하단에는 보이지만 전방으로 이어지지 않음
     """
+    sentence_length = normalize_sentence_length(sentence_length)
     objects = scene["objects"]
 
     # 1. detection 객체가 점자블록 위에 있는 경우
@@ -1015,6 +1142,12 @@ def _decide_tactile_guide_once(scene: dict[str, Any], frame_idx: int) -> dict[st
         ko = to_ko(primary["class"])
         direction = primary["clock_direction"]
 
+        voice = format_tactile_object_guide(
+            clock_direction=direction,
+            object_ko=ko,
+            sentence_length=sentence_length,
+        )
+
         mark_scene_announced_once("tactile_blocked_by_object", frame_idx)
 
         return _make_gt(
@@ -1022,7 +1155,7 @@ def _decide_tactile_guide_once(scene: dict[str, Any], frame_idx: int) -> dict[st
             "caution",
             2,
             f"{direction} 방향 점자블록 위 {ko} 감지",
-            f"주의. {direction} 방향 점자블록 위에 {jo_iga(ko)} 있습니다.",
+            voice,
         )
 
     tactile_block = scene.get("tactile_block", {})
@@ -1032,6 +1165,12 @@ def _decide_tactile_guide_once(scene: dict[str, Any], frame_idx: int) -> dict[st
     if tactile_status == "blocked_or_occluded":
         if not is_scene_announced_once("tactile_blocked_or_occluded"):
             direction = tactile_block.get("clock_direction") or "12시"
+
+            voice = format_tactile_unknown_guide(
+                clock_direction=direction,
+                sentence_length=sentence_length,
+            )
+
             mark_scene_announced_once("tactile_blocked_or_occluded", frame_idx)
 
             return {
@@ -1045,12 +1184,14 @@ def _decide_tactile_guide_once(scene: dict[str, Any], frame_idx: int) -> dict[st
                 "action": "caution",
                 "priority": 2,
                 "reason": "점자블록 위 장애물 또는 가림 감지",
-                "voice_guide": f"주의. {direction} 방향 점자블록 위에 장애물이 있거나 점자블록이 가려져 있습니다.",
+                "voice_guide": voice,
             }
 
     # 3. 점자블록 끊김
     if tactile_status == "broken":
         if not is_scene_announced_once("tactile_broken"):
+            voice = format_tactile_broken_guide(sentence_length)
+
             mark_scene_announced_once("tactile_broken", frame_idx)
 
             return {
@@ -1064,7 +1205,7 @@ def _decide_tactile_guide_once(scene: dict[str, Any], frame_idx: int) -> dict[st
                 "action": "caution",
                 "priority": 2,
                 "reason": "전방 점자블록 끊김",
-                "voice_guide": "주의. 전방 점자블록이 끊겨 있습니다.",
+                "voice_guide": voice,
             }
 
     return None
@@ -1374,6 +1515,7 @@ def build_backend_payload(
         "clock_direction": gt.get("clock_direction"),
         "distance": gt.get("distance"),
         "alert_level": gt.get("alert_level", "safe"),
+        "sentence_length": gt.get("sentence_length", "MEDIUM"),
     }
 
 
