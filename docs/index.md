@@ -28,6 +28,20 @@ feature_row:
 
 {% include feature_row %}
 
+## 목차
+
+1. [주요 기능](#주요-기능)
+1. [소개 영상](#소개-영상)
+1. [팀원 소개](#팀원-소개)
+1. [기술 스택](#기술-스택)
+    1. [Frontend](#frontend)
+    1. [Backend](#backend)
+    1. [AI](#ai)
+    1. [Infra](#infra)
+1. [사용법](#사용법)
+1. [폴더 구조](#폴더-구조)
+1. [GitHub](#github)
+
 ## 주요 기능
 
 - 보도 장애물 탐지
@@ -37,6 +51,21 @@ feature_row:
 - TTS 기반 음성 안내
 - 진동 기반 위험 피드백
 - 목적지 기반 보행 경로 안내
+
+## 소개 영상
+
+<div class="video-container">
+  <iframe
+  src="https://www.youtube.com/embed/IeTItnKXbmg?si=WnZsw3naPx6TtL2u"
+  title="YouTube video player"
+  frameborder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+  referrerpolicy="strict-origin-when-cross-origin"
+  allowfullscreen>
+  </iframe>
+</div>
+
+## 팀원 소개
 
 ## 기술 스택
 
@@ -67,6 +96,10 @@ feature_row:
 - AWS EC2
 - Docker
 - Nginx
+
+## 사용법
+
+## 폴더 구조
 
 ## GitHub
 
