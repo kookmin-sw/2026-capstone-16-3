@@ -4,7 +4,7 @@ layout: splash
 permalink: /
 
 header:
-  overlay_image: /assets/iamges/demo.png
+  overlay_image: /assets/images/demo.png
   # overlay_color: "#000"
   overlay_filter: "0.55"
   caption: "AI Safe Walking Assistant"
