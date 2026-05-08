@@ -117,6 +117,7 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
   void _decreaseSpeed() {
     final next = (_ttsSpeed - _ttsStep).clamp(_ttsMin, _ttsMax);
     setState(() => _ttsSpeed = next);
+    VibrationService().vibrate(VibrationEffect.buttonTap);
     TtsService().setSpeechRate(next);
     TtsService().speak('${_speedLabel(next)}으로 변경됐습니다.', interrupt: true);
     widget.onGuidanceSpeedChanged?.call(next);
@@ -125,6 +126,7 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
   void _increaseSpeed() {
     final next = (_ttsSpeed + _ttsStep).clamp(_ttsMin, _ttsMax);
     setState(() => _ttsSpeed = next);
+    VibrationService().vibrate(VibrationEffect.buttonTap);
     TtsService().setSpeechRate(next);
     TtsService().speak('${_speedLabel(next)}으로 변경됐습니다.', interrupt: true);
     widget.onGuidanceSpeedChanged?.call(next);
