@@ -4,7 +4,8 @@ layout: splash
 permalink: /
 
 header:
-  overlay_color: "#000"
+  overlay_image: /assets/iamges/demo.png
+  # overlay_color: "#000"
   overlay_filter: "0.55"
   caption: "AI Safe Walking Assistant"
 
@@ -38,6 +39,8 @@ feature_row:
 - 목적지 기반 보행 경로 안내
 
 ## 기술 스택
+
+![Tech Stack](./assets/images/architecture.png)
 
 ### Frontend
 
