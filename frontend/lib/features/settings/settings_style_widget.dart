@@ -183,13 +183,12 @@ class _SliderRowState extends State<_SliderRow> {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: '${widget.label} $_displayValue. ${widget.description}',
-      excludeSemantics: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 레이블·현재값은 시각 전용 — 슬라이더가 포커스될 때 읽어줌
+        ExcludeSemantics(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
@@ -207,28 +206,46 @@ class _SliderRowState extends State<_SliderRow> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 13,
-              trackShape: _GradientTrackShape(),
-              thumbShape: const _RoundedRectThumbShape(),
-              overlayShape: SliderComponentShape.noOverlay,
-              inactiveTrackColor: ColorCollection.point.withValues(alpha: 0.15),
-              tickMarkShape: widget.tickLabels != null
-                  ? null
-                  : SliderTickMarkShape.noTickMark,
-            ),
-            child: Slider(
-              value: widget.value,
-              onChanged: _handleChanged,
-              onChangeEnd: widget.onChangeEnd,
-              divisions: widget.divisions,
-            ),
+        ),
+        const SizedBox(height: 14),
+        // MergeSemantics: 슬라이더의 value/action + label/설명을 하나의 노드로 병합
+        MergeSemantics(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Semantics(
+                label: '${widget.label}. ${widget.description}',
+              ),
+              SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 13,
+                  trackShape: _GradientTrackShape(),
+                  thumbShape: const _RoundedRectThumbShape(),
+                  overlayShape: SliderComponentShape.noOverlay,
+                  inactiveTrackColor:
+                      ColorCollection.point.withValues(alpha: 0.15),
+                  tickMarkShape: widget.tickLabels != null
+                      ? null
+                      : SliderTickMarkShape.noTickMark,
+                ),
+                child: Slider(
+                  value: widget.value,
+                  onChanged: _handleChanged,
+                  onChangeEnd: widget.onChangeEnd,
+                  divisions: widget.divisions,
+                  semanticFormatterCallback: (v) =>
+                      widget.valueFormatter != null
+                          ? widget.valueFormatter!(v)
+                          : '${(v * 100).round()}%',
+                ),
+              ),
+            ],
           ),
-          if (widget.tickLabels != null) ...[
-            const SizedBox(height: 5),
-            Padding(
+        ),
+        if (widget.tickLabels != null) ...[
+          const SizedBox(height: 5),
+          ExcludeSemantics(
+            child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -246,10 +263,12 @@ class _SliderRowState extends State<_SliderRow> {
                     .toList(),
               ),
             ),
-            const SizedBox(height: 8),
-          ],
+          ),
           const SizedBox(height: 8),
-          Text(
+        ],
+        const SizedBox(height: 8),
+        ExcludeSemantics(
+          child: Text(
             widget.description,
             style: AppTextStyles.labelRegular.copyWith(
               color: ColorCollection.point,
@@ -257,8 +276,8 @@ class _SliderRowState extends State<_SliderRow> {
               fontSize: 16,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

@@ -16,6 +16,7 @@ import 'package:safepath/model/detection_event.dart';
 import 'package:safepath/service/camera_service.dart';
 import 'package:safepath/service/detection_ws_service.dart';
 import 'package:safepath/service/navigation_service.dart';
+import 'package:safepath/service/navigation_tts_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/tts_service.dart';
 import 'package:safepath/service/vibration_service.dart';
@@ -44,7 +45,9 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   String _endName = '';
 
   static const double _arrivalThresholdMeters = 10;
+  static const double _passThroughOffsetMeters = 8;
   bool _hasBeenOutsideThreshold = false;
+  double _minDistanceToStep = double.infinity;
   double? _debugDistance;
   bool _hasArrived = false;
   bool _showStartOverview = false;
@@ -61,6 +64,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   // 장애물 탐지 (카메라 + WS)
   StreamSubscription<DetectionEvent>? _wsSub;
   final List<DetectionEvent> _obstacles = [];
+  RouteStatus _routeStatus = RouteStatus.safe;
 
   @override
   void initState() {
@@ -105,6 +109,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     setState(() {
       _obstacles.insert(0, event);
       if (_obstacles.length > 3) _obstacles.removeLast();
+      _routeStatus = _computeRouteStatus();
     });
 
     VibrationService().vibrate(switch (event.alertLevel) {
@@ -117,8 +122,15 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       TtsService().speak(
         event.guideText,
         interrupt: event.alertLevel == 'high',
+        channel: TtsChannel.detection,
       );
     }
+  }
+
+  RouteStatus _computeRouteStatus() {
+    if (_obstacles.any((e) => e.alertLevel == 'high')) return RouteStatus.danger;
+    if (_obstacles.any((e) => e.alertLevel == 'medium')) return RouteStatus.warning;
+    return RouteStatus.safe;
   }
 
   String _obstacleText(DetectionEvent event) {
@@ -211,36 +223,68 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     );
 
     setState(() => _debugDistance = distance);
+    final direction = _turnTypeToDirection(step.turnType);
+
     if (!_showStartOverview &&
         !_hasBeenOutsideThreshold &&
         !_hasShownStartOverview) {
       _hasShownStartOverview = true;
       setState(() => _showStartOverview = true);
+      if (_route != null) {
+        NavigationTtsService().speakStartOverview(
+          startDirection: _startDirection,
+          totalTime: (_route!.totalTime / 60).ceil(),
+          firstStepDistance: distance.round(),
+          firstStepDirection: direction,
+          firstStepInstruction: step.description ?? '',
+        );
+        // overview 종료 후 step[0] 서버 안내문 자동 재생
+        NavigationTtsService().speakAfterOverview(step.description ?? '');
+      }
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted) setState(() => _showStartOverview = false);
       });
     }
     debugPrint(
       '📍 [Nav] step $_currentStepIndex/${_pointSteps.length - 1} | '
-      '남은 거리: ${distance.toStringAsFixed(1)}m | '
-      '${_hasBeenOutsideThreshold ? "진행 중" : "대기 중"} | '
-      '${_pointSteps[_currentStepIndex].description}',
+      '거리: ${distance.toStringAsFixed(1)}m | '
+      '최근접: ${_minDistanceToStep == double.infinity ? "-" : _minDistanceToStep.toStringAsFixed(1)}m | '
+      'pass-through: ${_minDistanceToStep < _arrivalThresholdMeters ? "${(distance - _minDistanceToStep).toStringAsFixed(1)}/${_passThroughOffsetMeters}m" : "대기"} | '
+      '${_hasBeenOutsideThreshold ? "진행 중" : "대기 중"}',
     );
 
-    if (distance >= _arrivalThresholdMeters) {
-      _hasBeenOutsideThreshold = true;
-    } else if (_hasBeenOutsideThreshold) {
+    if (distance < _minDistanceToStep) _minDistanceToStep = distance;
+
+    // pass-through 완수: 10m 이내 진입 후 최근접 지점에서 8m 이상 멀어지면 완수
+    // (distance >= 10m 분기보다 먼저 체크해야 함 — minDist + 8m >= 10m 인 경우를 커버)
+    if (_hasBeenOutsideThreshold &&
+        _minDistanceToStep < _arrivalThresholdMeters &&
+        distance > _minDistanceToStep + _passThroughOffsetMeters) {
       setState(() {
         _currentStepIndex++;
         _hasBeenOutsideThreshold = false;
+        _minDistanceToStep = double.infinity;
         _debugDistance = null;
       });
+      _speakNextStepOrDestination();
+      _checkDeviation(position);
+      return;
+    }
+
+    if (distance >= _arrivalThresholdMeters) {
+      _hasBeenOutsideThreshold = true;
+      NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
+    } else if (_hasBeenOutsideThreshold) {
+      // pass-through zone — 아직 완수 조건 미충족, TTS 안내 유지
+      NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
     } else {
-      // 처음부터 threshold 이내 → 이미 지난 step으로 간주하고 skip
+      // 처음부터 10m 이내 → 이미 지난 step으로 간주하고 skip (TTS 없음)
       setState(() {
         _currentStepIndex++;
+        _minDistanceToStep = double.infinity;
         _debugDistance = null;
       });
+      _speakNextStepOrDestination();
     }
 
     _checkDeviation(position);
@@ -265,6 +309,24 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
 
     if (distance < _arrivalThresholdMeters) {
       setState(() => _hasArrived = true);
+      NavigationTtsService().speakArrival();
+    }
+  }
+
+  void _speakNextStepOrDestination() {
+    if (_currentStepIndex < _pointSteps.length) {
+      final next = _pointSteps[_currentStepIndex];
+      NavigationTtsService().speakStep(
+        _turnTypeToDirection(next.turnType),
+        next.description ?? '',
+      );
+    } else {
+      // 모든 step 완료 → 목적지 직진 안내
+      NavigationTtsService().reset();
+      final msg = _destinationDirection != null
+          ? '$_destinationDirection 방향으로 직진하세요'
+          : '목적지 방향으로 직진하세요';
+      TtsService().speak(msg, interrupt: true, channel: TtsChannel.navigation);
     }
   }
 
@@ -322,11 +384,20 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         _route = result;
         _currentStepIndex = 0;
         _hasBeenOutsideThreshold = false;
+        _minDistanceToStep = double.infinity;
         _debugDistance = null;
         _hasArrived = false;
         _isRecalculating = false;
       });
       _loadRoute(result);
+      // 재탐색 후 overview 카드 없이 새 경로 첫 step 바로 안내
+      if (_pointSteps.isNotEmpty) {
+        final first = _pointSteps[0];
+        NavigationTtsService().speakStep(
+          _turnTypeToDirection(first.turnType),
+          first.description ?? '',
+        );
+      }
       debugPrint('✅ [Nav] 경로 재탐색 완료 - 새 step 수: ${_pointSteps.length}');
     } catch (e) {
       debugPrint('🔴 [Nav] 경로 재탐색 실패: $e');
@@ -336,6 +407,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
 
   @override
   void dispose() {
+    NavigationTtsService().reset();
     _positionSub?.cancel();
     _wsSub?.cancel();
     CameraService().stop();
@@ -395,8 +467,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                             time: _route != null
                                 ? (_route!.totalTime / 60).ceil()
                                 : 0,
-                            status:
-                                RouteStatus.safe, // TODO: 장애물탐지에 따른 경로 상태 반영
+                            status: _routeStatus,
                           ),
                         ),
                         Padding(
@@ -493,6 +564,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                             child: ListView.separated(
                               padding: EdgeInsets.only(
                                 left: 2,
+                                top: 2,
                                 right: 2,
                                 bottom: bottomPad,
                               ),
@@ -520,6 +592,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
               distanceToStep: _debugDistance,
               outsideThreshold: _hasBeenOutsideThreshold,
               threshold: _arrivalThresholdMeters,
+              minDistanceToStep: _minDistanceToStep,
             ),
             const CameraDebugOverlay(anchorLeft: true),
             if (_isRecalculating)

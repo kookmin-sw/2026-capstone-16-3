@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/theme/color_collection.dart';
@@ -46,6 +46,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
   bool _isLoadingMore = false;
   Timer? _debounce;
   Timer? _reverseGeocodeRetry;
+  StreamSubscription<Position>? _positionStream;
   Position? _currentPosition;
   bool isLoading = false;
   List<SavedPlace> _savedPlaces = [];
@@ -100,6 +101,19 @@ class _NavigationScreenState extends State<NavigationScreen> {
       if (!mounted) return;
       _currentPosition = position;
       await _fetchAddress(position);
+
+      // 초기 위치 획득 후 20m 이상 이동 시 위치·주소 갱신
+      _positionStream?.cancel();
+      _positionStream = Geolocator.getPositionStream(
+        locationSettings: AndroidSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 20,
+        ),
+      ).listen((pos) {
+        if (!mounted) return;
+        _currentPosition = pos;
+        _fetchAddress(pos);
+      });
     } catch (e) {
       debugPrint('🔴 위치 초기화 실패: $e');
       if (mounted) setState(() => currentLocation = '현재 위치 불러오는 중...');
@@ -107,28 +121,48 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   Future<void> _fetchAddress(Position position) async {
-    final address = await PlaceService.reverseGeocode(
+    _reverseGeocodeRetry?.cancel();
+
+    final result = await PlaceService.reverseGeocode(
       lat: position.latitude,
       lng: position.longitude,
     );
     if (!mounted) return;
-    if (address != null) {
-      _reverseGeocodeRetry?.cancel();
-      setState(() => currentLocation = address);
-    } else {
-      _reverseGeocodeRetry?.cancel();
-      _reverseGeocodeRetry = Timer.periodic(const Duration(seconds: 5), (_) async {
-        final retryAddress = await PlaceService.reverseGeocode(
-          lat: position.latitude,
-          lng: position.longitude,
-        );
-        if (!mounted) return;
-        if (retryAddress != null) {
-          _reverseGeocodeRetry?.cancel();
-          setState(() => currentLocation = retryAddress);
-        }
-      });
+
+    if (_applyGeocodeResult(result)) return;
+
+    // exactAddress 미획득 → 5초마다 재시도
+    _reverseGeocodeRetry = Timer.periodic(const Duration(seconds: 5), (_) async {
+      final retryResult = await PlaceService.reverseGeocode(
+        lat: _currentPosition?.latitude ?? position.latitude,
+        lng: _currentPosition?.longitude ?? position.longitude,
+      );
+      if (!mounted) {
+        _reverseGeocodeRetry?.cancel();
+        return;
+      }
+      if (_applyGeocodeResult(retryResult)) {
+        _reverseGeocodeRetry?.cancel();
+      }
+    });
+  }
+
+  /// 결과 적용 후 retry 종료 여부 반환
+  bool _applyGeocodeResult(ReverseGeocodeResult? result) {
+    if (result == null) return false;
+
+    if (result.source == ReverseGeocodeSource.exactAddress) {
+      setState(() => currentLocation = result.address);
+      return true;
     }
+
+    if (result.source == ReverseGeocodeSource.nearestPlace) {
+      setState(() => currentLocation = result.address);
+    }
+
+    // nearestPlace는 표시하되 exactAddress를 받을 때까지 retry 유지
+    // regionAddress → 표시 안 하고 계속 retry
+    return false;
   }
 
   /// destinationController의 listener 해제
@@ -137,6 +171,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     destinationController.dispose();
     _debounce?.cancel();
     _reverseGeocodeRetry?.cancel();
+    _positionStream?.cancel();
     super.dispose();
   }
 
@@ -189,6 +224,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     SoundEffectService().play(SoundEffect.actionStart);
     VibrationService().vibrate(VibrationEffect.actionStart);
 
+    _positionStream?.cancel();
     setState(() => isLoading = true);
 
     try {
