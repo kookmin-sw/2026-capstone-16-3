@@ -135,6 +135,7 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
     setState(() => _vibration = next);
     VibrationService().setStrength(next);
     VibrationService().vibrate(VibrationEffect.buttonTap);
+    SemanticsService.announce('$next퍼센트로 변경됐습니다.', TextDirection.ltr);
     widget.onVibrationChanged?.call(next);
   }
 
@@ -143,6 +144,7 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
     setState(() => _vibration = next);
     VibrationService().setStrength(next);
     VibrationService().vibrate(VibrationEffect.buttonTap);
+    SemanticsService.announce('$next퍼센트로 변경됐습니다.', TextDirection.ltr);
     widget.onVibrationChanged?.call(next);
   }
 }
