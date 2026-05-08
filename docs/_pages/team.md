@@ -4,6 +4,4 @@ permalink: /team/
 layout: single
 ---
 
-# Team
-
 team

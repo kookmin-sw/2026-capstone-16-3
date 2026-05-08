@@ -4,6 +4,4 @@ permalink: /api/
 layout: single
 ---
 
-# API
-
 api

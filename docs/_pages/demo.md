@@ -4,6 +4,4 @@ permalink: /demo/
 layout: single
 ---
 
-# Demo
-
 demo
