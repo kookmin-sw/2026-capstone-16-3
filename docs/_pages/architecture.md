@@ -2,6 +2,7 @@
 title: "시스템 구조"
 permalink: /architecture/
 layout: single
+classes: wide
 ---
 
 ![Tech Stack](../assets/images/architecture.png)

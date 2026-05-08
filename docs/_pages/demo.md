@@ -2,6 +2,7 @@
 title: "Demo"
 permalink: /demo/
 layout: single
+classes: wide
 ---
 
 <div class="video-container">

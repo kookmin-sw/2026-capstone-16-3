@@ -2,6 +2,7 @@
 title: "Team"
 permalink: /team/
 layout: single
+classes: wide
 ---
 
 <div class="team-grid">
@@ -41,7 +42,7 @@ layout: single
       안내 문장 생성
     </p>
   </div>
-  
+
   <div class="team-card">
     <img src="{{ '/assets/images/team/hwangyeonju.png' | relative_url }}" alt="황연주">
 
