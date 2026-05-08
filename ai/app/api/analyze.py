@@ -1,11 +1,9 @@
 from __future__ import annotations
-
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 import logging
 import time
-
 import cv2
 import numpy as np
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
