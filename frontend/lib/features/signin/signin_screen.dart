@@ -16,10 +16,6 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> with WidgetsBindingObserver {
   bool _isLoading = false;
 
-  /// SDK 호출이 완료(성공/실패)되면 false로 바뀐다.
-  /// true인 채로 앱이 foreground로 복귀하면 → 사용자가 인증 없이 돌아온 것.
-  bool _kakaoAuthPending = false;
-
   @override
   void initState() {
     super.initState();
@@ -32,29 +28,21 @@ class _SignInScreenState extends State<SignInScreen> with WidgetsBindingObserver
     super.dispose();
   }
 
-  /// 앱이 foreground로 복귀할 때 SDK가 아직 응답하지 않았으면 로딩 해제.
-  /// (KakaoTalk에서 뒤로가기로 돌아온 경우 SDK Future가 완료되지 않는 버그 대응)
+  /// 로그인 대기 중 앱으로 복귀(뒤로가기 / SDK hang / 외부 요인)하면 로딩 해제.
+  /// _kakaoAuthPending 플래그 없이 _isLoading 단독 체크:
+  ///   _isLoading이 true인 상태는 로그인 플로우 중일 때뿐이고,
+  ///   성공 후 화면 전환(pushReplacement) 시점에는 mounted가 false여서 조건 불충족.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed &&
-        _isLoading &&
-        _kakaoAuthPending &&
-        mounted) {
+    if (state == AppLifecycleState.resumed && _isLoading && mounted) {
       setState(() => _isLoading = false);
     }
   }
 
   Future<void> _onKakaoLogin() async {
-    setState(() {
-      _isLoading = true;
-      _kakaoAuthPending = true;
-    });
+    setState(() => _isLoading = true);
     try {
-      await AuthService().signInWithKakao(
-        onKakaoSdkComplete: () {
-          if (mounted) setState(() => _kakaoAuthPending = false);
-        },
-      );
+      await AuthService().signInWithKakao();
       if (!mounted) return;
 
       Navigator.pushReplacementNamed(context, AppRouter.home);

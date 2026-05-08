@@ -26,10 +26,7 @@ class AuthService {
   // ─── 카카오 로그인 ────────────────────────────────────────────────────────
 
   /// 카카오 SDK로 access token 획득 후 BE JWT 발급
-  ///
-  /// [onKakaoSdkComplete] SDK 호출 완료(성공/실패 모두) 시 호출되는 콜백.
-  /// 앱 복귀 감지와 조합해 취소 시 로딩 해제에 사용된다.
-  Future<AuthResult> signInWithKakao({VoidCallback? onKakaoSdkComplete}) async {
+  Future<AuthResult> signInWithKakao() async {
     String kakaoAccessToken;
     try {
       final kakaoTalkInstalled = await isKakaoTalkInstalled();
@@ -49,8 +46,6 @@ class AuthService {
         debugPrint('🔴 [Auth] 카카오 로그인 실패: $e');
         if (_isKakaoCancellation(e)) throw const AuthCancelledException();
         throw const AuthException('카카오 로그인 중 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.');
-      } finally {
-        onKakaoSdkComplete?.call();
       }
     } on AuthException {
       rethrow;
