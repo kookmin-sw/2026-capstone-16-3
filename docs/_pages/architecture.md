@@ -4,7 +4,7 @@ permalink: /architecture/
 layout: single
 ---
 
-![Tech Stack](./assets/images/architecture.png)
+![Tech Stack](../assets/images/architecture.png)
 
 ## 기술 스택
 
