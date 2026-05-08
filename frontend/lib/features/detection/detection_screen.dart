@@ -104,10 +104,9 @@ class _DetectionScreenState extends State<DetectionScreen> {
         // 동일 ID 갱신: 위치 유지, 데이터만 업데이트
         _obstacles[idx] = event;
       } else {
-        // 신규 장애물: 목록 맨 앞에 추가, 최대 3개 유지
+        // 신규 장애물: 목록 맨 앞에 추가
         _detectedCount++;
         _obstacles.insert(0, event);
-        if (_obstacles.length > 3) _obstacles.removeLast();
       }
     });
 
