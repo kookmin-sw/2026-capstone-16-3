@@ -255,24 +255,30 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
 
     if (distance < _minDistanceToStep) _minDistanceToStep = distance;
 
+    // pass-through 완수: 10m 이내 진입 후 최근접 지점에서 8m 이상 멀어지면 완수
+    // (distance >= 10m 분기보다 먼저 체크해야 함 — minDist + 8m >= 10m 인 경우를 커버)
+    if (_hasBeenOutsideThreshold &&
+        _minDistanceToStep < _arrivalThresholdMeters &&
+        distance > _minDistanceToStep + _passThroughOffsetMeters) {
+      setState(() {
+        _currentStepIndex++;
+        _hasBeenOutsideThreshold = false;
+        _minDistanceToStep = double.infinity;
+        _debugDistance = null;
+      });
+      _speakNextStepOrDestination();
+      _checkDeviation(position);
+      return;
+    }
+
     if (distance >= _arrivalThresholdMeters) {
       _hasBeenOutsideThreshold = true;
       NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
     } else if (_hasBeenOutsideThreshold) {
-      // pass-through zone — 8m 안내 포함
+      // pass-through zone — 아직 완수 조건 미충족, TTS 안내 유지
       NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
-      // 최근접 거리에서 _passThroughOffsetMeters 이상 멀어졌을 때 완수
-      if (distance > _minDistanceToStep + _passThroughOffsetMeters) {
-        setState(() {
-          _currentStepIndex++;
-          _hasBeenOutsideThreshold = false;
-          _minDistanceToStep = double.infinity;
-          _debugDistance = null;
-        });
-        _speakNextStepOrDestination();
-      }
     } else {
-      // 처음부터 threshold 이내 → 이미 지난 step으로 간주하고 skip (TTS 없음)
+      // 처음부터 10m 이내 → 이미 지난 step으로 간주하고 skip (TTS 없음)
       setState(() {
         _currentStepIndex++;
         _minDistanceToStep = double.infinity;
