@@ -2,6 +2,10 @@ package com.example.capstone.domain.guide.service;
 
 import com.example.capstone.domain.guide.exception.GuideErrorCode;
 import com.example.capstone.domain.guide.exception.GuideException;
+import com.example.capstone.domain.user.entity.UserSetting;
+import com.example.capstone.domain.user.exception.UserErrorCode;
+import com.example.capstone.domain.user.exception.UserException;
+import com.example.capstone.domain.user.repository.UserSettingRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.ByteArrayResource;
@@ -23,9 +27,14 @@ import java.util.Objects;
 public class GuideService {
 
     private final WebClient fastApiWebClient;
+    private final UserSettingRepository userSettingRepository;
 
-    public GuideService(@Qualifier("fastApiWebClient") WebClient fastApiWebClient) {
+    public GuideService(
+            @Qualifier("fastApiWebClient") WebClient fastApiWebClient,
+            UserSettingRepository userSettingRepository
+    ) {
         this.fastApiWebClient = fastApiWebClient;
+        this.userSettingRepository = userSettingRepository;
     }
 
     public void sendFrame(
@@ -36,6 +45,9 @@ public class GuideService {
         validateImage(image);
         validateUserId(userId);
         validateCapturedAt(capturedAt);
+
+        UserSetting userSetting = userSettingRepository.findByUserId(userId)
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_SETTING_NOT_FOUND));
 
         try {
             MultipartBodyBuilder builder = new MultipartBodyBuilder();
@@ -53,6 +65,7 @@ public class GuideService {
 
             builder.part("user_id", userId.toString());
             builder.part("captured_at", capturedAt);
+            builder.part("sentence_length", userSetting.getSentenceLength());
 
             fastApiWebClient.post()
                     .uri("/api/analyze")

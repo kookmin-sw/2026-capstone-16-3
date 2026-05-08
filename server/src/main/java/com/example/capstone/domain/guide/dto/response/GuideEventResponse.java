@@ -6,6 +6,7 @@ public record GuideEventResponse(
         String primaryObjectClass,
         String clockDirection,
         String distance,
-        String alertLevel
+        String alertLevel,
+        String primaryObjectId
 ) {
 }
