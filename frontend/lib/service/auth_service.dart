@@ -48,7 +48,7 @@ class AuthService {
       } catch (e) {
         debugPrint('🔴 [Auth] 카카오 로그인 실패: $e');
         if (_isKakaoCancellation(e)) throw const AuthCancelledException();
-        throw AuthException('카카오 로그인 실패: $e');
+        throw const AuthException('카카오 로그인 중 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.');
       } finally {
         onKakaoSdkComplete?.call();
       }
@@ -56,7 +56,7 @@ class AuthService {
       rethrow;
     } catch (e) {
       debugPrint('🔴 [Auth] 예상치 못한 오류: $e');
-      throw AuthException('카카오 로그인 실패: $e');
+      throw const AuthException('카카오 로그인 중 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.');
     }
 
     return await _fetchTokenFromServer(kakaoAccessToken);
@@ -90,7 +90,8 @@ class AuthService {
       return AuthResult(isNewUser: isNewUser);
     }
 
-    throw AuthException('서버 인증 실패: ${response.statusCode}');
+    debugPrint('🔴 [Auth] 서버 인증 실패: ${response.statusCode} / ${response.body}');
+    throw const AuthException('서버 연결에 실패했습니다.\n잠시 후 다시 시도해주세요.');
   }
 
   // ─── 토큰 재발급 ──────────────────────────────────────────────────────────
