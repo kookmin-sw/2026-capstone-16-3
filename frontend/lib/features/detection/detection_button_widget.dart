@@ -78,7 +78,7 @@ class _DetectionButtonState extends State<DetectionButton>
                   height: glassSize,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: ColorCollection.main.withValues(alpha: 0.06),
+                    color: ColorCollection.main.withValues(alpha: 0.05),
                   ),
                 ),
                 // 펄스 링 1
@@ -88,10 +88,10 @@ class _DetectionButtonState extends State<DetectionButton>
                   ringBaseSize: glassSize,
                   color: ColorCollection.main,
                 ),
-                // 펄스 링 2 (0.4s / 2.0s = 0.2 fraction 딜레이)
+                // 펄스 링 2 (0.8s / 2.0s = 0.4 fraction 딜레이)
                 _PulseRing(
                   controller: _pulseController,
-                  delayFraction: 0.2,
+                  delayFraction: 0.4,
                   ringBaseSize: glassSize,
                   color: ColorCollection.main,
                 ),
@@ -108,7 +108,7 @@ class _DetectionButtonState extends State<DetectionButton>
                           BoxShadow(
                             color: ColorCollection.main.withValues(alpha: 0.4),
                             blurRadius: 15,
-                            spreadRadius: 2,
+                            spreadRadius: 4,
                           ),
                         ]
                       : null,
