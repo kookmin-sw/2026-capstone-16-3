@@ -36,10 +36,6 @@ feature_row:
 1. [소개 영상](#소개-영상)
 1. [팀원 소개](#팀원-소개)
 1. [기술 스택](#기술-스택)
-    1. [Frontend](#frontend)
-    1. [Backend](#backend)
-    1. [AI](#ai)
-    1. [Infra](#infra)
 1. [사용법](#사용법)
 1. [폴더 구조](#폴더-구조)
 1. [GitHub](#github)
@@ -56,52 +52,57 @@ feature_row:
 
 ## 소개 영상
 
-<div class="video-container">
-  <iframe
-  src="https://www.youtube.com/embed/IeTItnKXbmg?si=WnZsw3naPx6TtL2u"
-  title="YouTube video player"
-  frameborder="0"
-  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-  referrerpolicy="strict-origin-when-cross-origin"
-  allowfullscreen>
-  </iframe>
-</div>
+{% include section.demo.html %}
 
 ## 팀원 소개
 
+{% include section/team.html %}
+
 ## 기술 스택
 
-![Tech Stack](./assets/images/architecture.png)
-
-### Frontend
-
-- Flutter
-- Dart
-
-### Backend
-
-- Spring Boot
-- Java 21
-- MySQL
-- JWT
-- WebSocket
-
-### AI
-
-- YOLO
-- Segmentation
-- FastAPI
-- PyTorch
-
-### Infra
-
-- AWS EC2
-- Docker
-- Nginx
+{% include section.architecture.html %}
 
 ## 사용법
 
+{% include section.guide.html %}
+
 ## 폴더 구조
+
+```md
+2026-capstone-16/
+├── frontend/                
+│   ├── android/
+│   ├── ios/
+│   ├── assets/
+│   ├── lib/
+│   ├── pubspec.lock
+│   └── pubspec.yaml
+│
+├── server/                 
+│   ├── src/
+│   ├── gradle/
+│   ├── build.gradle
+│   ├── settings.gradle
+│   ├── gradlew
+│   ├── gradlew.bat
+│   └── Dockerfile
+│
+├── ai/                   
+│   ├── app/
+│   ├── models/
+│   └── requirements.txt
+│
+├── docs/                    
+│   ├── _pages/
+│   ├── _layouts/
+│   ├── _includes/
+│   ├── _sass/
+│   ├── _data/
+│   ├── assets/
+│   └── index.md
+│
+└── README.md
+```
 
 ## GitHub
 

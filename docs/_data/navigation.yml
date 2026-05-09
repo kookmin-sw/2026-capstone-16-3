@@ -4,9 +4,9 @@ main:
     url: /
   - title: "시스템 구조"
     url: /architecture/
-  - title: "API"
-    url: /api/
-  - title: "Demo"
-    url: /demo/
   - title: "Team"
     url: /team/
+  - title: "Demo"
+    url: /demo/
+  - title: "사용법"
+    url: /guide/
