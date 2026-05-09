@@ -58,6 +58,10 @@ html {
   }
 }
 
+section[id] {
+  scroll-margin-top: 120px;
+}
+
 /* gilbut-card */
 .gilbut-card {
   padding: 1.8rem;
