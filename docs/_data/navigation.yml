@@ -9,11 +9,8 @@ main:
   - title: "소개 영상"
     url: "#demo"
 
-  - title: "시스템 구조"
+  - title: "시스템 아키텍처"
     url: "#architecture"
-
-  - title: "기술 스택"
-    url: "#tech-stack"
 
   - title: "사용법"
     url: "#guide"
