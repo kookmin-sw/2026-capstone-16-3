@@ -15,6 +15,7 @@ import 'package:safepath/features/navigation/navigation_voiceguide_card.dart';
 import 'package:safepath/model/detection_event.dart';
 import 'package:safepath/service/camera_service.dart';
 import 'package:safepath/service/detection_ws_service.dart';
+import 'package:safepath/service/crosswalk_service.dart';
 import 'package:safepath/service/navigation_service.dart';
 import 'package:safepath/service/navigation_tts_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
@@ -60,6 +61,10 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   static const int _deviationCountThreshold = 3;
   int _deviationCount = 0;
   bool _isRecalculating = false;
+
+  // 횡단보도 음성신호기 캐시 (step index → CrosswalkInfo?)
+  Map<int, CrosswalkInfo?> _crosswalkCache = {};
+  int _prefetchGeneration = 0;
 
   // 장애물 탐지 (카메라 + WS)
   StreamSubscription<DetectionEvent>? _wsSub;
@@ -189,6 +194,29 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     debugPrint(
       '  [목적지] (${_destinationStep?.latitude}, ${_destinationStep?.longitude})',
     );
+
+    _prefetchCrosswalks();
+  }
+
+  Future<void> _prefetchCrosswalks() async {
+    final myGeneration = ++_prefetchGeneration;
+    for (int i = 0; i < _pointSteps.length; i++) {
+      if (!mounted || _prefetchGeneration != myGeneration) return;
+      final step = _pointSteps[i];
+      if (step.facilityType == 15 &&
+          step.latitude != null &&
+          step.longitude != null) {
+        final info = await CrosswalkService.getNearby(
+          lat: step.latitude!,
+          lng: step.longitude!,
+        );
+        if (!mounted || _prefetchGeneration != myGeneration) return;
+        _crosswalkCache[i] = info;
+        debugPrint(
+          '🚦 [Crosswalk] step[$i] → acousticSignal=${info?.acousticSignalInstalled}, summary=${info?.guidanceSummary}',
+        );
+      }
+    }
   }
 
   void _startLocationTracking() {
@@ -327,9 +355,15 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   void _speakNextStepOrDestination() {
     if (_currentStepIndex < _pointSteps.length) {
       final next = _pointSteps[_currentStepIndex];
+      final crosswalk = _crosswalkCache[_currentStepIndex];
+      final acousticSuffix =
+          (crosswalk?.acousticSignalInstalled == true &&
+                  crosswalk!.guidanceSummary.isNotEmpty)
+              ? ' ${crosswalk.guidanceSummary}'
+              : '';
       NavigationTtsService().speakStep(
         _turnTypeToDirection(next.turnType),
-        next.description ?? '',
+        '${next.description ?? ''}$acousticSuffix'.trim(),
       );
     } else {
       // 모든 step 완료 → 목적지 직진 안내
@@ -399,6 +433,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         _debugDistance = null;
         _hasArrived = false;
         _isRecalculating = false;
+        _crosswalkCache = {};
       });
       _loadRoute(result);
       // 재탐색 후 overview 카드 없이 새 경로 첫 step 바로 안내
