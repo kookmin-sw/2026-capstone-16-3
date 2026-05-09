@@ -6,7 +6,7 @@ main:
     url: /demo/
   - title: "사용법"
     url: /guide/
-  - title: "시스템 구조"
+  - title: "시스템 아키텍처"
     url: /architecture/
   - title: "폴더 구조"
     url: /folder-structure/

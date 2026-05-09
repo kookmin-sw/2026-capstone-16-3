@@ -35,7 +35,7 @@ excerpt: >
 
 {% include sections/demo.html %}
 
-## 기술 스택
+## 시스템 아키텍처
 
 {% include sections/architecture.html %}
 
