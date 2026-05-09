@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
@@ -6,7 +7,9 @@ import 'package:safepath/service/tts_service.dart';
 import 'package:safepath/service/user_settings_service.dart';
 import 'package:safepath/service/vibration_service.dart';
 
-/// 안내 스타일 개인화 섹션 (슬라이더)
+/// 안내 스타일 개인화 섹션 (접근성 개선 버전)
+///
+/// 읽기 순서: 제목(header) → 현재 설정값 → 조작 버튼 → 설명(시각 전용)
 class SettingsStyleWidget extends StatefulWidget {
   final UserSettings initialSettings;
   final void Function(MessageLength)? onSentenceLengthChanged;
@@ -26,31 +29,29 @@ class SettingsStyleWidget extends StatefulWidget {
 }
 
 class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
-  // TTS 속도: 0.5배속~5.0배속 → 슬라이더 0.0~1.0으로 변환
   static const double _ttsMin = 0.5;
   static const double _ttsMax = 5.0;
+  static const double _ttsStep = 0.5;
 
-  // 진동 강도: 0~100
-  static const int _vibrationMax = 100;
+  static const int _vibMax = 100;
+  static const int _vibStep = 10;
 
   late MessageLength _messageLength;
-  late double _vibrationStrength; // 슬라이더 0.0~1.0
-  late double _ttsSpeed; // 슬라이더 0.0~1.0
+  late double _ttsSpeed; // 0.5 ~ 5.0, step 0.5
+  late int _vibration; // 0 ~ 100, step 10
 
   @override
   void initState() {
     super.initState();
     _messageLength = widget.initialSettings.sentenceLength;
-    _vibrationStrength =
-        (widget.initialSettings.vibrationStrength / _vibrationMax).clamp(
-          0.0,
-          1.0,
-        );
-    final speed = widget.initialSettings.guidanceSpeed;
-    _ttsSpeed = ((speed - _ttsMin) / (_ttsMax - _ttsMin)).clamp(0.0, 1.0);
-  }
 
-  double get _ttsSpeedValue => _ttsMin + _ttsSpeed * (_ttsMax - _ttsMin);
+    final rawSpeed = widget.initialSettings.guidanceSpeed.clamp(_ttsMin, _ttsMax);
+    _ttsSpeed = (((rawSpeed - _ttsMin) / _ttsStep).round() * _ttsStep + _ttsMin)
+        .clamp(_ttsMin, _ttsMax);
+
+    final rawVib = widget.initialSettings.vibrationStrength.clamp(0, _vibMax);
+    _vibration = ((rawVib / _vibStep).round() * _vibStep).clamp(0, _vibMax);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,211 +66,187 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SliderRow(
+          _SegmentedRow<MessageLength>(
             label: '안내 문장 길이',
-            value: _messageLength.sliderValue,
             description: '안내 메시지의 상세도를 조절합니다.',
-            divisions: 2,
-            tickLabels: const ['간결', '보통', '상세'],
-            valueFormatter: (_) => _messageLength.displayLabel,
-            onChanged: (v) =>
-                setState(() => _messageLength = MessageLength.fromSlider(v)),
-            onChangeEnd: (_) =>
-                widget.onSentenceLengthChanged?.call(_messageLength),
+            options: MessageLength.values,
+            selected: _messageLength,
+            labelOf: (m) => m.displayLabel,
+            onSelected: (m) {
+              VibrationService().vibrate(VibrationEffect.buttonTap);
+              setState(() => _messageLength = m);
+              widget.onSentenceLengthChanged?.call(m);
+            },
           ),
-          const SizedBox(height: 4),
-          Divider(
-            color: ColorCollection.point.withValues(alpha: 0.2),
-            thickness: 1,
-            height: 28,
-          ),
-          _SliderRow(
+          _divider(),
+          _StepperRow(
             label: '안내 문장 빠르기',
-            value: _ttsSpeed,
+            buttonLabel: '빠르기',
             description: '안내 메시지의 재생 속도를 조절합니다.',
-            // 0.5~5.0배속, 0.1 단위 스냅: (5.0 - 0.5) / 0.1 = 45 divisions
-            divisions: 45,
-            valueFormatter: (v) {
-              final speed = _ttsMin + v * (_ttsMax - _ttsMin);
-              return '${speed.toStringAsFixed(1)}배속';
-            },
-            onChanged: (v) {
-              setState(() => _ttsSpeed = v);
-              TtsService().setSpeechRate(_ttsSpeedValue);
-            },
-            onChangeEnd: (_) {
-              TtsService().speak(
-                '안내 음성 속도 조절 중입니다. 이 속도로 안내를 받게 됩니다.',
-                interrupt: true,
-              );
-              widget.onGuidanceSpeedChanged?.call(_ttsSpeedValue);
-            },
+            displayValue: '${_ttsSpeed.toStringAsFixed(1)}배속',
+            canDecrease: _ttsSpeed > _ttsMin,
+            canIncrease: _ttsSpeed < _ttsMax,
+            onDecrease: _decreaseSpeed,
+            onIncrease: _increaseSpeed,
           ),
-          const SizedBox(height: 4),
-          Divider(
-            color: ColorCollection.point.withValues(alpha: 0.2),
-            thickness: 1,
-            height: 28,
-          ),
-          _SliderRow(
+          _divider(),
+          _StepperRow(
             label: '진동 강도',
-            value: _vibrationStrength,
+            buttonLabel: '강도',
             description: '경고 진동의 강도를 조절합니다.',
-            divisions: 10,
-            onChanged: (v) {
-              setState(() => _vibrationStrength = v);
-              VibrationService().setStrength((v * _vibrationMax).round());
-            },
-            onChangeEnd: (v) =>
-                widget.onVibrationChanged?.call((v * _vibrationMax).round()),
+            displayValue: '$_vibration%',
+            canDecrease: _vibration > 0,
+            canIncrease: _vibration < _vibMax,
+            onDecrease: _decreaseVibration,
+            onIncrease: _increaseVibration,
           ),
         ],
       ),
     );
   }
+
+  Widget _divider() => Divider(
+    color: ColorCollection.point.withValues(alpha: 0.2),
+    thickness: 1,
+    height: 28,
+  );
+
+  String _speedLabel(double speed) =>
+      '${speed.toStringAsFixed(1).replaceAll('.', '점')}배속';
+
+  void _decreaseSpeed() {
+    final next = (_ttsSpeed - _ttsStep).clamp(_ttsMin, _ttsMax);
+    setState(() => _ttsSpeed = next);
+    VibrationService().vibrate(VibrationEffect.buttonTap);
+    TtsService().setSpeechRate(next);
+    TtsService().speak('${_speedLabel(next)}으로 변경됐습니다.', interrupt: true);
+    widget.onGuidanceSpeedChanged?.call(next);
+  }
+
+  void _increaseSpeed() {
+    final next = (_ttsSpeed + _ttsStep).clamp(_ttsMin, _ttsMax);
+    setState(() => _ttsSpeed = next);
+    VibrationService().vibrate(VibrationEffect.buttonTap);
+    TtsService().setSpeechRate(next);
+    TtsService().speak('${_speedLabel(next)}으로 변경됐습니다.', interrupt: true);
+    widget.onGuidanceSpeedChanged?.call(next);
+  }
+
+  void _decreaseVibration() {
+    final next = (_vibration - _vibStep).clamp(0, _vibMax);
+    setState(() => _vibration = next);
+    VibrationService().setStrength(next);
+    VibrationService().vibrate(VibrationEffect.buttonTap);
+    SemanticsService.announce('$next퍼센트로 변경됐습니다.', TextDirection.ltr);
+    widget.onVibrationChanged?.call(next);
+  }
+
+  void _increaseVibration() {
+    final next = (_vibration + _vibStep).clamp(0, _vibMax);
+    setState(() => _vibration = next);
+    VibrationService().setStrength(next);
+    VibrationService().vibrate(VibrationEffect.buttonTap);
+    SemanticsService.announce('$next퍼센트로 변경됐습니다.', TextDirection.ltr);
+    widget.onVibrationChanged?.call(next);
+  }
 }
 
-class _SliderRow extends StatefulWidget {
-  final String label;
-  final double value;
-  final String description;
-  final ValueChanged<double> onChanged;
-  final ValueChanged<double>? onChangeEnd;
-  final String Function(double)? valueFormatter;
-  final int? divisions;
-  final List<String>? tickLabels;
+// ─── 세그먼트 선택 버튼 (안내 문장 길이) ──────────────────────────────────────────
+//
+// 읽기 순서: "제목" → "현재 설정: 간결" → "간결, 선택됨, 버튼" … → (설명, 시각 전용)
 
-  const _SliderRow({
+class _SegmentedRow<T> extends StatelessWidget {
+  final String label;
+  final String description;
+  final List<T> options;
+  final T selected;
+  final String Function(T) labelOf;
+  final void Function(T) onSelected;
+
+  const _SegmentedRow({
     required this.label,
-    required this.value,
     required this.description,
-    required this.onChanged,
-    this.onChangeEnd,
-    this.valueFormatter,
-    this.divisions,
-    this.tickLabels,
+    required this.options,
+    required this.selected,
+    required this.labelOf,
+    required this.onSelected,
   });
 
   @override
-  State<_SliderRow> createState() => _SliderRowState();
-}
-
-class _SliderRowState extends State<_SliderRow> {
-  late int _lastStep;
-
-  @override
-  void initState() {
-    super.initState();
-    _lastStep = _toStep(widget.value);
-  }
-
-  int _toStep(double v) =>
-      widget.divisions != null ? (v * widget.divisions!).round() : -1;
-
-  String get _displayValue => widget.valueFormatter != null
-      ? widget.valueFormatter!(widget.value)
-      : '${(widget.value * 100).round()}%';
-
-  void _handleChanged(double v) {
-    if (widget.divisions != null) {
-      final step = _toStep(v);
-      if (step != _lastStep) {
-        _lastStep = step;
-        VibrationService().vibrate(VibrationEffect.buttonTap);
-      }
-    }
-    widget.onChanged(v);
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final currentLabel = labelOf(selected);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 레이블·현재값은 시각 전용 — 슬라이더가 포커스될 때 읽어줌
-        ExcludeSemantics(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                widget.label,
-                style: AppTextStyles.labelBold.copyWith(
-                  color: ColorCollection.point,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              Text(
-                _displayValue,
-                style: AppTextStyles.labelBold.copyWith(
-                  color: ColorCollection.main,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 14),
-        // MergeSemantics: 슬라이더의 value/action + label/설명을 하나의 노드로 병합
-        MergeSemantics(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Semantics(
-                label: '${widget.label}. ${widget.description}',
-              ),
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  trackHeight: 13,
-                  trackShape: _GradientTrackShape(),
-                  thumbShape: const _RoundedRectThumbShape(),
-                  overlayShape: SliderComponentShape.noOverlay,
-                  inactiveTrackColor:
-                      ColorCollection.point.withValues(alpha: 0.15),
-                  tickMarkShape: widget.tickLabels != null
-                      ? null
-                      : SliderTickMarkShape.noTickMark,
-                ),
-                child: Slider(
-                  value: widget.value,
-                  onChanged: _handleChanged,
-                  onChangeEnd: widget.onChangeEnd,
-                  divisions: widget.divisions,
-                  semanticFormatterCallback: (v) =>
-                      widget.valueFormatter != null
-                          ? widget.valueFormatter!(v)
-                          : '${(v * 100).round()}%',
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (widget.tickLabels != null) ...[
-          const SizedBox(height: 5),
-          ExcludeSemantics(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: widget.tickLabels!
-                    .map(
-                      (t) => Text(
-                        t,
-                        style: AppTextStyles.labelRegular.copyWith(
-                          color: ColorCollection.point,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
+        // 1. 제목 + 현재값 (시각: 레이블만, TalkBack: "제목, 현재 값")
+        Semantics(
+          header: true,
+          label: '$label, 현재 $currentLabel',
+          excludeSemantics: true,
+          child: Text(
+            label,
+            style: AppTextStyles.labelBold.copyWith(
+              color: ColorCollection.point,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 8),
-        ],
+        ),
+        const SizedBox(height: 12),
+        // 3. 선택 버튼
+        Row(
+          children: options.map((option) {
+            final isSelected = option == selected;
+            final optLabel = labelOf(option);
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Semantics(
+                  label: optLabel,
+                  selected: isSelected,
+                  button: true,
+                  excludeSemantics: true,
+                  child: GestureDetector(
+                    onTap: () {
+                      onSelected(option);
+                      SemanticsService.announce(
+                        '$optLabel 선택됨',
+                        TextDirection.ltr,
+                      );
+                    },
+                    child: Container(
+                      height: 52,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? ColorCollection.main
+                            : ColorCollection.point.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isSelected
+                              ? ColorCollection.main
+                              : ColorCollection.point.withValues(alpha: 0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: Text(
+                        optLabel,
+                        style: AppTextStyles.labelBold.copyWith(
+                          color: isSelected ? Colors.white : ColorCollection.point,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
         const SizedBox(height: 8),
+        // 4. 설명 (시각 전용 — 제목만으로 충분히 유추 가능)
         ExcludeSemantics(
           child: Text(
-            widget.description,
+            description,
             style: AppTextStyles.labelRegular.copyWith(
               color: ColorCollection.point,
               fontWeight: FontWeight.w400,
@@ -282,114 +259,157 @@ class _SliderRowState extends State<_SliderRow> {
   }
 }
 
-// ─── 그라데이션 트랙 ──────────────────────────────────────────────────────────
+// ─── + / − 스테퍼 (빠르기·진동 강도) ─────────────────────────────────────────────
+//
+// 읽기 순서: "제목" → "현재 설정: N" → "줄이기 버튼" → "현재값" → "늘리기 버튼"
+//           → (설명, 시각 전용)
 
-class _GradientTrackShape extends SliderTrackShape {
-  static const _gradient = LinearGradient(
-    colors: [Color(0xFFFFB06B), Color(0xFFE67E22)],
-    stops: [0.0, 0.4],
-  );
+class _StepperRow extends StatelessWidget {
+  final String label;
+  final String buttonLabel; // 버튼 레이블 단축형 (e.g. "빠르기", "강도")
+  final String description;
+  final String displayValue;
+  final bool canDecrease;
+  final bool canIncrease;
+  final VoidCallback onDecrease;
+  final VoidCallback onIncrease;
+
+  const _StepperRow({
+    required this.label,
+    required this.buttonLabel,
+    required this.description,
+    required this.displayValue,
+    required this.canDecrease,
+    required this.canIncrease,
+    required this.onDecrease,
+    required this.onIncrease,
+  });
 
   @override
-  Rect getPreferredRect({
-    required RenderBox parentBox,
-    Offset offset = Offset.zero,
-    required SliderThemeData sliderTheme,
-    bool isEnabled = false,
-    bool isDiscrete = false,
-  }) {
-    final trackHeight = sliderTheme.trackHeight ?? 14;
-    final trackTop = offset.dy + (parentBox.size.height - trackHeight) / 2;
-    return Rect.fromLTWH(
-      offset.dx,
-      trackTop,
-      parentBox.size.width,
-      trackHeight,
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. 제목 + 현재값 (시각: 레이블만, TalkBack: "제목, 현재 값")
+        Semantics(
+          header: true,
+          label: '$label, 현재 $displayValue',
+          excludeSemantics: true,
+          child: Text(
+            label,
+            style: AppTextStyles.labelBold.copyWith(
+              color: ColorCollection.point,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // 3. 스테퍼 (− 값 +)
+        Row(
+          children: [
+            _StepButton(
+              icon: Icons.remove,
+              semanticsLabel: '$buttonLabel 감소',
+              enabled: canDecrease,
+              onTap: onDecrease,
+            ),
+            Expanded(
+              child: Semantics(
+                label: '현재 $label $displayValue',
+                child: Container(
+                  height: 52,
+                  alignment: Alignment.center,
+                  margin: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: ColorCollection.point.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: ColorCollection.main, width: 2),
+                  ),
+                  child: ExcludeSemantics(
+                    child: Text(
+                      displayValue,
+                      style: AppTextStyles.labelBold.copyWith(
+                        color: ColorCollection.main,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            _StepButton(
+              icon: Icons.add,
+              semanticsLabel: '$buttonLabel 증가',
+              enabled: canIncrease,
+              onTap: onIncrease,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        // 4. 설명 (시각 전용)
+        ExcludeSemantics(
+          child: Text(
+            description,
+            style: AppTextStyles.labelRegular.copyWith(
+              color: ColorCollection.point,
+              fontWeight: FontWeight.w400,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ],
     );
-  }
-
-  @override
-  void paint(
-    PaintingContext context,
-    Offset offset, {
-    required RenderBox parentBox,
-    required SliderThemeData sliderTheme,
-    required Animation<double> enableAnimation,
-    required Offset thumbCenter,
-    Offset? secondaryOffset,
-    bool isEnabled = false,
-    bool isDiscrete = false,
-    required TextDirection textDirection,
-  }) {
-    final canvas = context.canvas;
-    final rect = getPreferredRect(
-      parentBox: parentBox,
-      offset: offset,
-      sliderTheme: sliderTheme,
-    );
-    final radius = Radius.circular(rect.height / 2);
-
-    // 비활성 트랙 (전체 배경)
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, radius),
-      Paint()
-        ..color =
-            sliderTheme.inactiveTrackColor ??
-            ColorCollection.point.withValues(alpha: 0.15),
-    );
-
-    // 활성 트랙 (그라데이션)
-    final activeRect = Rect.fromLTRB(
-      rect.left,
-      rect.top,
-      thumbCenter.dx,
-      rect.bottom,
-    );
-    if (activeRect.width > 0) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(activeRect, radius),
-        Paint()..shader = _gradient.createShader(activeRect),
-      );
-    }
   }
 }
 
-// ─── 가로형 Thumb ─────────────────────────────────────────────────────────────
+class _StepButton extends StatelessWidget {
+  final IconData icon;
+  final String semanticsLabel;
+  final bool enabled;
+  final VoidCallback onTap;
 
-class _RoundedRectThumbShape extends SliderComponentShape {
-  const _RoundedRectThumbShape();
-
-  static const double _width = 20;
-  static const double _height = 13;
+  const _StepButton({
+    required this.icon,
+    required this.semanticsLabel,
+    required this.enabled,
+    required this.onTap,
+  });
 
   @override
-  Size getPreferredSize(bool isEnabled, bool isDiscrete) =>
-      const Size(_width, _height);
-
-  @override
-  void paint(
-    PaintingContext context,
-    Offset center, {
-    required Animation<double> activationAnimation,
-    required Animation<double> enableAnimation,
-    required bool isDiscrete,
-    required TextPainter labelPainter,
-    required RenderBox parentBox,
-    required SliderThemeData sliderTheme,
-    required TextDirection textDirection,
-    required double value,
-    required double textScaleFactor,
-    required Size sizeWithOverflow,
-  }) {
-    final canvas = context.canvas;
-    final rect = Rect.fromCenter(
-      center: center,
-      width: _width,
-      height: _height,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(rect, const Radius.circular(6)),
-      Paint()..color = ColorCollection.point,
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: semanticsLabel,
+      button: true,
+      enabled: enabled,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: enabled ? onTap : null,
+        child: Container(
+          width: 56,
+          height: 52,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: enabled
+                ? ColorCollection.main.withValues(alpha: 0.15)
+                : ColorCollection.point.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: enabled
+                  ? ColorCollection.main
+                  : ColorCollection.point.withValues(alpha: 0.2),
+              width: 2,
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: enabled
+                ? ColorCollection.main
+                : ColorCollection.point.withValues(alpha: 0.3),
+            size: 28,
+          ),
+        ),
+      ),
     );
   }
 }

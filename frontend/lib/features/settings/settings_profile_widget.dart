@@ -16,14 +16,14 @@ class SettingsProfileWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: '프로필: $name. 프로필 편집',
+      label: '프로필: $name, 프로필 편집',
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap == null
             ? null
             : () {
                 SoundEffectService().play(SoundEffect.buttonTap);
-              VibrationService().vibrate(VibrationEffect.buttonTap);
+                VibrationService().vibrate(VibrationEffect.buttonTap);
                 onTap!();
               },
         borderRadius: BorderRadius.circular(10),
