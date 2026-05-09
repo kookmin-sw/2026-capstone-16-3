@@ -46,6 +46,19 @@ class TtsService {
     _tts.setCancelHandler(() {
       _isSpeaking = false;
       debugPrint('🔊 [TTS] 음성 출력 취소');
+      // 외부 인터럽트(TalkBack 스크롤 피드백 등)로 취소된 경우
+      // 대기 중인 nav 안내가 있으면 짧은 지연 후 재시도
+      final pending = _pendingNavMessage;
+      if (pending != null) {
+        _pendingNavMessage = null;
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (!_isSpeaking && _voiceGuidanceEnabled) {
+            debugPrint('🔊 [TTS] 취소 후 대기 nav 안내 재시도: $pending');
+            _isSpeaking = true;
+            _tts.speak(pending);
+          }
+        });
+      }
     });
 
     _tts.setErrorHandler((msg) {

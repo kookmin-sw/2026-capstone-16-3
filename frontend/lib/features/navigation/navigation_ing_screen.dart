@@ -15,6 +15,7 @@ import 'package:safepath/features/navigation/navigation_voiceguide_card.dart';
 import 'package:safepath/model/detection_event.dart';
 import 'package:safepath/service/camera_service.dart';
 import 'package:safepath/service/detection_ws_service.dart';
+import 'package:safepath/service/crosswalk_service.dart';
 import 'package:safepath/service/navigation_service.dart';
 import 'package:safepath/service/navigation_tts_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
@@ -60,6 +61,10 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   static const int _deviationCountThreshold = 3;
   int _deviationCount = 0;
   bool _isRecalculating = false;
+
+  // 횡단보도 음성신호기 캐시 (step index → CrosswalkInfo?)
+  Map<int, CrosswalkInfo?> _crosswalkCache = {};
+  int _prefetchGeneration = 0;
 
   // 장애물 탐지 (카메라 + WS)
   StreamSubscription<DetectionEvent>? _wsSub;
@@ -202,6 +207,29 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     debugPrint(
       '  [목적지] (${_destinationStep?.latitude}, ${_destinationStep?.longitude})',
     );
+
+    _prefetchCrosswalks();
+  }
+
+  Future<void> _prefetchCrosswalks() async {
+    final myGeneration = ++_prefetchGeneration;
+    for (int i = 0; i < _pointSteps.length; i++) {
+      if (!mounted || _prefetchGeneration != myGeneration) return;
+      final step = _pointSteps[i];
+      if (step.facilityType == 15 &&
+          step.latitude != null &&
+          step.longitude != null) {
+        final info = await CrosswalkService.getNearby(
+          lat: step.latitude!,
+          lng: step.longitude!,
+        );
+        if (!mounted || _prefetchGeneration != myGeneration) return;
+        _crosswalkCache[i] = info;
+        debugPrint(
+          '🚦 [Crosswalk] step[$i] → acousticSignal=${info?.acousticSignalInstalled}, summary=${info?.guidanceSummary}',
+        );
+      }
+    }
   }
 
   void _startLocationTracking() {
@@ -235,7 +263,6 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       step.longitude!,
     );
 
-    setState(() => _debugDistance = distance);
     final direction = _turnTypeToDirection(step.turnType);
 
     if (!_showStartOverview &&
@@ -258,6 +285,19 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         if (mounted) setState(() => _showStartOverview = false);
       });
     }
+
+    // minDist를 먼저 업데이트해야 inPassThroughZone 판단이 정확함
+    if (distance < _minDistanceToStep) _minDistanceToStep = distance;
+
+    // 10m 이내 진입 이후 → pass-through zone
+    // 이 구간에서는 거리가 다시 증가해도 UI/TTS에 반영하지 않음
+    final inPassThroughZone =
+        _hasBeenOutsideThreshold && _minDistanceToStep < _arrivalThresholdMeters;
+
+    if (!inPassThroughZone) {
+      setState(() => _debugDistance = distance);
+    }
+
     debugPrint(
       '📍 [Nav] step $_currentStepIndex/${_pointSteps.length - 1} | '
       '거리: ${distance.toStringAsFixed(1)}m | '
@@ -266,26 +306,31 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       '${_hasBeenOutsideThreshold ? "진행 중" : "대기 중"}',
     );
 
-    if (distance < _minDistanceToStep) _minDistanceToStep = distance;
+    // pass-through 완수: 10m 이내 진입 후 최근접 지점에서 8m 이상 멀어지면 완수
+    // (distance >= 10m 분기보다 먼저 체크해야 함 — minDist + 8m >= 10m 인 경우를 커버)
+    if (inPassThroughZone &&
+        distance > _minDistanceToStep + _passThroughOffsetMeters) {
+      setState(() {
+        _currentStepIndex++;
+        _hasBeenOutsideThreshold = false;
+        _minDistanceToStep = double.infinity;
+        _debugDistance = null;
+      });
+      _speakNextStepOrDestination();
+      _checkDeviation(position);
+      return;
+    }
 
     if (distance >= _arrivalThresholdMeters) {
       _hasBeenOutsideThreshold = true;
-      NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
-    } else if (_hasBeenOutsideThreshold) {
-      // pass-through zone — 8m 안내 포함
-      NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
-      // 최근접 거리에서 _passThroughOffsetMeters 이상 멀어졌을 때 완수
-      if (distance > _minDistanceToStep + _passThroughOffsetMeters) {
-        setState(() {
-          _currentStepIndex++;
-          _hasBeenOutsideThreshold = false;
-          _minDistanceToStep = double.infinity;
-          _debugDistance = null;
-        });
-        _speakNextStepOrDestination();
+      // pass-through zone에서 거리가 다시 10m 이상으로 튀어도 TTS 차단
+      if (!inPassThroughZone) {
+        NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
       }
+    } else if (_hasBeenOutsideThreshold) {
+      // pass-through zone — 거리 증가 안내 방지를 위해 speakDistance 호출하지 않음
     } else {
-      // 처음부터 threshold 이내 → 이미 지난 step으로 간주하고 skip (TTS 없음)
+      // 처음부터 10m 이내 → 이미 지난 step으로 간주하고 skip (TTS 없음)
       setState(() {
         _currentStepIndex++;
         _minDistanceToStep = double.infinity;
@@ -323,9 +368,15 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   void _speakNextStepOrDestination() {
     if (_currentStepIndex < _pointSteps.length) {
       final next = _pointSteps[_currentStepIndex];
+      final crosswalk = _crosswalkCache[_currentStepIndex];
+      final acousticSuffix =
+          (crosswalk?.acousticSignalInstalled == true &&
+                  crosswalk!.guidanceSummary.isNotEmpty)
+              ? ' ${crosswalk.guidanceSummary}'
+              : '';
       NavigationTtsService().speakStep(
         _turnTypeToDirection(next.turnType),
-        next.description ?? '',
+        '${next.description ?? ''}$acousticSuffix'.trim(),
       );
     } else {
       // 모든 step 완료 → 목적지 직진 안내
@@ -395,6 +446,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         _debugDistance = null;
         _hasArrived = false;
         _isRecalculating = false;
+        _crosswalkCache = {};
       });
       _loadRoute(result);
       // 재탐색 후 overview 카드 없이 새 경로 첫 step 바로 안내

@@ -46,9 +46,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
   bool _isLoadingMore = false;
   Timer? _debounce;
   Timer? _reverseGeocodeRetry;
+  StreamSubscription<Position>? _positionStream;
   Position? _currentPosition;
-  int _fallbackCount = 0;
-  static const int _maxFallbackCount = 3;
   bool isLoading = false;
   List<SavedPlace> _savedPlaces = [];
   List<Map<String, dynamic>> _recentPlaces = [];
@@ -102,6 +101,19 @@ class _NavigationScreenState extends State<NavigationScreen> {
       if (!mounted) return;
       _currentPosition = position;
       await _fetchAddress(position);
+
+      // 초기 위치 획득 후 20m 이상 이동 시 위치·주소 갱신
+      _positionStream?.cancel();
+      _positionStream = Geolocator.getPositionStream(
+        locationSettings: AndroidSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 20,
+        ),
+      ).listen((pos) {
+        if (!mounted) return;
+        _currentPosition = pos;
+        _fetchAddress(pos);
+      });
     } catch (e) {
       debugPrint('🔴 위치 초기화 실패: $e');
       if (mounted) setState(() => currentLocation = '현재 위치 불러오는 중...');
@@ -109,7 +121,6 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   Future<void> _fetchAddress(Position position) async {
-    _fallbackCount = 0;
     _reverseGeocodeRetry?.cancel();
 
     final result = await PlaceService.reverseGeocode(
@@ -146,12 +157,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
     }
 
     if (result.source == ReverseGeocodeSource.nearestPlace) {
-      _fallbackCount++;
       setState(() => currentLocation = result.address);
-      // nearestPlace 3회 수신 시 최선값으로 확정
-      if (_fallbackCount >= _maxFallbackCount) return true;
     }
 
+    // nearestPlace는 표시하되 exactAddress를 받을 때까지 retry 유지
     // regionAddress → 표시 안 하고 계속 retry
     return false;
   }
@@ -162,6 +171,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     destinationController.dispose();
     _debounce?.cancel();
     _reverseGeocodeRetry?.cancel();
+    _positionStream?.cancel();
     super.dispose();
   }
 
@@ -214,6 +224,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     SoundEffectService().play(SoundEffect.actionStart);
     VibrationService().vibrate(VibrationEffect.actionStart);
 
+    _positionStream?.cancel();
     setState(() => isLoading = true);
 
     try {

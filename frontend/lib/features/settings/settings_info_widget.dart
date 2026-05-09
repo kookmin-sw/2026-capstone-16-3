@@ -43,7 +43,7 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: item.label,
+      label: '${item.label}, 화면으로 이동',
       excludeSemantics: true,
       child: InkWell(
         onTap: item.onTap == null
