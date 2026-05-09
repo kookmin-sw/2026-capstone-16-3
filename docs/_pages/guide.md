@@ -5,4 +5,4 @@ layout: single
 classes: wide
 ---
 
-{% include section/guide.html %}
+{% include sections/guide.html %}
