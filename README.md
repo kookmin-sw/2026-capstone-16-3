@@ -5,6 +5,10 @@
 > 시각장애인과 저시력자가 보다 안전하고 독립적으로 이동할 수 있도록 돕는  
 > **AI 기반 보행 보조 서비스**
 
+<div align="center">
+  <img src="docs/assets/images/preview.png" alt="길벗 앱 미리보기" width="60%">
+</div>
+
 ## 🎬프로젝트 소개 영상
 추후 프로젝트 소개 영상 링크 추가 예정
 
@@ -147,7 +151,7 @@
  
 ```
 2026-capstone-16/
-├── frontend/                #
+├── frontend/                
 │   ├── android/
 │   ├── ios/
 │   ├── assets/
