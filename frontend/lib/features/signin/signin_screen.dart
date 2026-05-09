@@ -13,8 +13,31 @@ class SignInScreen extends StatefulWidget {
   State<SignInScreen> createState() => _SignInScreenState();
 }
 
-class _SignInScreenState extends State<SignInScreen> {
+class _SignInScreenState extends State<SignInScreen> with WidgetsBindingObserver {
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// 로그인 대기 중 앱으로 복귀(뒤로가기 / SDK hang / 외부 요인)하면 로딩 해제.
+  /// _kakaoAuthPending 플래그 없이 _isLoading 단독 체크:
+  ///   _isLoading이 true인 상태는 로그인 플로우 중일 때뿐이고,
+  ///   성공 후 화면 전환(pushReplacement) 시점에는 mounted가 false여서 조건 불충족.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isLoading && mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _onKakaoLogin() async {
     setState(() => _isLoading = true);
@@ -23,6 +46,8 @@ class _SignInScreenState extends State<SignInScreen> {
       if (!mounted) return;
 
       Navigator.pushReplacementNamed(context, AppRouter.home);
+    } on AuthCancelledException {
+      // 사용자가 직접 취소 — 오류 메시지 없이 초기 화면으로 복귀
     } on AuthException catch (e) {
       if (!mounted) return;
       await _showErrorDialog(e.message);
