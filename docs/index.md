@@ -28,35 +28,46 @@ feature_row:
 길벗은 스마트폰 카메라와 AI 기반 객체 탐지 기술을 활용하여  
 시각장애인과 보행약자의 안전한 실외 보행을 지원하는 플랫폼이다.
 
+[GitHub](https://github.com/kookmin-sw/2026-capstone-16)
+
 {% include feature_row %}
 
 ## 목차
 
+<!--
+Hero Header
+프로젝트 소개:
+주요기능
+소개 영상
+사용법:
+시스템 구조:
+기술 스택:
+폴더 구조
+팀원 소개
+참고 자료
+-->
+
 1. [주요 기능](#주요-기능)
 1. [소개 영상](#소개-영상)
-1. [팀원 소개](#팀원-소개)
-1. [기술 스택](#기술-스택)
 1. [사용법](#사용법)
+1. [기술 스택](#기술-스택)
 1. [폴더 구조](#폴더-구조)
-1. [GitHub](#github)
+1. [팀원 소개](#팀원-소개)
+1. [참고 자료]
+
+## 프로젝트 소개
+
+<!-- 
+- 문제 정의 -> 기존 한계 -> 길벗 목표
+-->
 
 ## 주요 기능
 
-- 보도 장애물 탐지
-- 점자블록 및 보행 가능 영역 분석
-- 횡단보도 및 신호등 상태 인식
-- 음향신호기 데이터 연동
-- TTS 기반 음성 안내
-- 진동 기반 위험 피드백
-- 목적지 기반 보행 경로 안내
+{% include sections/feature.html %}
 
 ## 소개 영상
 
 {% include sections/demo.html %}
-
-## 팀원 소개
-
-{% include sections/team.html %}
 
 ## 기술 스택
 
@@ -68,42 +79,18 @@ feature_row:
 
 ## 폴더 구조
 
-```md
-2026-capstone-16/
-├── frontend/                
-│   ├── android/
-│   ├── ios/
-│   ├── assets/
-│   ├── lib/
-│   ├── pubspec.lock
-│   └── pubspec.yaml
-│
-├── server/                 
-│   ├── src/
-│   ├── gradle/
-│   ├── build.gradle
-│   ├── settings.gradle
-│   ├── gradlew
-│   ├── gradlew.bat
-│   └── Dockerfile
-│
-├── ai/                   
-│   ├── app/
-│   ├── models/
-│   └── requirements.txt
-│
-├── docs/                    
-│   ├── _pages/
-│   ├── _layouts/
-│   ├── _includes/
-│   ├── _sass/
-│   ├── _data/
-│   ├── assets/
-│   └── index.md
-│
-└── README.md
-```
+{% include sections/folder-structure.html %}
 
-## GitHub
+## 팀원 소개
 
-[프로젝트 저장소](https://github.com/kookmin-sw/2026-capstone-16)
+{% include sections/team.html %}
+
+## 참고 자료
+
+- [TMAP 보행자 API 공식 문서](https://tmapapi.tmapmobility.com/)
+- [Ultralytics YOLOv11 문서](https://docs.ultralytics.com/)
+- [공공데이터포털](https://www.data.go.kr/)
+- [서울 열린데이터광장]
+- [Kakao Local API]
+- [AIHub]
+- [Roboflow]
