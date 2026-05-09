@@ -1,277 +1,305 @@
+from __future__ import annotations
+
+import time
+from typing import Any
+
 import cv2
 import numpy as np
 import torch
-import torch.nn.functional as F
-
 from PIL import Image
+from transformers import pipeline
+import transformers.pipelines as hf_pipelines
 from ultralytics import YOLO
-from transformers import AutoImageProcessor, AutoModelForSemanticSegmentation
+
+from app.core.config import (
+    CONF_DET,
+    CONF_SEG,
+    DEPTH_MODEL_NAME,
+    IMG_SIZE,
+    YOLO_DET_WEIGHTS,
+    YOLO_SEG_WEIGHTS,
+)
+from app.services.guide_builder import build_scene_from_model_outputs
 
 # =========================================================
-# 기본 설정
+# Device / global models
 # =========================================================
-IMGSZ = 640
-CONF = 0.25
-
 device = "cuda" if torch.cuda.is_available() else "cpu"
+depth_device = 0 if torch.cuda.is_available() else -1
 
-# 전역 모델 객체
-yolo = None
-processor = None
-seg = None
+det_model: YOLO | None = None
+seg_model: YOLO | None = None
+depth_pipe: Any | None = None
 
-# =========================================================
-# 클래스 정규화 / 위험도 맵
-# =========================================================
-YOLO_CANONICAL_MAP = {
-    "bicycle": "bicycle",
-    "bus": "bus",
-    "car": "car",
-    "motorcycle": "motorcycle",
-    "scooter": "scooter",
-    "truck": "truck",
-    "person": "person",
-    "wheelchair": "wheelchair",
-    "barricade": "barricade",
-    "bench": "bench",
-    "bollard": "bollard",
-    "fire_hydrant": "fire_hydrant",
-    "pole": "pole",
-    "stop": "stop",
-    "table": "table",
-    "traffic_light": "traffic_light",
-    "tree_trunk": "tree_trunk",
-}
+# Backward-compatible aliases. 기존 analyze.py/main.py가 inference.seg를 보던 구조 대응.
+yolo: YOLO | None = None
+seg: YOLO | None = None
 
-SEVERITY_MAP = {
-    "bicycle": 2,
-    "bus": 3,
-    "car": 3,
-    "motorcycle": 3,
-    "scooter": 3,
-    "truck": 3,
-    "person": 2,
-    "wheelchair": 2,
-    "barricade": 2,
-    "bench": 2,
-    "bollard": 2,
-    "fire_hydrant": 2,
-    "pole": 2,
-    "stop": 2,
-    "table": 2,
-    "traffic_light": 1,
-    "tree_trunk": 2,
-}
+# Swagger 단일 이미지 테스트에서는 track보다 predict가 안정적임
+USE_TRACKING = False
 
-# =========================================================
-# 기본 유틸
-# =========================================================
-def canonicalize_yolo_name(name: str) -> str:
-    return YOLO_CANONICAL_MAP.get(name, name)
+# 서버 터미널에 YOLO 검출 결과 출력
+DEBUG_YOLO_DETECTION = True
 
 
-def default_motion_for_class(cls_name: str) -> str:
-    """
-    현재는 single-frame 기준이라 motion을 안정적으로 추정하기 어려움.
-    우선 기본값으로 채우고, 나중에 user별 이전 프레임 비교로 개선 가능.
-    """
-    if cls_name in {"bicycle", "bus", "car", "motorcycle", "scooter", "truck"}:
-        return "parked"
-    if cls_name in {"person", "wheelchair"}:
-        return "static"
-    return "static"
-
-
-def motion_risk_value(motion: str) -> int:
-    if motion in {"moving", "approaching"}:
-        return 2
-    return 0
-
-
-def immediacy_value(distance: str) -> int:
-    if distance == "near":
-        return 3
-    if distance == "mid":
-        return 2
-    return 1
-
-
-def infer_distance(x1: float, y1: float, x2: float, y2: float, width: int, height: int) -> str:
-    """
-    bbox 면적 비율 기반 단순 거리 추정
-    """
-    area_ratio = ((x2 - x1) * (y2 - y1)) / float(width * height)
-
-    if area_ratio >= 0.10:
-        return "near"
-    if area_ratio >= 0.03:
-        return "mid"
-    return "far"
-
-
-def infer_clock_direction(cx: float, width: int) -> str:
-    ratio = cx / float(width)
-
-    if ratio < 0.2:
-        return "10시"
-    if ratio < 0.4:
-        return "11시"
-    if ratio < 0.6:
-        return "12시"
-    if ratio < 0.8:
-        return "1시"
-    return "2시"
-
-
-def infer_h_region(cx: float, width: int) -> str:
-    ratio = cx / float(width)
-
-    if ratio < 0.33:
-        return "left"
-    if ratio < 0.66:
-        return "center"
-    return "right"
-
-
-def estimate_on_path(h_region: str, distance: str) -> bool:
-    """
-    매우 단순한 1차 휴리스틱:
-    - 중앙(center)이고
-    - near/mid면 경로상으로 간주
-    """
-    return h_region == "center" and distance in {"near", "mid"}
-
-
-def estimate_narrows_path(h_region: str, distance: str) -> bool:
-    """
-    좌/우에 있더라도 near/mid면 통로를 좁힐 수 있다고 간단 판단
-    """
-    return h_region in {"left", "right", "center"} and distance in {"near", "mid"}
+def _sync() -> None:
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
 
 
 # =========================================================
-# 모델 로드
+# Debug util
 # =========================================================
-def load_models(yolo_pt: str, seg_model_dir: str) -> None:
-    global yolo, processor, seg
+def debug_yolo_result(title: str, result, names) -> None:
+    print(f"\n========== {title} ==========")
 
-    yolo = YOLO(yolo_pt)
-    processor = AutoImageProcessor.from_pretrained(seg_model_dir, reduce_labels=False)
-    seg = AutoModelForSemanticSegmentation.from_pretrained(seg_model_dir).to(device).eval()
+    if result.boxes is None or len(result.boxes) == 0:
+        print("no boxes")
+        return
+
+    boxes = result.boxes.xyxy.cpu().numpy()
+    confs = result.boxes.conf.cpu().numpy()
+    clss = result.boxes.cls.cpu().numpy().astype(int)
+
+    ids = None
+    if getattr(result.boxes, "id", None) is not None and result.boxes.id is not None:
+        ids = result.boxes.id.cpu().numpy().astype(int)
+
+    for i, (box, conf, cls_id) in enumerate(zip(boxes, confs, clss)):
+        name = names[int(cls_id)]
+        tid = ids[i] if ids is not None else "-"
+        print(
+            f"id={tid} | class={name:<24s} | conf={float(conf):.3f} | "
+            f"bbox={[round(float(v), 1) for v in box.tolist()]}"
+        )
+
+
+# =========================================================
+# Model loading
+# =========================================================
+def load_models(
+    yolo_det_weights: str | None = None,
+    yolo_seg_weights: str | None = None,
+    depth_model_name: str | None = None,
+    **_: Any,
+) -> None:
+    """Load YOLO detection, YOLO segmentation, and metric depth models."""
+    global det_model, seg_model, depth_pipe, yolo, seg
+
+    det_weights = str(yolo_det_weights or YOLO_DET_WEIGHTS)
+    seg_weights = str(yolo_seg_weights or YOLO_SEG_WEIGHTS)
+    depth_name = depth_model_name or DEPTH_MODEL_NAME
+
+    print("YOLO detection weights:", det_weights)
+    print("YOLO segmentation weights:", seg_weights)
+
+    det_model = YOLO(det_weights)
+    seg_model = YOLO(seg_weights)
+
+    # transformers pipeline 내부 torch 참조 오류 방지
+    hf_pipelines.torch = torch
+
+    depth_pipe = pipeline(
+        task="depth-estimation",
+        model=depth_name,
+        device=depth_device,
+    )
+
+    yolo = det_model
+    seg = seg_model
+
+    print("YOLO detection classes:", det_model.names)
+    print("YOLO segmentation classes:", seg_model.names)
+    print("Depth model:", depth_name)
+    print("Device:", device)
+    print("USE_TRACKING:", USE_TRACKING)
 
 
 def is_model_loaded() -> bool:
-    return yolo is not None and processor is not None and seg is not None
+    return det_model is not None and seg_model is not None and depth_pipe is not None
 
 
-# =========================================================
-# SegFormer 추론
-# =========================================================
-@torch.inference_mode()
-def seg_infer(img_pil: Image.Image) -> np.ndarray:
-    if seg is None or processor is None:
-        raise RuntimeError("SegFormer 모델이 로드되지 않았습니다.")
+def reset_tracker() -> None:
+    """Reset Ultralytics internal tracker state.
 
-    inputs = processor(images=img_pil, return_tensors="pt").to(device)
-    outputs = seg(**inputs)
-
-    logits_up = F.interpolate(
-        outputs.logits,
-        size=img_pil.size[::-1],   # (H, W)
-        mode="bilinear",
-        align_corners=False,
-    )
-
-    pred = logits_up.argmax(dim=1)[0].detach().cpu().numpy().astype(np.int32)
-    return pred
-
-
-# =========================================================
-# YOLO 추론
-# =========================================================
-def run_yolo_detect(frame_bgr: np.ndarray):
-    if yolo is None:
-        raise RuntimeError("YOLO 모델이 로드되지 않았습니다.")
-
-    result = yolo.predict(
-        source=frame_bgr,
-        imgsz=IMGSZ,
-        conf=CONF,
-        verbose=False
-    )[0]
-
-    det_rows = []
-
-    if result.boxes is None or len(result.boxes) == 0:
-        return result, det_rows
-
-    boxes = result.boxes.xyxy.detach().cpu().numpy()
-    confs = result.boxes.conf.detach().cpu().numpy()
-    clss = result.boxes.cls.detach().cpu().numpy().astype(int)
-
-    height, width = frame_bgr.shape[:2]
-
-    for box, conf, cls_id in zip(boxes, confs, clss):
-        cls_name = yolo.names[int(cls_id)]
-        canonical = canonicalize_yolo_name(cls_name)
-
-        x1, y1, x2, y2 = box.tolist()
-        cx = (x1 + x2) / 2.0
-
-        distance = infer_distance(x1, y1, x2, y2, width, height)
-        clock_direction = infer_clock_direction(cx, width)
-        h_region = infer_h_region(cx, width)
-
-        motion = default_motion_for_class(canonical)
-        severity = SEVERITY_MAP.get(canonical, 1)
-        immediacy = immediacy_value(distance)
-        motion_risk = motion_risk_value(motion)
-
-        on_path = estimate_on_path(h_region, distance)
-        narrows_path = estimate_narrows_path(h_region, distance)
-
-        guide_priority = severity + immediacy + motion_risk
-        if on_path:
-            guide_priority += 1
-        if narrows_path:
-            guide_priority += 1
-
-        det_rows.append({
-            "class": canonical,
-            "confidence": float(conf),
-            "bbox": [float(x1), float(y1), float(x2), float(y2)],
-            "motion": motion,
-            "h_region": h_region,
-            "clock_direction": clock_direction,
-            "distance": distance,
-            "on_path": on_path,
-            "narrows_path": narrows_path,
-            "blocks_tactile": False,
-            "severity": severity,
-            "immediacy": immediacy,
-            "motion_risk": motion_risk,
-            "guide_priority": int(guide_priority),
-        })
-
-    return result, det_rows
-
-
-# =========================================================
-# 최종 단일 이미지 추론
-# =========================================================
-def run_single_image_inference(frame_bgr: np.ndarray):
+    필요할 때만 사용. 서버에서 연속 프레임 tracking을 유지하려면 호출하지 않는다.
     """
+    if det_model is not None:
+        det_model.predictor = None
+
+
+# =========================================================
+# Depth
+# =========================================================
+def predict_depth(pil_image: Image.Image) -> np.ndarray:
+    if depth_pipe is None:
+        raise RuntimeError("Depth 모델이 로드되지 않았습니다.")
+
+    out = depth_pipe(pil_image)
+    depth = out["predicted_depth"]
+
+    if hasattr(depth, "squeeze"):
+        depth = depth.squeeze()
+
+    if hasattr(depth, "detach"):
+        depth = depth.detach().cpu().numpy()
+    elif hasattr(depth, "cpu"):
+        depth = depth.cpu().numpy()
+    else:
+        depth = np.asarray(depth)
+
+    return depth.astype(np.float32)
+
+
+# =========================================================
+# Detection
+# =========================================================
+def run_yolo_detection(frame_bgr: np.ndarray):
+    """YOLO detection 실행.
+
+    - USE_TRACKING=False: predict() 사용
+      Swagger 단일 이미지 테스트에 적합.
+    - USE_TRACKING=True: track() 사용
+      실제 연속 프레임 처리에서 ID 유지가 필요할 때 사용.
+    """
+    if det_model is None:
+        raise RuntimeError("YOLO detection 모델이 로드되지 않았습니다.")
+
+    if USE_TRACKING:
+        result = det_model.track(
+            source=frame_bgr,
+            imgsz=IMG_SIZE,
+            conf=CONF_DET,
+            persist=True,
+            tracker="bytetrack.yaml",
+            save=False,
+            verbose=False,
+        )[0]
+    else:
+        result = det_model.predict(
+            source=frame_bgr,
+            imgsz=IMG_SIZE,
+            conf=CONF_DET,
+            save=False,
+            verbose=False,
+        )[0]
+
+    if DEBUG_YOLO_DETECTION:
+        mode = "TRACK" if USE_TRACKING else "PREDICT"
+        debug_yolo_result(f"SERVER YOLO {mode}", result, det_model.names)
+
+    return result
+
+
+# =========================================================
+# Main inference pipeline
+# =========================================================
+def run_single_image_inference(
+    frame_bgr: np.ndarray,
+    image_id: str | None = None,
+    frame_idx: int = 0,
+    sentence_length: str = "MEDIUM",
+) -> dict[str, Any]:
+    """Run the integrated pipeline for a single frame.
+
     반환:
-    - yolo_result
-    - seg_pred (H, W) np.ndarray
-    - det_rows (list[dict])
+    {
+      "scene_json": {"id", "frame_idx", "scene"},
+      "gt": {...},
+      "timings_ms": {...},
+      "det_count": int,
+    }
     """
     if not is_model_loaded():
         raise RuntimeError("모델이 아직 로드되지 않았습니다.")
 
-    img_pil = Image.fromarray(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
+    if frame_bgr is None:
+        raise ValueError("frame_bgr is None")
 
-    yolo_result, det_rows = run_yolo_detect(frame_bgr)
-    seg_pred = seg_infer(img_pil)
+    assert det_model is not None
+    assert seg_model is not None
 
-    return yolo_result, seg_pred, det_rows
+    timings: dict[str, float] = {}
+    total_start = time.perf_counter()
+
+    img_h, img_w = frame_bgr.shape[:2]
+    pil_img = Image.fromarray(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
+
+    # =====================================================
+    # 1. YOLO segmentation
+    # =====================================================
+    _sync()
+    t0 = time.perf_counter()
+    seg_result = seg_model.predict(
+        source=frame_bgr,
+        imgsz=IMG_SIZE,
+        conf=CONF_SEG,
+        save=False,
+        verbose=False,
+        retina_masks=True,
+    )[0]
+    _sync()
+    timings["seg_inference"] = (time.perf_counter() - t0) * 1000
+
+    # =====================================================
+    # 2. YOLO detection
+    #    기존 track() 대신 기본 predict() 사용
+    # =====================================================
+    _sync()
+    t0 = time.perf_counter()
+    det_result = run_yolo_detection(frame_bgr)
+    _sync()
+    timings["det_inference"] = (time.perf_counter() - t0) * 1000
+
+    if hasattr(det_result, "speed") and det_result.speed:
+        timings["det_preprocess_only"] = float(det_result.speed.get("preprocess", 0.0))
+        timings["det_inference_only"] = float(det_result.speed.get("inference", 0.0))
+        timings["det_postprocess_only"] = float(det_result.speed.get("postprocess", 0.0))
+
+    # =====================================================
+    # 3. Depth estimation
+    # =====================================================
+    _sync()
+    t0 = time.perf_counter()
+    depth_m = predict_depth(pil_img)
+    _sync()
+    timings["depth_inference"] = (time.perf_counter() - t0) * 1000
+
+    # =====================================================
+    # 4. Scene + guide build
+    # sentence_length를 guide_builder까지 전달
+    # =====================================================
+    t0 = time.perf_counter()
+    packed = build_scene_from_model_outputs(
+        image_id=image_id or "frame",
+        frame_idx=frame_idx,
+        img_w=img_w,
+        img_h=img_h,
+        det_result=det_result,
+        seg_result=seg_result,
+        depth_m=depth_m,
+        det_class_names=det_model.names,
+        sentence_length=sentence_length,
+    )
+    timings["scene_guide_build"] = (time.perf_counter() - t0) * 1000
+
+    timings["total"] = (time.perf_counter() - total_start) * 1000
+
+    scene_json = {
+        "id": packed["id"],
+        "frame_idx": packed["frame_idx"],
+        "scene": packed["scene"],
+    }
+    gt = packed["gt"]
+
+    # 혹시 guide_builder에서 sentence_length를 gt에 넣지 않았을 경우 대비
+    gt["sentence_length"] = str(sentence_length).strip().upper()
+
+    det_count = len(scene_json["scene"].get("objects", []))
+
+    return {
+        "scene_json": scene_json,
+        "gt": gt,
+        "timings_ms": {key: round(value, 1) for key, value in timings.items()},
+        "det_count": det_count,
+    }
