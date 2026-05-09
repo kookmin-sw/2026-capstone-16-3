@@ -2,9 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:safepath/common/theme/color_collection.dart';
-import 'package:safepath/common/theme/text_styles.dart';
+import 'package:safepath/common/widgets/permission_onboarding_sheet.dart';
 import 'package:safepath/common/widgets/title_bar_widget.dart';
 import 'package:safepath/features/detection/detection_active_view.dart';
 import 'package:safepath/features/detection/detection_idle_view.dart';
@@ -38,114 +36,10 @@ class _DetectionScreenState extends State<DetectionScreen> {
 
   StreamSubscription<DetectionEvent>? _wsSub;
 
-  // ─── 카메라 권한 ─────────────────────────────────────────────────────────────
-
-  /// 카메라 권한을 확인하고 필요 시 요청한다.
-  /// 권한이 확보되면 true, 탐지를 진행할 수 없으면 false를 반환한다.
-  Future<bool> _requestCameraPermission() async {
-    var status = await Permission.camera.status;
-
-    if (status.isGranted) return true;
-
-    if (status.isDenied) {
-      status = await Permission.camera.request();
-      if (status.isGranted) return true;
-    }
-
-    if (!mounted) return false;
-
-    if (status.isPermanentlyDenied || status.isRestricted) {
-      await _showCameraPermissionPermanentlyDeniedDialog();
-    } else {
-      await _showCameraPermissionDeniedDialog();
-    }
-    return false;
-  }
-
-  Future<void> _showCameraPermissionDeniedDialog() async {
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: ColorCollection.background,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: ColorCollection.point, width: 2),
-        ),
-        title: Text(
-          '카메라 권한 필요',
-          style: AppTextStyles.bodyBold.copyWith(color: ColorCollection.point),
-        ),
-        content: Text(
-          '장애물 탐지를 위해 카메라 권한이 필요합니다.\n탐지 시작 버튼을 다시 눌러 권한을 허용해 주세요.',
-          style: AppTextStyles.labelRegular.copyWith(
-            color: ColorCollection.point,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              '확인',
-              style: AppTextStyles.labelBold.copyWith(
-                color: ColorCollection.main,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showCameraPermissionPermanentlyDeniedDialog() async {
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: ColorCollection.background,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: ColorCollection.point, width: 2),
-        ),
-        title: Text(
-          '카메라 권한 필요',
-          style: AppTextStyles.bodyBold.copyWith(color: ColorCollection.point),
-        ),
-        content: Text(
-          '카메라 권한이 거부되어 있습니다.\n설정에서 카메라 권한을 허용해 주세요.',
-          style: AppTextStyles.labelRegular.copyWith(
-            color: ColorCollection.point,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              '취소',
-              style: AppTextStyles.labelBold.copyWith(
-                color: ColorCollection.point,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              openAppSettings();
-            },
-            child: Text(
-              '설정 열기',
-              style: AppTextStyles.labelBold.copyWith(
-                color: ColorCollection.main,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ─── 탐지 시작 ───────────────────────────────────────────────────────────
 
   Future<void> _startDetection() async {
-    if (!await _requestCameraPermission()) return;
+    if (!await PermissionOnboardingSheet.show(context)) return;
 
     SoundEffectService().play(SoundEffect.actionStart);
     VibrationService().vibrate(VibrationEffect.actionStart);

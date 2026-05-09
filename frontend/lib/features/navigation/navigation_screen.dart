@@ -1,5 +1,7 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:safepath/common/widgets/permission_onboarding_sheet.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/widgets/action_button_widget.dart';
@@ -69,7 +71,11 @@ class _NavigationScreenState extends State<NavigationScreen> {
       });
     });
 
-    _initLocation();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final granted = await PermissionOnboardingSheet.show(context);
+      if (granted && mounted) _initLocation();
+    });
   }
 
   Future<void> _loadRecentPlaces() async {
