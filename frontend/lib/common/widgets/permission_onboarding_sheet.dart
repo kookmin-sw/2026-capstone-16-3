@@ -6,15 +6,16 @@ import 'package:safepath/common/theme/text_styles.dart';
 
 /// 서비스 단위 권한 설명 시트
 ///
-/// [needsLocation] true → 카메라·위치 모두 필수 (길찾기)
-/// [needsLocation] false → 카메라만 필수, 위치는 best-effort 요청 (장애물 탐지)
+/// "권한 허용하기" 탭 시 카메라·위치·마이크·알림 시스템 팝업을 순서대로 띄운다.
+/// 각 팝업을 거부해도 다음 팝업으로 진행하며, 모든 팝업이 끝나면 시트를 닫는다.
 ///
-/// 마이크·알림은 항상 선택으로 요청하며, 거부해도 서비스에 영향을 주지 않는다.
+/// [needsLocation] true  → 카메라·위치가 모두 허용돼야 true 반환 (길찾기)
+/// [needsLocation] false → 카메라만 허용되면 true 반환 (장애물 탐지)
 class PermissionOnboardingSheet {
   const PermissionOnboardingSheet._();
 
   /// 필수 권한이 이미 허용됐으면 즉시 true 반환 (시트 미표시).
-  /// 허용되지 않은 필수 권한이 있으면 설명 시트를 표시하고 최종 허용 여부를 반환한다.
+  /// 그렇지 않으면 설명 시트를 표시하고 최종 허용 여부를 반환한다.
   static Future<bool> show(
     BuildContext context, {
     bool needsLocation = true,
@@ -23,20 +24,9 @@ class PermissionOnboardingSheet {
     final location =
         needsLocation ? await Permission.locationWhenInUse.status : null;
 
-    // 필수 권한 모두 허용 → 시트 없이 즉시 통과
     if (camera.isGranted && (location?.isGranted ?? true)) return true;
 
     if (!context.mounted) return false;
-
-    // 필수 권한 영구 거부 / MDM → 시트 없이 바로 설정 안내
-    final blocked = camera.isPermanentlyDenied ||
-        camera.isRestricted ||
-        (location != null &&
-            (location.isPermanentlyDenied || location.isRestricted));
-    if (blocked) {
-      await _showSettingsDialog(context);
-      return false;
-    }
 
     final result = await showModalBottomSheet<bool>(
       context: context,
@@ -61,8 +51,8 @@ class PermissionOnboardingSheet {
           style: AppTextStyles.bodyBold.copyWith(color: ColorCollection.point),
         ),
         content: Text(
-          '보행 안내 기능을 사용하려면 카메라·위치 권한이 필요합니다.\n'
-          '설정에서 권한을 허용한 후 다시 시도해 주세요.',
+          '일부 필수 권한이 거부되어 있습니다.\n'
+          '설정에서 권한을 허용하면 모든 기능을 사용하실 수 있습니다.',
           style: AppTextStyles.labelRegular.copyWith(
             color: ColorCollection.point,
           ),
@@ -71,7 +61,7 @@ class PermissionOnboardingSheet {
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
-              '취소',
+              '닫기',
               style: AppTextStyles.labelBold.copyWith(
                 color: ColorCollection.point,
               ),
@@ -107,70 +97,42 @@ class _SheetContent extends StatefulWidget {
 
 class _SheetContentState extends State<_SheetContent> {
   bool _isRequesting = false;
-  String? _errorMessage;
 
   Future<void> _onTapAllow() async {
-    setState(() {
-      _isRequesting = true;
-      _errorMessage = null;
-    });
+    setState(() => _isRequesting = true);
 
-    // ── 카메라 (항상 필수) ────────────────────────────────────────────────────
+    // 시스템 팝업을 순서대로 띄운다. 각 항목 거부해도 다음으로 진행.
+
     var camera = await Permission.camera.status;
     if (!camera.isGranted) camera = await Permission.camera.request();
 
-    if (!mounted) return;
-
-    if (!camera.isGranted) {
-      if (camera.isPermanentlyDenied || camera.isRestricted) {
-        setState(() => _isRequesting = false);
-        await PermissionOnboardingSheet._showSettingsDialog(context);
-        if (mounted) Navigator.pop(context, false);
-      } else {
-        setState(() {
-          _isRequesting = false;
-          _errorMessage = '카메라 권한이 거부되었습니다.\n버튼을 다시 눌러 권한을 허용해 주세요.';
-        });
-      }
-      return;
-    }
-
-    // ── 위치 ─────────────────────────────────────────────────────────────────
     var location = await Permission.locationWhenInUse.status;
     if (!location.isGranted) location = await Permission.locationWhenInUse.request();
 
-    if (!mounted) return;
-
-    // needsLocation: true이면 위치 거부 시 차단
-    if (widget.needsLocation && !location.isGranted) {
-      if (location.isPermanentlyDenied || location.isRestricted) {
-        setState(() => _isRequesting = false);
-        await PermissionOnboardingSheet._showSettingsDialog(context);
-        if (mounted) Navigator.pop(context, false);
-      } else {
-        setState(() {
-          _isRequesting = false;
-          _errorMessage = '위치 권한이 거부되었습니다.\n버튼을 다시 눌러 권한을 허용해 주세요.';
-        });
-      }
-      return;
-    }
-    // needsLocation: false이면 위치 거부돼도 계속 진행
-
-    // ── 마이크 (선택) ─────────────────────────────────────────────────────────
-    final mic = await Permission.microphone.status;
+    var mic = await Permission.microphone.status;
     if (!mic.isGranted && !mic.isPermanentlyDenied && !mic.isRestricted) {
-      await Permission.microphone.request();
+      mic = await Permission.microphone.request();
     }
 
-    // ── 알림 (선택) ───────────────────────────────────────────────────────────
-    final notif = await Permission.notification.status;
+    var notif = await Permission.notification.status;
     if (!notif.isGranted && !notif.isPermanentlyDenied && !notif.isRestricted) {
       await Permission.notification.request();
     }
 
     if (!mounted) return;
-    Navigator.pop(context, true);
+
+    // 필수 권한이 영구 거부 상태이면 설정 안내 (비차단 — 안내 후 시트 닫힘)
+    final cameraBlocked = camera.isPermanentlyDenied || camera.isRestricted;
+    final locationBlocked = widget.needsLocation &&
+        (location.isPermanentlyDenied || location.isRestricted);
+    if (cameraBlocked || locationBlocked) {
+      await PermissionOnboardingSheet._showSettingsDialog(context);
+      if (!mounted) return;
+    }
+
+    final granted =
+        camera.isGranted && (!widget.needsLocation || location.isGranted);
+    Navigator.pop(context, granted);
   }
 
   @override
@@ -257,31 +219,6 @@ class _SheetContentState extends State<_SheetContent> {
                   color: ColorCollection.point.withValues(alpha: 0.5),
                 ),
               ),
-
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: ColorCollection.point.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: ColorCollection.point.withValues(alpha: 0.25),
-                    ),
-                  ),
-                  child: Text(
-                    _errorMessage!,
-                    style: AppTextStyles.labelRegular.copyWith(
-                      color: ColorCollection.point,
-                    ),
-                  ),
-                ),
-              ],
-
               const SizedBox(height: 28),
 
               Semantics(
@@ -315,23 +252,6 @@ class _SheetContentState extends State<_SheetContent> {
                                 color: ColorCollection.background,
                               ),
                             ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Center(
-                child: TextButton(
-                  onPressed: _isRequesting
-                      ? null
-                      : () => Navigator.pop(context, false),
-                  child: Text(
-                    '나중에 허용 (일부 기능 제한)',
-                    style: AppTextStyles.labelRegular.copyWith(
-                      color: ColorCollection.point.withValues(alpha: 0.5),
-                      decoration: TextDecoration.underline,
-                      decorationColor:
-                          ColorCollection.point.withValues(alpha: 0.5),
                     ),
                   ),
                 ),
