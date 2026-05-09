@@ -222,7 +222,6 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       step.longitude!,
     );
 
-    setState(() => _debugDistance = distance);
     final direction = _turnTypeToDirection(step.turnType);
 
     if (!_showStartOverview &&
@@ -245,6 +244,19 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         if (mounted) setState(() => _showStartOverview = false);
       });
     }
+
+    // minDist를 먼저 업데이트해야 inPassThroughZone 판단이 정확함
+    if (distance < _minDistanceToStep) _minDistanceToStep = distance;
+
+    // 10m 이내 진입 이후 → pass-through zone
+    // 이 구간에서는 거리가 다시 증가해도 UI/TTS에 반영하지 않음
+    final inPassThroughZone =
+        _hasBeenOutsideThreshold && _minDistanceToStep < _arrivalThresholdMeters;
+
+    if (!inPassThroughZone) {
+      setState(() => _debugDistance = distance);
+    }
+
     debugPrint(
       '📍 [Nav] step $_currentStepIndex/${_pointSteps.length - 1} | '
       '거리: ${distance.toStringAsFixed(1)}m | '
@@ -253,12 +265,9 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       '${_hasBeenOutsideThreshold ? "진행 중" : "대기 중"}',
     );
 
-    if (distance < _minDistanceToStep) _minDistanceToStep = distance;
-
     // pass-through 완수: 10m 이내 진입 후 최근접 지점에서 8m 이상 멀어지면 완수
     // (distance >= 10m 분기보다 먼저 체크해야 함 — minDist + 8m >= 10m 인 경우를 커버)
-    if (_hasBeenOutsideThreshold &&
-        _minDistanceToStep < _arrivalThresholdMeters &&
+    if (inPassThroughZone &&
         distance > _minDistanceToStep + _passThroughOffsetMeters) {
       setState(() {
         _currentStepIndex++;
@@ -273,10 +282,12 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
 
     if (distance >= _arrivalThresholdMeters) {
       _hasBeenOutsideThreshold = true;
-      NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
+      // pass-through zone에서 거리가 다시 10m 이상으로 튀어도 TTS 차단
+      if (!inPassThroughZone) {
+        NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
+      }
     } else if (_hasBeenOutsideThreshold) {
-      // pass-through zone — 아직 완수 조건 미충족, TTS 안내 유지
-      NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
+      // pass-through zone — 거리 증가 안내 방지를 위해 speakDistance 호출하지 않음
     } else {
       // 처음부터 10m 이내 → 이미 지난 step으로 간주하고 skip (TTS 없음)
       setState(() {
