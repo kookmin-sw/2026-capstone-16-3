@@ -30,6 +30,7 @@ class RouteStep {
   final String? description;
   final int? turnType;
   final String? pointType; // "SP"=출발, "EP"=도착
+  final int? facilityType; // 15 = 횡단보도
 
   // LINE 전용
   final List<LatLng>? path;
@@ -41,6 +42,7 @@ class RouteStep {
     this.description,
     this.turnType,
     this.pointType,
+    this.facilityType,
     this.path,
   });
 
@@ -62,6 +64,7 @@ class RouteStep {
       description: json['description'] as String?,
       turnType: json['turnType'] as int?,
       pointType: json['pointType'] as String?,
+      facilityType: json['facilityType'] as int?,
     );
   }
 }
