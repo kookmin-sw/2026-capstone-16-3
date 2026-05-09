@@ -1,5 +1,5 @@
 const sections = document.querySelectorAll("section[id]");
-const navLinks = document.querySelectorAll('.greedy-nav a[href^="#"]');
+const navLinks = document.querySelectorAll('.greedy-nav a[href*="#"]');
 
 const observer = new IntersectionObserver(
   (entries) => {
@@ -11,7 +11,9 @@ const observer = new IntersectionObserver(
       navLinks.forEach((link) => {
         link.classList.remove("active");
 
-        if (link.getAttribute("href") === `#${id}`) {
+        const url = new URL(link.getAttribute("href"), window.location.href);
+
+        if (url.hash === `#${id}`) {
           link.classList.add("active");
         }
       });
