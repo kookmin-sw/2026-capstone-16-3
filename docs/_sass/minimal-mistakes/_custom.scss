@@ -1,5 +1,83 @@
-// team
+/* Hero Section */
+.page__hero--overlay {
+  min-height: 72vh;
+  display: flex;
+  align-items: center;
+  margin-bottom: 5rem;
+  background-position: center;
+}
 
+.page__hero--overlay .wrapper {
+  max-width: 1180px;
+}
+
+.page__hero--overlay .page__title {
+  font-size: clamp(3rem, 7vw, 6.5rem);
+  font-weight: 900;
+  letter-spacing: -0.06em;
+  margin-bottom: 1.2rem;
+}
+
+.page__hero--overlay .page__lead {
+  max-width: 760px;
+  font-size: clamp(1.25rem, 2vw, 2rem);
+  line-height: 1.6;
+  font-weight: 600;
+}
+
+.page__hero--overlay .btn {
+  margin-top: 1.6rem;
+  margin-right: 0.8rem;
+  padding: 0.9rem 1.35rem;
+  border-radius: 999px;
+  font-weight: 800;
+}
+
+.btn--light-outline {
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.btn--light-outline:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.page__hero-caption {
+  display: none;
+}
+
+/* Intro Section */
+.intro-section {
+  max-width: 980px;
+  margin: 0 auto 6rem;
+  text-align: center;
+}
+
+.section-eyebrow {
+  margin-bottom: 0.8rem;
+  color: #f97316;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.intro-section h2 {
+  margin: 0 0 1.4rem;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.25;
+  letter-spacing: -0.04em;
+}
+
+.intro-section p:last-child {
+  max-width: 760px;
+  margin: 0 auto;
+  color: #4b5563;
+  font-size: 1.1rem;
+  line-height: 1.9;
+}
+
+/* team */
 .team-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -54,8 +132,7 @@
   }
 }
 
-// architecture
-
+/* architecture */
 .architecture-image {
   width: 100%;
   border-radius: 1rem;
@@ -78,8 +155,7 @@
   margin: 0;
 }
 
-// guide
-
+/* guide */
 .guide-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -122,8 +198,7 @@
   }
 }
 
-// feature
-
+/* feature */
 .feature-grid-4 {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -166,8 +241,7 @@
   }
 }
 
-// folder-structure
-
+/* folder-structure */
 .folder-structure {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
