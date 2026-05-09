@@ -7,6 +7,9 @@
   <img src="docs/assets/images/preview.png" alt="길벗 앱 미리보기" width="60%">
 </div>
 
+## 🌐 프로젝트 소개 사이트
+[https://kookmin-sw.github.io/capstone-2026-16/](https://kookmin-sw.github.io/capstone-2026-16/)
+
 ## 🎬프로젝트 소개 영상
 추후 프로젝트 소개 영상 링크 추가 예정
 
