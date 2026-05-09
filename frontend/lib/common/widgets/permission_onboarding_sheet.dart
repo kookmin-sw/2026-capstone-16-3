@@ -319,6 +319,23 @@ class _SheetContentState extends State<_SheetContent> {
                   ),
                 ),
               ),
+              const SizedBox(height: 12),
+              Center(
+                child: TextButton(
+                  onPressed: _isRequesting
+                      ? null
+                      : () => Navigator.pop(context, false),
+                  child: Text(
+                    '나중에 허용 (일부 기능 제한)',
+                    style: AppTextStyles.labelRegular.copyWith(
+                      color: ColorCollection.point.withValues(alpha: 0.5),
+                      decoration: TextDecoration.underline,
+                      decorationColor:
+                          ColorCollection.point.withValues(alpha: 0.5),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
