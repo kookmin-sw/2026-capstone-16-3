@@ -1,6 +1,4 @@
-# <img src="docs/assets/images/icon.png" alt="길벗 아이콘" height="35" align="left"> 길벗
-
-# 당신의 걸음 곁에, **"길벗"**
+# <img src="docs/assets/images/icon.png" alt="길벗 아이콘" height="35" align="left">당신의 걸음 곁에, **"길벗"**
  
 > 시각장애인과 저시력자가 보다 안전하고 독립적으로 이동할 수 있도록 돕는  
 > **AI 기반 보행 보조 서비스**
