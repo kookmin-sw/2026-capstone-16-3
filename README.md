@@ -11,7 +11,7 @@
 
 ## 🌐 프로젝트 소개 사이트
 
-[https://kookmin-sw.github.io/capstone-2026-16/](https://kookmin-sw.github.io/capstone-2026-16/)
+[https://kookmin-sw.github.io/2026-capstone-16/](https://kookmin-sw.github.io/2026-capstone-16/)
 
 ## 🎬프로젝트 소개 영상
 
