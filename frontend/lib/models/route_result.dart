@@ -64,7 +64,7 @@ class RouteStep {
       description: json['description'] as String?,
       turnType: json['turnType'] as int?,
       pointType: json['pointType'] as String?,
-      facilityType: json['facilityType'] as int?,
+      facilityType: int.tryParse(json['facilityType']?.toString() ?? ''),
     );
   }
 }
