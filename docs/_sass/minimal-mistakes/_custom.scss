@@ -1,3 +1,10 @@
+/* fonts */
+html,
+body {
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+}
+
 /* section */
 .gilbut-section {
   margin: 7rem 0;
@@ -87,6 +94,24 @@
 }
 
 /* Hero Section */
+.page__title,
+.page__hero-title,
+h1,
+h2,
+h3 {
+  font-family: "Pretendard", sans-serif;
+  letter-spacing: -0.04em;
+}
+
+h1,
+h2 {
+  font-weight: 800;
+}
+
+h3 {
+  font-weight: 700;
+}
+
 .page__hero--overlay {
   min-height: 72vh;
   display: flex;
