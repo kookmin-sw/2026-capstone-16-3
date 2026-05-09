@@ -181,7 +181,7 @@
 └── README.md
 ```
  
----
+<br>
  
 ## 💡 기대 효과
  
@@ -194,42 +194,19 @@
 | 📡 **확장 가능성** | 공공 인프라 데이터 연동으로 서비스 고도화 가능 |
  
 ---
- 
+
 ## 👥 팀16-리트리버 소개
- 
+
 **팀 16 — 리트리버**
 
-<div align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <img src="docs/assets/images/team/hanyeojin.png" width="100" height="100" style="border-radius: 50%; object-fit: cover;">
-        <br><b>한여진</b><br>20233119<br><sub>Frontend</sub>
-      </td>
-      <td align="center">
-        <img src="docs/assets/images/team/hwangyeonju.png" width="100" height="100" style="border-radius: 50%; object-fit: cover;">
-        <br><b>황연주</b><br>20233123<br><sub>Frontend</sub>
-      </td>
-      <td align="center">
-        <img src="docs/assets/images/team/jeonyechan.png" width="100" height="100" style="border-radius: 50%; object-fit: cover;">
-        <br><b>전예찬</b><br>20213078<br><sub>Backend</sub>
-      </td>
-      <td align="center">
-        <img src="docs/assets/images/team/yangnarae.png" width="100" height="100" style="border-radius: 50%; object-fit: cover;">
-        <br><b>양나래</b><br>20223103<br><sub>Backend</sub>
-      </td>
-      <td align="center">
-        <img src="docs/assets/images/team/leeilhwan.png" width="100" height="100" style="border-radius: 50%; object-fit: cover;">
-        <br><b>이일환</b><br>20213048<br><sub>AI</sub>
-      </td>
-      <td align="center">
-        <img src="docs/assets/images/team/kimyeji.png" width="100" height="100" style="border-radius: 50%; object-fit: cover;">
-        <br><b>김예지</b><br>20223058<br><sub>AI</sub>
-      </td>
-    </tr>
-  </table>
-</div>
- 
+| 이름 | 학번 | 역할 |
+| --- | --- | --- |
+| 한여진 | 20233119 | Frontend |
+| 황연주 | 20233123 | Frontend |
+| 전예찬 | 20213078 | Backend |
+| 양나래 | 20223103 | Backend |
+| 이일환 | 20213048 | AI |
+| 김예지 | 20223058 | AI |
 ---
  
 ## 📚 참고 자료
