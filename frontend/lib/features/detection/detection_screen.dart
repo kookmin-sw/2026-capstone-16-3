@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -39,7 +39,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
   // ─── 탐지 시작 ───────────────────────────────────────────────────────────
 
   Future<void> _startDetection() async {
-    if (!await PermissionOnboardingSheet.show(context)) return;
+    if (!await PermissionOnboardingSheet.show(context, needsLocation: false)) return;
 
     SoundEffectService().play(SoundEffect.actionStart);
     VibrationService().vibrate(VibrationEffect.actionStart);

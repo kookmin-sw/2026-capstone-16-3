@@ -6,27 +6,33 @@ import 'package:safepath/common/theme/text_styles.dart';
 
 /// 서비스 단위 권한 설명 시트
 ///
-/// "안전한 보행 안내" 맥락으로 카메라·위치(필수)·마이크·알림(선택) 권한을
-/// 한 번에 설명하고 요청한다.
-/// 필수 권한(카메라·위치)이 이미 허용된 경우 시트를 표시하지 않고 즉시 true를 반환한다.
+/// [needsLocation] true → 카메라·위치 모두 필수 (길찾기)
+/// [needsLocation] false → 카메라만 필수, 위치는 best-effort 요청 (장애물 탐지)
+///
+/// 마이크·알림은 항상 선택으로 요청하며, 거부해도 서비스에 영향을 주지 않는다.
 class PermissionOnboardingSheet {
   const PermissionOnboardingSheet._();
 
-  /// 필수 권한(카메라·위치)이 모두 허용됐으면 즉시 true 반환 (시트 미표시).
-  /// 하나라도 미허용이면 설명 시트를 표시하고 최종 허용 여부를 반환한다.
-  static Future<bool> show(BuildContext context) async {
+  /// 필수 권한이 이미 허용됐으면 즉시 true 반환 (시트 미표시).
+  /// 허용되지 않은 필수 권한이 있으면 설명 시트를 표시하고 최종 허용 여부를 반환한다.
+  static Future<bool> show(
+    BuildContext context, {
+    bool needsLocation = true,
+  }) async {
     final camera = await Permission.camera.status;
-    final location = await Permission.locationWhenInUse.status;
+    final location =
+        needsLocation ? await Permission.locationWhenInUse.status : null;
 
-    if (camera.isGranted && location.isGranted) return true;
+    // 필수 권한 모두 허용 → 시트 없이 즉시 통과
+    if (camera.isGranted && (location?.isGranted ?? true)) return true;
 
     if (!context.mounted) return false;
 
-    // 필수 권한 영구 거부 / 기기 관리(MDM) → 시트 없이 바로 설정 안내
+    // 필수 권한 영구 거부 / MDM → 시트 없이 바로 설정 안내
     final blocked = camera.isPermanentlyDenied ||
         camera.isRestricted ||
-        location.isPermanentlyDenied ||
-        location.isRestricted;
+        (location != null &&
+            (location.isPermanentlyDenied || location.isRestricted));
     if (blocked) {
       await _showSettingsDialog(context);
       return false;
@@ -36,7 +42,7 @@ class PermissionOnboardingSheet {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _SheetContent(),
+      builder: (_) => _SheetContent(needsLocation: needsLocation),
     );
     return result ?? false;
   }
@@ -92,7 +98,8 @@ class PermissionOnboardingSheet {
 // ─── 시트 본문 ────────────────────────────────────────────────────────────────
 
 class _SheetContent extends StatefulWidget {
-  const _SheetContent();
+  final bool needsLocation;
+  const _SheetContent({required this.needsLocation});
 
   @override
   State<_SheetContent> createState() => _SheetContentState();
@@ -108,41 +115,55 @@ class _SheetContentState extends State<_SheetContent> {
       _errorMessage = null;
     });
 
-    // ── 필수 권한 요청 ──────────────────────────────────────────────────────
+    // ── 카메라 (항상 필수) ────────────────────────────────────────────────────
     var camera = await Permission.camera.status;
     if (!camera.isGranted) camera = await Permission.camera.request();
 
-    var location = await Permission.locationWhenInUse.status;
-    if (!location.isGranted) location = await Permission.locationWhenInUse.request();
-
     if (!mounted) return;
 
-    final requiredGranted = camera.isGranted && location.isGranted;
-
-    if (!requiredGranted) {
-      final permanentlyBlocked = camera.isPermanentlyDenied ||
-          camera.isRestricted ||
-          location.isPermanentlyDenied ||
-          location.isRestricted;
-      if (permanentlyBlocked) {
+    if (!camera.isGranted) {
+      if (camera.isPermanentlyDenied || camera.isRestricted) {
         setState(() => _isRequesting = false);
         await PermissionOnboardingSheet._showSettingsDialog(context);
         if (mounted) Navigator.pop(context, false);
       } else {
         setState(() {
           _isRequesting = false;
-          _errorMessage = '카메라·위치 권한이 거부되었습니다.\n버튼을 다시 눌러 권한을 허용해 주세요.';
+          _errorMessage = '카메라 권한이 거부되었습니다.\n버튼을 다시 눌러 권한을 허용해 주세요.';
         });
       }
       return;
     }
 
-    // ── 선택 권한 요청 (거부해도 서비스 이용 가능) ──────────────────────────
+    // ── 위치 ─────────────────────────────────────────────────────────────────
+    var location = await Permission.locationWhenInUse.status;
+    if (!location.isGranted) location = await Permission.locationWhenInUse.request();
+
+    if (!mounted) return;
+
+    // needsLocation: true이면 위치 거부 시 차단
+    if (widget.needsLocation && !location.isGranted) {
+      if (location.isPermanentlyDenied || location.isRestricted) {
+        setState(() => _isRequesting = false);
+        await PermissionOnboardingSheet._showSettingsDialog(context);
+        if (mounted) Navigator.pop(context, false);
+      } else {
+        setState(() {
+          _isRequesting = false;
+          _errorMessage = '위치 권한이 거부되었습니다.\n버튼을 다시 눌러 권한을 허용해 주세요.';
+        });
+      }
+      return;
+    }
+    // needsLocation: false이면 위치 거부돼도 계속 진행
+
+    // ── 마이크 (선택) ─────────────────────────────────────────────────────────
     final mic = await Permission.microphone.status;
     if (!mic.isGranted && !mic.isPermanentlyDenied && !mic.isRestricted) {
       await Permission.microphone.request();
     }
 
+    // ── 알림 (선택) ───────────────────────────────────────────────────────────
     final notif = await Permission.notification.status;
     if (!notif.isGranted && !notif.isPermanentlyDenied && !notif.isRestricted) {
       await Permission.notification.request();
@@ -167,7 +188,6 @@ class _SheetContentState extends State<_SheetContent> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 드래그 핸들
               Center(
                 child: Container(
                   width: 40,
@@ -180,7 +200,6 @@ class _SheetContentState extends State<_SheetContent> {
               ),
               const SizedBox(height: 28),
 
-              // 제목
               Semantics(
                 header: true,
                 child: Text(
@@ -199,40 +218,39 @@ class _SheetContentState extends State<_SheetContent> {
               ),
               const SizedBox(height: 28),
 
-              // ── 필수 섹션 ────────────────────────────────────────────────
-              _SectionLabel(label: '필수'),
+              // ── 필수 ─────────────────────────────────────────────────────
+              const _SectionLabel(label: '필수'),
               const SizedBox(height: 12),
-              _PermissionItem(
+              const _PermissionItem(
                 icon: Icons.camera_alt_outlined,
                 label: '카메라',
                 description: '횡단보도·장애물 등 주변 환경 인식\n(장애물 탐지, 길찾기)',
               ),
               const SizedBox(height: 16),
-              _PermissionItem(
+              const _PermissionItem(
                 icon: Icons.location_on_outlined,
                 label: '위치',
                 description: '현재 위치 기반 안전 경로 안내\n(길찾기)',
               ),
               const SizedBox(height: 24),
 
-              // ── 선택 섹션 ────────────────────────────────────────────────
-              _SectionLabel(label: '선택', isOptional: true),
+              // ── 선택 ─────────────────────────────────────────────────────
+              const _SectionLabel(label: '선택', isOptional: true),
               const SizedBox(height: 12),
-              _PermissionItem(
+              const _PermissionItem(
                 icon: Icons.mic_outlined,
                 label: '마이크',
                 description: '음성으로 목적지 입력\n(길찾기 음성 검색)',
                 isOptional: true,
               ),
               const SizedBox(height: 16),
-              _PermissionItem(
+              const _PermissionItem(
                 icon: Icons.notifications_outlined,
                 label: '알림',
                 description: '위험 상황 및 경로 안내 알림',
                 isOptional: true,
               ),
               const SizedBox(height: 16),
-
               Text(
                 '선택 권한을 거부해도 핵심 기능은 계속 이용할 수 있습니다.',
                 style: AppTextStyles.labelRegular.copyWith(
@@ -240,7 +258,6 @@ class _SheetContentState extends State<_SheetContent> {
                 ),
               ),
 
-              // 오류 메시지 (필수 권한 거부 후 재시도 안내)
               if (_errorMessage != null) ...[
                 const SizedBox(height: 16),
                 Container(
@@ -267,7 +284,6 @@ class _SheetContentState extends State<_SheetContent> {
 
               const SizedBox(height: 28),
 
-              // 권한 허용 버튼
               Semantics(
                 button: true,
                 label: _isRequesting ? '권한 요청 중' : '권한 허용하기',
