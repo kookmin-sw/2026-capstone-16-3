@@ -6,13 +6,14 @@ import 'package:safepath/common/theme/text_styles.dart';
 
 /// 서비스 단위 권한 설명 시트
 ///
-/// "안전한 보행 안내" 맥락으로 카메라·위치 권한을 한 번에 설명하고 요청한다.
-/// 이미 두 권한이 모두 허용된 경우 시트를 표시하지 않고 즉시 true를 반환한다.
+/// "안전한 보행 안내" 맥락으로 카메라·위치(필수)·마이크·알림(선택) 권한을
+/// 한 번에 설명하고 요청한다.
+/// 필수 권한(카메라·위치)이 이미 허용된 경우 시트를 표시하지 않고 즉시 true를 반환한다.
 class PermissionOnboardingSheet {
   const PermissionOnboardingSheet._();
 
-  /// 필요한 모든 권한이 이미 허용됐으면 즉시 true 반환 (시트 미표시).
-  /// 허용되지 않은 권한이 있으면 설명 시트를 표시하고 최종 허용 여부를 반환한다.
+  /// 필수 권한(카메라·위치)이 모두 허용됐으면 즉시 true 반환 (시트 미표시).
+  /// 하나라도 미허용이면 설명 시트를 표시하고 최종 허용 여부를 반환한다.
   static Future<bool> show(BuildContext context) async {
     final camera = await Permission.camera.status;
     final location = await Permission.locationWhenInUse.status;
@@ -21,7 +22,7 @@ class PermissionOnboardingSheet {
 
     if (!context.mounted) return false;
 
-    // 영구 거부 / 기기 관리(MDM) → 시트 없이 바로 설정 안내
+    // 필수 권한 영구 거부 / 기기 관리(MDM) → 시트 없이 바로 설정 안내
     final blocked = camera.isPermanentlyDenied ||
         camera.isRestricted ||
         location.isPermanentlyDenied ||
@@ -107,6 +108,7 @@ class _SheetContentState extends State<_SheetContent> {
       _errorMessage = null;
     });
 
+    // ── 필수 권한 요청 ──────────────────────────────────────────────────────
     var camera = await Permission.camera.status;
     if (!camera.isGranted) camera = await Permission.camera.request();
 
@@ -115,28 +117,39 @@ class _SheetContentState extends State<_SheetContent> {
 
     if (!mounted) return;
 
-    if (camera.isGranted && location.isGranted) {
-      Navigator.pop(context, true);
+    final requiredGranted = camera.isGranted && location.isGranted;
+
+    if (!requiredGranted) {
+      final permanentlyBlocked = camera.isPermanentlyDenied ||
+          camera.isRestricted ||
+          location.isPermanentlyDenied ||
+          location.isRestricted;
+      if (permanentlyBlocked) {
+        setState(() => _isRequesting = false);
+        await PermissionOnboardingSheet._showSettingsDialog(context);
+        if (mounted) Navigator.pop(context, false);
+      } else {
+        setState(() {
+          _isRequesting = false;
+          _errorMessage = '카메라·위치 권한이 거부되었습니다.\n버튼을 다시 눌러 권한을 허용해 주세요.';
+        });
+      }
       return;
     }
 
-    // 영구 거부 발생 → 설정 다이얼로그 후 시트 닫기
-    final permanentlyBlocked = camera.isPermanentlyDenied ||
-        camera.isRestricted ||
-        location.isPermanentlyDenied ||
-        location.isRestricted;
-    if (permanentlyBlocked) {
-      setState(() => _isRequesting = false);
-      await PermissionOnboardingSheet._showSettingsDialog(context);
-      if (mounted) Navigator.pop(context, false);
-      return;
+    // ── 선택 권한 요청 (거부해도 서비스 이용 가능) ──────────────────────────
+    final mic = await Permission.microphone.status;
+    if (!mic.isGranted && !mic.isPermanentlyDenied && !mic.isRestricted) {
+      await Permission.microphone.request();
     }
 
-    // 거부됨 (재시도 가능) → 인라인 안내 후 버튼 재활성화
-    setState(() {
-      _isRequesting = false;
-      _errorMessage = '권한이 거부되었습니다.\n버튼을 다시 눌러 권한을 허용해 주세요.';
-    });
+    final notif = await Permission.notification.status;
+    if (!notif.isGranted && !notif.isPermanentlyDenied && !notif.isRestricted) {
+      await Permission.notification.request();
+    }
+
+    if (!mounted) return;
+    Navigator.pop(context, true);
   }
 
   @override
@@ -186,15 +199,15 @@ class _SheetContentState extends State<_SheetContent> {
               ),
               const SizedBox(height: 28),
 
-              // 카메라 권한
+              // ── 필수 섹션 ────────────────────────────────────────────────
+              _SectionLabel(label: '필수'),
+              const SizedBox(height: 12),
               _PermissionItem(
                 icon: Icons.camera_alt_outlined,
                 label: '카메라',
                 description: '횡단보도·장애물 등 주변 환경 인식\n(장애물 탐지, 길찾기)',
               ),
-              const SizedBox(height: 20),
-
-              // 위치 권한
+              const SizedBox(height: 16),
               _PermissionItem(
                 icon: Icons.location_on_outlined,
                 label: '위치',
@@ -202,21 +215,32 @@ class _SheetContentState extends State<_SheetContent> {
               ),
               const SizedBox(height: 24),
 
-              Divider(
-                color: ColorCollection.point.withValues(alpha: 0.2),
-                thickness: 1,
+              // ── 선택 섹션 ────────────────────────────────────────────────
+              _SectionLabel(label: '선택', isOptional: true),
+              const SizedBox(height: 12),
+              _PermissionItem(
+                icon: Icons.mic_outlined,
+                label: '마이크',
+                description: '음성으로 목적지 입력\n(길찾기 음성 검색)',
+                isOptional: true,
+              ),
+              const SizedBox(height: 16),
+              _PermissionItem(
+                icon: Icons.notifications_outlined,
+                label: '알림',
+                description: '위험 상황 및 경로 안내 알림',
+                isOptional: true,
               ),
               const SizedBox(height: 16),
 
-              // 알림 선택 안내
               Text(
-                '알림 권한은 설정에서 언제든지 변경하실 수 있습니다.',
+                '선택 권한을 거부해도 핵심 기능은 계속 이용할 수 있습니다.',
                 style: AppTextStyles.labelRegular.copyWith(
-                  color: ColorCollection.point.withValues(alpha: 0.55),
+                  color: ColorCollection.point.withValues(alpha: 0.5),
                 ),
               ),
 
-              // 오류 메시지 (거부 후 재시도 안내)
+              // 오류 메시지 (필수 권한 거부 후 재시도 안내)
               if (_errorMessage != null) ...[
                 const SizedBox(height: 16),
                 Container(
@@ -287,23 +311,63 @@ class _SheetContentState extends State<_SheetContent> {
   }
 }
 
+// ─── 섹션 레이블 ──────────────────────────────────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  final String label;
+  final bool isOptional;
+
+  const _SectionLabel({required this.label, this.isOptional = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: isOptional
+            ? ColorCollection.point.withValues(alpha: 0.1)
+            : ColorCollection.main.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: AppTextStyles.labelBold.copyWith(
+          color: isOptional
+              ? ColorCollection.point.withValues(alpha: 0.6)
+              : ColorCollection.main,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+}
+
 // ─── 권한 항목 위젯 ───────────────────────────────────────────────────────────
 
 class _PermissionItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final String description;
+  final bool isOptional;
 
   const _PermissionItem({
     required this.icon,
     required this.label,
     required this.description,
+    this.isOptional = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final iconBgColor = isOptional
+        ? ColorCollection.point.withValues(alpha: 0.08)
+        : ColorCollection.main.withValues(alpha: 0.15);
+    final iconColor = isOptional
+        ? ColorCollection.point.withValues(alpha: 0.55)
+        : ColorCollection.main;
+
     return Semantics(
-      label: '$label 권한: $description',
+      label: '$label 권한${isOptional ? ' (선택)' : ' (필수)'}: $description',
       excludeSemantics: true,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,10 +376,10 @@ class _PermissionItem extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: ColorCollection.main.withValues(alpha: 0.15),
+              color: iconBgColor,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: ColorCollection.main, size: 26),
+            child: Icon(icon, color: iconColor, size: 26),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -332,7 +396,9 @@ class _PermissionItem extends StatelessWidget {
                 Text(
                   description,
                   style: AppTextStyles.labelRegular.copyWith(
-                    color: ColorCollection.point.withValues(alpha: 0.65),
+                    color: ColorCollection.point.withValues(
+                      alpha: isOptional ? 0.5 : 0.65,
+                    ),
                   ),
                 ),
               ],
