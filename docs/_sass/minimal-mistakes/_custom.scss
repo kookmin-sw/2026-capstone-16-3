@@ -14,8 +14,16 @@ html {
   position: sticky;
   top: 0;
   z-index: 1000;
-  backdrop-filter: blur(14px);
-  background: rgba(255,255,255,0.82);
+
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+
+  border-bottom: 1px solid rgba(229, 231, 235, 0.7);
+}
+
+.greedy-nav {
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 .greedy-nav .visible-links a {
