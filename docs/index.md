@@ -52,7 +52,7 @@ feature_row:
 
 ## 소개 영상
 
-{% include section.demo.html %}
+{% include section/demo.html %}
 
 ## 팀원 소개
 
@@ -60,11 +60,11 @@ feature_row:
 
 ## 기술 스택
 
-{% include section.architecture.html %}
+{% include section/architecture.html %}
 
 ## 사용법
 
-{% include section.guide.html %}
+{% include section/guide.html %}
 
 ## 폴더 구조
 

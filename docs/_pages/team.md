@@ -5,4 +5,4 @@ layout: single
 classes: wide
 ---
 
-{% include section.team.html %}
+{% include section/team.html %}

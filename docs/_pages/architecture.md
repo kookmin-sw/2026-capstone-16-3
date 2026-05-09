@@ -5,4 +5,4 @@ layout: single
 classes: wide
 ---
 
-{% include section.architecture.html %}
+{% include sections/architecture.html %}
