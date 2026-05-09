@@ -1,8 +1,26 @@
-/* fonts */
+/* html */
 html,
 body {
   font-family: "Pretendard", -apple-system, BlinkMacSystemFont,
     "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* navbar */
+.masthead {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  backdrop-filter: blur(14px);
+  background: rgba(255,255,255,0.82);
+}
+
+.greedy-nav .visible-links a {
+  padding: 0.8rem 1rem;
+  font-weight: 700;
 }
 
 /* section */

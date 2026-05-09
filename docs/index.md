@@ -21,11 +21,13 @@ excerpt: >
 
 <!-- markdownlint-disable MD025 MD033 -->
 
+<section id="intro" class="gilbut-section">
+
 ## 프로젝트 소개
 
-<!-- 
 - 문제 정의 -> 기존 한계 -> 길벗 목표
--->
+
+</section>
 
 ## 주요 기능
 
