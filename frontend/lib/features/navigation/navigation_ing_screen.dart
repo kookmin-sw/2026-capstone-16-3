@@ -633,17 +633,15 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                 ],
               ),
             ),
-            ExcludeSemantics(
-              child: RouteDebugOverlay(
-                pointSteps: _pointSteps,
-                currentStepIndex: _currentStepIndex,
-                distanceToStep: _debugDistance,
-                outsideThreshold: _hasBeenOutsideThreshold,
-                threshold: _arrivalThresholdMeters,
-                minDistanceToStep: _minDistanceToStep,
-              ),
+            RouteDebugOverlay(
+              pointSteps: _pointSteps,
+              currentStepIndex: _currentStepIndex,
+              distanceToStep: _debugDistance,
+              outsideThreshold: _hasBeenOutsideThreshold,
+              threshold: _arrivalThresholdMeters,
+              minDistanceToStep: _minDistanceToStep,
             ),
-            const ExcludeSemantics(child: CameraDebugOverlay(anchorLeft: true)),
+            const CameraDebugOverlay(anchorLeft: true),
             if (_isRecalculating)
               Positioned(
                 top: 0,
