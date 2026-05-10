@@ -68,8 +68,13 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
 
   // 장애물 탐지 (카메라 + WS)
   StreamSubscription<DetectionEvent>? _wsSub;
+  Timer? _sweepTimer;
   final List<DetectionEvent> _obstacles = [];
+  final Map<String, DateTime> _lastSeen = {};
   RouteStatus _routeStatus = RouteStatus.safe;
+
+  static const Duration _staleThreshold = Duration(seconds: 3);
+  static const Duration _sweepInterval = Duration(seconds: 1);
 
   @override
   void initState() {
@@ -108,27 +113,23 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     await CameraService().start(CameraMode.navigation);
     await DetectionWsService().connect();
     _wsSub = DetectionWsService().eventStream?.listen(_onObstacleEvent);
+    _sweepTimer = Timer.periodic(_sweepInterval, (_) => _sweepStaleObstacles());
   }
 
   void _onObstacleEvent(DetectionEvent event) {
+    if (!event.isActive) return;
+
+    _lastSeen[event.primaryObjectId] = DateTime.now();
+
     setState(() {
-      if (!event.isActive) {
-        // 종료 이벤트: 해당 primaryObjectId 카드 제거
-        _obstacles.removeWhere((e) => e.primaryObjectId == event.primaryObjectId);
+      final idx = _obstacles.indexWhere((e) => e.primaryObjectId == event.primaryObjectId);
+      if (idx != -1) {
+        _obstacles[idx] = event;
       } else {
-        final idx = _obstacles.indexWhere((e) => e.primaryObjectId == event.primaryObjectId);
-        if (idx != -1) {
-          // 동일 ID 갱신: 위치 유지, 데이터만 업데이트
-          _obstacles[idx] = event;
-        } else {
-          // 신규 장애물: 목록 맨 앞에 추가
-          _obstacles.insert(0, event);
-        }
+        _obstacles.insert(0, event);
       }
       _routeStatus = _computeRouteStatus();
     });
-
-    if (!event.isActive) return;
 
     VibrationService().vibrate(switch (event.alertLevel) {
       'high' => VibrationEffect.obstacleLevel3,
@@ -143,6 +144,17 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         channel: TtsChannel.detection,
       );
     }
+  }
+
+  void _sweepStaleObstacles() {
+    if (_obstacles.isEmpty) return;
+    final now = DateTime.now();
+    setState(() {
+      _obstacles.removeWhere((e) =>
+        now.difference(_lastSeen[e.primaryObjectId] ?? DateTime(0)) > _staleThreshold,
+      );
+      _routeStatus = _computeRouteStatus();
+    });
   }
 
   RouteStatus _computeRouteStatus() {
@@ -467,6 +479,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   @override
   void dispose() {
     NavigationTtsService().reset();
+    _sweepTimer?.cancel();
     _positionSub?.cancel();
     _wsSub?.cancel();
     CameraService().stop();
