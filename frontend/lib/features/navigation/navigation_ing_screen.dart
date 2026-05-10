@@ -15,6 +15,7 @@ import 'package:safepath/features/navigation/navigation_voiceguide_card.dart';
 import 'package:safepath/model/detection_event.dart';
 import 'package:safepath/service/camera_service.dart';
 import 'package:safepath/service/detection_ws_service.dart';
+import 'package:safepath/models/crosswalk_info.dart';
 import 'package:safepath/service/crosswalk_service.dart';
 import 'package:safepath/service/navigation_service.dart';
 import 'package:safepath/service/navigation_tts_service.dart';
