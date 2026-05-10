@@ -55,7 +55,7 @@ class _RouteDebugOverlayState extends State<RouteDebugOverlay> {
       return Positioned(
         right: 8 + vp.right,
         top: 8 + vp.top,
-        child: GestureDetector(
+        child: ExcludeSemantics(child: GestureDetector(
           onTap: () => setState(() => _visible = true),
           child: Container(
             padding: const EdgeInsets.all(6),
@@ -65,14 +65,14 @@ class _RouteDebugOverlayState extends State<RouteDebugOverlay> {
             ),
             child: const Icon(Icons.navigation, color: Colors.white, size: 18),
           ),
-        ),
+        )),
       );
     }
 
     return Positioned(
       right: 8 + vp.right,
       top: 8 + vp.top,
-      child: Column(
+      child: ExcludeSemantics(child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -153,7 +153,7 @@ class _RouteDebugOverlayState extends State<RouteDebugOverlay> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
