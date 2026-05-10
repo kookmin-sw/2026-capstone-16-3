@@ -104,7 +104,12 @@ class _SavedPlaceScreenState extends State<SavedPlaceScreen> {
             children: [
               Expanded(
                 child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? Center(
+                        child: Semantics(
+                          label: '로딩 중',
+                          child: const CircularProgressIndicator(),
+                        ),
+                      )
                     : _places.isEmpty && !isEditMode
                     ? Center(
                         child: Text(

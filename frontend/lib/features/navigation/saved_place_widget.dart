@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/enum/place_category.dart';
@@ -33,18 +33,20 @@ class SavedPlaceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    final bool isTappable = !isEditMode && onTap != null;
+
+    final Widget card = Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
-        onTap: onTap == null
-            ? null
-            : () {
+        onTap: isTappable
+            ? () {
                 SoundEffectService().play(SoundEffect.buttonTap);
-              VibrationService().vibrate(VibrationEffect.buttonTap);
+                VibrationService().vibrate(VibrationEffect.buttonTap);
                 onTap!();
-              },
+              }
+            : null,
         child: Container(
           decoration: BoxDecoration(
             color: ColorCollection.point.withOpacity(0.1),
@@ -57,15 +59,18 @@ class SavedPlaceWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 if (category != null) ...[
-                  Container(
-                    width: 35,
-                    height: 35,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: iconBackgroundColor,
-                      borderRadius: BorderRadius.circular(5),
+                  // 아이콘은 label에 포함되므로 개별 읽기 제외
+                  ExcludeSemantics(
+                    child: Container(
+                      width: 35,
+                      height: 35,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: iconBackgroundColor,
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                      child: Icon(category?.icon, color: iconColor, size: 25),
                     ),
-                    child: Icon(category?.icon, color: iconColor, size: 25),
                   ),
                   const SizedBox(width: 14),
                 ],
@@ -93,43 +98,73 @@ class SavedPlaceWidget extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 if (isEditMode)
-                  GestureDetector(
+                  // 삭제 버튼은 카드와 독립된 별도 semantics 노드
+                  // Semantics.onTap: TalkBack 더블탭 시 ACTION_CLICK을 직접 수신
+                  Semantics(
+                    button: true,
+                    label: '$label 삭제',
+                    excludeSemantics: true,
                     onTap: onDelete == null
                         ? null
                         : () {
                             SoundEffectService().play(SoundEffect.buttonTap);
-              VibrationService().vibrate(VibrationEffect.buttonTap);
+                            VibrationService().vibrate(VibrationEffect.buttonTap);
                             onDelete!();
                           },
-                    child: Container(
-                      width: 50,
-                      height: 50,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: ColorCollection.red,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: ColorCollection.point,
-                          width: 1,
+                    child: GestureDetector(
+                      onTap: onDelete == null
+                          ? null
+                          : () {
+                              SoundEffectService().play(SoundEffect.buttonTap);
+                              VibrationService().vibrate(VibrationEffect.buttonTap);
+                              onDelete!();
+                            },
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: ColorCollection.red,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: ColorCollection.point,
+                            width: 1,
+                          ),
                         ),
-                      ),
-                      child: const Icon(
-                        Icons.delete,
-                        color: ColorCollection.point,
-                        size: 35,
+                        child: const Icon(
+                          Icons.delete,
+                          color: ColorCollection.point,
+                          size: 35,
+                        ),
                       ),
                     ),
                   )
                 else
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: ColorCollection.main,
+                  // 화살표 아이콘은 장식용 — 개별 읽기 제외
+                  ExcludeSemantics(
+                    child: Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: ColorCollection.main,
+                    ),
                   ),
               ],
             ),
           ),
         ),
       ),
+    );
+
+    // 일반 모드: 카드 전체를 하나의 버튼으로 읽힘
+    // 편집 모드: 카드는 비활성, 삭제 버튼이 별도 노드로 읽힘
+    if (isEditMode) return card;
+
+    return Semantics(
+      button: true,
+      label: '$label, $location',
+      enabled: onTap != null,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: card,
     );
   }
 }
