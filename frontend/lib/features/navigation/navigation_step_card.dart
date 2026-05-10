@@ -174,10 +174,10 @@ class NavigationStepCard extends StatelessWidget {
               ),
             ),
             if (acousticSignal != null && acousticSignal!.isNotEmpty) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 decoration: BoxDecoration(
                   color: ColorCollection.main.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(10),
