@@ -99,6 +99,95 @@ class PermissionOnboardingSheet {
     );
   }
 
+  /// 기능 시작 버튼을 눌렀을 때 해당 기능에 필요한 권한만 확인한다.
+  ///
+  /// - 이미 허용된 권한은 건너뜀.
+  /// - 미허용 권한은 시스템 팝업으로 요청 후 다시 확인.
+  /// - 여전히 거부 상태이면 해당 권한에 특화된 AlertDialog를 표시하고 false 반환.
+  /// - 모두 허용이면 true 반환 (다이얼로그 미표시).
+  static Future<bool> requestForFeature(
+    BuildContext context, {
+    bool needsCamera = false,
+    bool needsLocation = false,
+    required String featureName,
+  }) async {
+    var camera = needsCamera
+        ? await Permission.camera.status
+        : PermissionStatus.granted;
+    var location = needsLocation
+        ? await Permission.locationWhenInUse.status
+        : PermissionStatus.granted;
+
+    if (needsCamera && !camera.isGranted && !camera.isPermanentlyDenied && !camera.isRestricted) {
+      camera = await Permission.camera.request();
+    }
+    if (needsLocation && !location.isGranted && !location.isPermanentlyDenied && !location.isRestricted) {
+      location = await Permission.locationWhenInUse.request();
+    }
+
+    if (!context.mounted) return false;
+
+    final cameraDenied = needsCamera && !camera.isGranted;
+    final locationDenied = needsLocation && !location.isGranted;
+    if (!cameraDenied && !locationDenied) return true;
+
+    final items = [
+      if (cameraDenied) '카메라',
+      if (locationDenied) '위치',
+    ];
+    final permText = items.join('·');
+
+    final isPermanent =
+        (cameraDenied && (camera.isPermanentlyDenied || camera.isRestricted)) ||
+        (locationDenied && (location.isPermanentlyDenied || location.isRestricted));
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ColorCollection.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: ColorCollection.point, width: 2),
+        ),
+        title: Semantics(
+          header: true,
+          child: Text(
+            '$permText 권한이 필요합니다',
+            style: AppTextStyles.bodyBold.copyWith(color: ColorCollection.point),
+          ),
+        ),
+        content: Text(
+          isPermanent
+              ? '$featureName을(를) 사용하려면 $permText 권한이 필요합니다.\n설정에서 권한을 허용해주세요.'
+              : '$featureName을(를) 사용하려면 $permText 권한을 허용해야 합니다.',
+          style: AppTextStyles.labelRegular.copyWith(color: ColorCollection.point),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              '닫기',
+              style: AppTextStyles.labelBold.copyWith(color: ColorCollection.point),
+            ),
+          ),
+          if (isPermanent)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                openAppSettings();
+              },
+              child: Text(
+                '설정 열기',
+                style: AppTextStyles.labelBold.copyWith(color: ColorCollection.main),
+              ),
+            ),
+        ],
+      ),
+    );
+
+    return false;
+  }
+
   static Future<void> _showSettingsDialog(BuildContext context) async {
     await showDialog<void>(
       context: context,

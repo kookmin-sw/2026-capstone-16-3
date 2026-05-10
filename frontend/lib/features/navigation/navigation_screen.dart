@@ -15,7 +15,6 @@ import 'package:safepath/models/saved_place.dart';
 import 'package:safepath/routes/app_router.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:safepath/service/place_service.dart';
 import 'package:safepath/service/navigation_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
@@ -119,62 +118,11 @@ class NavigationScreenState extends State<NavigationScreen>
   }
 
   Future<void> _initLocation() async {
-    // 권한 미허용이면 조기 종료 (권한 요청은 온보딩에서 처리)
     final permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      if (!mounted) return;
-      setState(() => currentLocation = '위치 권한이 필요합니다');
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: ColorCollection.background,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-            side: const BorderSide(color: ColorCollection.point, width: 2),
-          ),
-          title: Semantics(
-            header: true,
-            child: Text(
-              '위치 권한이 필요합니다',
-              style: AppTextStyles.bodyBold.copyWith(
-                color: ColorCollection.point,
-              ),
-            ),
-          ),
-          content: Text(
-            '길찾기를 사용하려면 위치 권한이 필요합니다.\n'
-            '설정에서 위치 권한을 허용해주세요.',
-            style: AppTextStyles.labelRegular.copyWith(
-              color: ColorCollection.point,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(
-                '닫기',
-                style: AppTextStyles.labelBold.copyWith(
-                  color: ColorCollection.point,
-                ),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                openAppSettings();
-              },
-              child: Text(
-                '설정 열기',
-                style: AppTextStyles.labelBold.copyWith(
-                  color: ColorCollection.main,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-      return;
+      if (mounted) setState(() => currentLocation = '위치 권한이 필요합니다');
+      return; // 안내 시작 버튼에서 requestForFeature가 처리
     }
 
     try {
@@ -295,20 +243,28 @@ class NavigationScreenState extends State<NavigationScreen>
 
   /// 길찾기 시작 함수
   void startNavigation() async {
-    if (_currentPosition == null ||
-        _selectedLat == null ||
-        _selectedLng == null) {
-      return;
-    }
+    if (_selectedLat == null || _selectedLng == null) return;
 
-    // 통합 모드: 카메라 권한 추가 확인 (위치는 _initLocation에서 이미 확인)
-    if (widget.withObstacleDetection) {
-      final granted = await PermissionOnboardingSheet.show(
-        context,
-        needsLocation: true,
-      );
-      if (!granted) return;
+    // 이 모드에 필요한 권한만 확인 — 거부 시 해당 권한 특화 AlertDialog 표시
+    if (!await PermissionOnboardingSheet.requestForFeature(
+      context,
+      needsCamera: widget.withObstacleDetection,
+      needsLocation: true,
+      featureName: widget.withObstacleDetection ? '통합 모드' : '스마트 길찾기',
+    )) return;
+
+    if (!mounted) return;
+
+    // 권한이 방금 허용된 경우 위치를 재취득
+    if (_currentPosition == null) {
+      try {
+        _currentPosition = await getCurrentLocation();
+        await _fetchAddress(_currentPosition!);
+      } catch (_) {
+        return;
+      }
     }
+    if (_currentPosition == null) return;
 
     FocusManager.instance.primaryFocus?.unfocus();
     SoundEffectService().play(SoundEffect.actionStart);
