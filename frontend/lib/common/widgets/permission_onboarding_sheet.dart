@@ -105,41 +105,44 @@ class PermissionOnboardingSheet {
   /// - 미허용 권한은 시스템 팝업으로 요청 후 다시 확인.
   /// - 여전히 거부 상태이면 해당 권한에 특화된 AlertDialog를 표시하고 false 반환.
   /// - 모두 허용이면 true 반환 (다이얼로그 미표시).
+  /// 기능 시작 버튼을 눌렀을 때 해당 기능에 필요한 권한만 확인한다.
+  /// 시스템 권한 팝업은 띄우지 않고 상태만 읽는다 (시스템 팝업은 초기 온보딩에서만 출력).
+  /// 거부된 권한이 있으면 해당 권한에 특화된 AlertDialog를 표시하고 false 반환.
   static Future<bool> requestForFeature(
     BuildContext context, {
     bool needsCamera = false,
     bool needsLocation = false,
+    bool needsMicrophone = false,
     required String featureName,
   }) async {
-    var camera = needsCamera
+    final camera = needsCamera
         ? await Permission.camera.status
         : PermissionStatus.granted;
-    var location = needsLocation
+    final location = needsLocation
         ? await Permission.locationWhenInUse.status
         : PermissionStatus.granted;
-
-    if (needsCamera && !camera.isGranted && !camera.isPermanentlyDenied && !camera.isRestricted) {
-      camera = await Permission.camera.request();
-    }
-    if (needsLocation && !location.isGranted && !location.isPermanentlyDenied && !location.isRestricted) {
-      location = await Permission.locationWhenInUse.request();
-    }
+    final mic = needsMicrophone
+        ? await Permission.microphone.status
+        : PermissionStatus.granted;
 
     if (!context.mounted) return false;
 
     final cameraDenied = needsCamera && !camera.isGranted;
     final locationDenied = needsLocation && !location.isGranted;
-    if (!cameraDenied && !locationDenied) return true;
+    final micDenied = needsMicrophone && !mic.isGranted;
+    if (!cameraDenied && !locationDenied && !micDenied) return true;
 
     final items = [
       if (cameraDenied) '카메라',
       if (locationDenied) '위치',
+      if (micDenied) '마이크',
     ];
     final permText = items.join('·');
 
     final isPermanent =
         (cameraDenied && (camera.isPermanentlyDenied || camera.isRestricted)) ||
-        (locationDenied && (location.isPermanentlyDenied || location.isRestricted));
+        (locationDenied && (location.isPermanentlyDenied || location.isRestricted)) ||
+        (micDenied && (mic.isPermanentlyDenied || mic.isRestricted));
 
     await showDialog<void>(
       context: context,
