@@ -73,7 +73,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   final Map<String, DateTime> _lastSeen = {};
   RouteStatus _routeStatus = RouteStatus.safe;
 
-  static const Duration _staleThreshold = Duration(seconds: 3);
+  static const Duration _staleThreshold = Duration(seconds: 8);
   static const Duration _sweepInterval = Duration(seconds: 1);
 
   @override

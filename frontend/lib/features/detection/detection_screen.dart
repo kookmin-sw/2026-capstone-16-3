@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -41,7 +41,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
   Timer? _sweepTimer;
 
   /// N초 이상 갱신 없는 카드를 stale로 판단
-  static const Duration _staleThreshold = Duration(seconds: 3);
+  static const Duration _staleThreshold = Duration(seconds: 8);
   static const Duration _sweepInterval = Duration(seconds: 1);
 
   // ─── 탐지 시작 ───────────────────────────────────────────────────────────
