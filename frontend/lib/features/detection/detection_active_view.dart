@@ -39,27 +39,25 @@ class DetectionActiveView extends StatelessWidget {
           child: Row(
             children: [
               // ── 좌측: 버튼 + 상태 + 탐지 수 ──────────────────────────────
+              // FittedBox.scaleDown: 콘텐츠가 이미 맞는 화면은 scale=1 (원본 유지),
+              // 높이가 부족한 화면에서만 비율 축소하여 overflow 방지
               SizedBox(
                 width: 220,
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    // 버튼 외 고정 콘텐츠 높이(상태 표시줄 + 탐지 수 박스 + 간격)
-                    const fixedHeight = 110.0;
-                    final buttonSize = min(
-                      180.0,
-                      max(80.0, constraints.maxHeight - fixedHeight),
-                    );
-                    final gap = buttonSize < 130 ? 8.0 : 16.0;
-
-                    return Column(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: 220,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         DetectionButton(
                           isDetecting: true,
                           onTap: onStop,
-                          size: buttonSize,
+                          size: 180,
                         ),
-                        SizedBox(height: gap),
+                        const SizedBox(height: 16),
 
                         // 실시간 감지 활성화
                         Semantics(
@@ -86,7 +84,7 @@ class DetectionActiveView extends StatelessWidget {
                             ],
                           ),
                         ),
-                        SizedBox(height: gap * 0.75),
+                        const SizedBox(height: 12),
 
                         // 탐지된 물체 수 박스
                         Semantics(
@@ -94,9 +92,7 @@ class DetectionActiveView extends StatelessWidget {
                           excludeSemantics: true,
                           child: Container(
                             width: double.infinity,
-                            padding: EdgeInsets.symmetric(
-                              vertical: buttonSize < 130 ? 8 : 14,
-                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
                             decoration: BoxDecoration(
                               color: ColorCollection.point.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
@@ -125,8 +121,8 @@ class DetectionActiveView extends StatelessWidget {
                           ),
                         ),
                       ],
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 20),

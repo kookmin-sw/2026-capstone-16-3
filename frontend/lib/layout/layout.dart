@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
+import 'package:safepath/common/widgets/permission_onboarding_sheet.dart';
 import 'package:safepath/features/detection/detection_screen.dart';
 import 'package:safepath/features/home/home_screen.dart';
 import 'package:safepath/features/navigation/navigation_screen.dart';
@@ -19,6 +20,7 @@ class _MainLayoutState extends State<MainLayout> {
   bool _isDetecting = false;
 
   final _settingsScrollController = ScrollController();
+  final _navigationKey = GlobalKey<NavigationScreenState>();
 
   late final List<Widget> _pages = [
     HomeScreen(onTabChange: _onTap),
@@ -31,6 +33,18 @@ class _MainLayoutState extends State<MainLayout> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      // 최초 로그인 후 1회만 권한 온보딩 표시
+      await PermissionOnboardingSheet.showOnce(context);
+      // 온보딩 완료 후 위치 초기화 (권한 허용 여부와 무관하게 시도 — 내부에서 denied 처리)
+      if (mounted) _navigationKey.currentState?.initLocationIfNeeded();
+    });
+  }
+
+  @override
   void dispose() {
     _settingsScrollController.dispose();
     super.dispose();
@@ -40,6 +54,9 @@ class _MainLayoutState extends State<MainLayout> {
     // 설정 탭으로 진입할 때 스크롤 top으로 리셋
     if (index == 4 && _settingsScrollController.hasClients) {
       _settingsScrollController.jumpTo(0);
+    }
+    if (index == 2) {
+      _navigationKey.currentState?.initLocationIfNeeded();
     }
     setState(() {
       _currentIndex = index;

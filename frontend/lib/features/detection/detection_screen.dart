@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:safepath/common/widgets/permission_onboarding_sheet.dart';
 import 'package:safepath/common/widgets/title_bar_widget.dart';
 import 'package:safepath/features/detection/detection_active_view.dart';
 import 'package:safepath/features/detection/detection_idle_view.dart';
@@ -24,8 +25,11 @@ class DetectionScreen extends StatefulWidget {
 class _DetectionScreenState extends State<DetectionScreen> {
   bool _isDetecting = false;
 
-  /// WS로 수신한 최신 탐지 결과 목록 (최근 3개까지 유지)
+  /// WS로 수신한 최신 탐지 결과 목록
   final List<DetectionEvent> _obstacles = [];
+
+  /// primaryObjectId별 마지막 수신 시각 — stale 판별에 사용
+  final Map<String, DateTime> _lastSeen = {};
 
   /// 탐지 시작 후 수신된 이벤트 총 횟수
   int _detectedCount = 0;
@@ -34,10 +38,18 @@ class _DetectionScreenState extends State<DetectionScreen> {
   bool _wsConnected = false;
 
   StreamSubscription<DetectionEvent>? _wsSub;
+  Timer? _sweepTimer;
+
+  /// N초 이상 갱신 없는 카드를 stale로 판단
+  static const Duration _staleThreshold = Duration(seconds: 8);
+  static const Duration _sweepInterval = Duration(seconds: 1);
 
   // ─── 탐지 시작 ───────────────────────────────────────────────────────────
 
   Future<void> _startDetection() async {
+    // 시트 내부에서 거부 유형별 다이얼로그 안내가 완료된 후 false 반환
+    if (!await PermissionOnboardingSheet.show(context, needsLocation: false)) return;
+
     SoundEffectService().play(SoundEffect.actionStart);
     VibrationService().vibrate(VibrationEffect.actionStart);
     await CameraService().start(CameraMode.detection);
@@ -51,6 +63,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
     );
 
     _wsSub = DetectionWsService().eventStream?.listen(_onDetectionEvent);
+    _sweepTimer = Timer.periodic(_sweepInterval, (_) => _sweepStaleObstacles());
 
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
@@ -72,6 +85,8 @@ class _DetectionScreenState extends State<DetectionScreen> {
   Future<void> _stopDetection() async {
     SoundEffectService().play(SoundEffect.actionStop);
     VibrationService().vibrate(VibrationEffect.actionStop);
+    _sweepTimer?.cancel();
+    _sweepTimer = null;
     await _wsSub?.cancel();
     _wsSub = null;
 
@@ -93,21 +108,27 @@ class _DetectionScreenState extends State<DetectionScreen> {
   // ─── WS 이벤트 수신 ──────────────────────────────────────────────────────
 
   void _onDetectionEvent(DetectionEvent event) {
+    // 전송 실패 이벤트는 무시 — lastSeen 갱신 없이 stale 타이머가 자연히 제거
+    if (!event.isActive) return;
+
+    _lastSeen[event.primaryObjectId] = DateTime.now();
+
     setState(() {
-      _detectedCount++;
-      _obstacles.insert(0, event); // 최신 이벤트를 목록 맨 앞에
-      if (_obstacles.length > 3) _obstacles.removeLast(); // 최근 3개 유지
+      final idx = _obstacles.indexWhere((e) => e.primaryObjectId == event.primaryObjectId);
+      if (idx != -1) {
+        _obstacles[idx] = event;
+      } else {
+        _detectedCount++;
+        _obstacles.insert(0, event);
+      }
     });
 
-    // 장애물 위험 등급별 진동 피드백
     VibrationService().vibrate(switch (event.alertLevel) {
       'high' => VibrationEffect.obstacleLevel3,
       'medium' => VibrationEffect.obstacleLevel2,
       _ => VibrationEffect.obstacleLevel1,
     });
 
-    // high → 진행 중인 음성 중단 후 즉시 출력
-    // medium / low → 말하는 중이 아닐 때만 출력
     if (event.guideText.isNotEmpty) {
       TtsService().speak(
         event.guideText,
@@ -116,8 +137,20 @@ class _DetectionScreenState extends State<DetectionScreen> {
     }
   }
 
+  /// 마지막 수신으로부터 [_staleThreshold] 초과한 카드를 제거한다.
+  void _sweepStaleObstacles() {
+    if (_obstacles.isEmpty) return;
+    final now = DateTime.now();
+    setState(() {
+      _obstacles.removeWhere((e) =>
+        now.difference(_lastSeen[e.primaryObjectId] ?? DateTime(0)) > _staleThreshold,
+      );
+    });
+  }
+
   @override
   void dispose() {
+    _sweepTimer?.cancel();
     _wsSub?.cancel();
     super.dispose();
   }

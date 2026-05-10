@@ -73,8 +73,13 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
 
   // 장애물 탐지 (카메라 + WS)
   StreamSubscription<DetectionEvent>? _wsSub;
+  Timer? _sweepTimer;
   final List<DetectionEvent> _obstacles = [];
+  final Map<String, DateTime> _lastSeen = {};
   RouteStatus _routeStatus = RouteStatus.safe;
+
+  static const Duration _staleThreshold = Duration(seconds: 8);
+  static const Duration _sweepInterval = Duration(seconds: 1);
 
   @override
   void initState() {
@@ -114,12 +119,21 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     await CameraService().start(CameraMode.navigation);
     await DetectionWsService().connect();
     _wsSub = DetectionWsService().eventStream?.listen(_onObstacleEvent);
+    _sweepTimer = Timer.periodic(_sweepInterval, (_) => _sweepStaleObstacles());
   }
 
   void _onObstacleEvent(DetectionEvent event) {
+    if (!event.isActive) return;
+
+    _lastSeen[event.primaryObjectId] = DateTime.now();
+
     setState(() {
-      _obstacles.insert(0, event);
-      if (_obstacles.length > 3) _obstacles.removeLast();
+      final idx = _obstacles.indexWhere((e) => e.primaryObjectId == event.primaryObjectId);
+      if (idx != -1) {
+        _obstacles[idx] = event;
+      } else {
+        _obstacles.insert(0, event);
+      }
       _routeStatus = _computeRouteStatus();
     });
 
@@ -136,6 +150,17 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         channel: TtsChannel.detection,
       );
     }
+  }
+
+  void _sweepStaleObstacles() {
+    if (_obstacles.isEmpty) return;
+    final now = DateTime.now();
+    setState(() {
+      _obstacles.removeWhere((e) =>
+        now.difference(_lastSeen[e.primaryObjectId] ?? DateTime(0)) > _staleThreshold,
+      );
+      _routeStatus = _computeRouteStatus();
+    });
   }
 
   RouteStatus _computeRouteStatus() {
@@ -494,6 +519,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   @override
   void dispose() {
     NavigationTtsService().reset();
+    _sweepTimer?.cancel();
     _positionSub?.cancel();
     if (_withObstacleDetection) {
       _wsSub?.cancel();
