@@ -52,6 +52,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   bool _hasBeenOutsideThreshold = false;
   double _minDistanceToStep = double.infinity;
   double? _debugDistance;
+  double? _rawDistance; // freeze 없이 항상 갱신되는 실제 GPS 거리
   bool _hasArrived = false;
   bool _showStartOverview = false;
   bool _hasShownStartOverview = false;
@@ -286,6 +287,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     final inPassThroughZone =
         _hasBeenOutsideThreshold && _minDistanceToStep < _arrivalThresholdMeters;
 
+    _rawDistance = distance;
     if (!inPassThroughZone || distance <= (_debugDistance ?? double.infinity)) {
       setState(() => _debugDistance = distance);
     }
@@ -611,7 +613,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                                   currentStep.turnType,
                                 ),
                                 instruction: currentStep.description ?? '',
-                                distance: _debugDistance?.round() ?? 0,
+                                distance: _debugDistance?.round(),
                                 isApproaching: _hasBeenOutsideThreshold,
                                 acousticSignal: acousticSignal,
                               );
@@ -686,6 +688,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
               outsideThreshold: _hasBeenOutsideThreshold,
               threshold: _arrivalThresholdMeters,
               minDistanceToStep: _minDistanceToStep,
+              rawDistance: _rawDistance,
               segmentDist: _lastSegmentDist,
               deviationCount: _deviationCount,
               pathIndex: _currentPathIndex,

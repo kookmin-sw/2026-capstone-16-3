@@ -27,6 +27,7 @@ class RouteDebugOverlay extends StatefulWidget {
   final bool outsideThreshold;
   final double threshold;
   final double minDistanceToStep;
+  final double? rawDistance;
   final double? segmentDist;
   final int deviationCount;
   final int pathIndex;
@@ -39,6 +40,7 @@ class RouteDebugOverlay extends StatefulWidget {
     required this.outsideThreshold,
     required this.threshold,
     this.minDistanceToStep = double.infinity,
+    this.rawDistance,
     this.segmentDist,
     this.deviationCount = 0,
     this.pathIndex = 0,
@@ -160,6 +162,9 @@ class _RouteDebugOverlayState extends State<RouteDebugOverlay> {
                       distanceToStep: i == widget.currentStepIndex
                           ? widget.distanceToStep
                           : null,
+                      rawDistance: i == widget.currentStepIndex
+                          ? widget.rawDistance
+                          : null,
                       outsideThreshold: i == widget.currentStepIndex
                           ? widget.outsideThreshold
                           : null,
@@ -182,6 +187,7 @@ class _StepDebugCard extends StatelessWidget {
   final RouteStep step;
   final bool isCurrent;
   final double? distanceToStep;
+  final double? rawDistance;
   final bool? outsideThreshold;
   final double threshold;
   final double minDistanceToStep;
@@ -192,6 +198,7 @@ class _StepDebugCard extends StatelessWidget {
     required this.distanceToStep,
     required this.outsideThreshold,
     required this.threshold,
+    this.rawDistance,
     this.minDistanceToStep = double.infinity,
   });
 
@@ -304,7 +311,7 @@ class _StepDebugCard extends StatelessWidget {
                     ),
                     if (minDistanceToStep != double.infinity && outsideThreshold == true)
                       Text(
-                        'pass: ${(distanceToStep! - minDistanceToStep).toStringAsFixed(1)}/8m',
+                        'pass: ${((rawDistance ?? distanceToStep ?? minDistanceToStep) - minDistanceToStep).toStringAsFixed(1)}/8m',
                         style: const TextStyle(color: Colors.cyan, fontSize: 9),
                       ),
                   ],
