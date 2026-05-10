@@ -64,7 +64,6 @@ def build_backend_event_payload(
         "clock_direction": gt.get("clock_direction"),
         "distance": gt.get("distance"),
         "alert_level": gt.get("alert_level", "safe"),
-        "sentence_length": sentence_length,
     }
 
 
@@ -97,7 +96,13 @@ async def analyze_image(
         raise HTTPException(status_code=400, detail="이미지 파일만 업로드 가능합니다.")
 
     try:
-        parsed_captured_at = datetime.fromisoformat(captured_at)
+        # parsed_captured_at = datetime.fromisoformat(captured_at)
+        normalized_captured_at = (
+            captured_at[:-1] + "+00:00"
+            if captured_at.endswith("Z")
+            else captured_at
+        )
+        parsed_captured_at = datetime.fromisoformat(normalized_captured_at)
     except ValueError:
         raise HTTPException(
             status_code=400,
