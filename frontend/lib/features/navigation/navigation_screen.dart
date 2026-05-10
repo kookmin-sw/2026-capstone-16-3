@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/theme/color_collection.dart';
+import 'package:safepath/common/widgets/permission_onboarding_sheet.dart';
 import 'package:safepath/common/widgets/action_button_widget.dart';
 import 'package:safepath/common/widgets/text_input_bar.dart';
 import 'package:safepath/common/widgets/title_bar_widget.dart';
@@ -298,6 +299,15 @@ class NavigationScreenState extends State<NavigationScreen>
         _selectedLat == null ||
         _selectedLng == null) {
       return;
+    }
+
+    // 통합 모드: 카메라 권한 추가 확인 (위치는 _initLocation에서 이미 확인)
+    if (widget.withObstacleDetection) {
+      final granted = await PermissionOnboardingSheet.show(
+        context,
+        needsLocation: true,
+      );
+      if (!granted) return;
     }
 
     FocusManager.instance.primaryFocus?.unfocus();
