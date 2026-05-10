@@ -48,7 +48,16 @@ class NavigationStartOverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final startLabel = startDirection != null
+        ? '$startDirection 방향으로 출발하세요'
+        : '길안내를 시작합니다';
+    final semanticLabel =
+        '$startLabel. 총 ${_formatDistance(totalDistance)}, 약 ${_formatTime(totalTime)}. '
+        '${_formatDistance(firstStepDistance)} 앞에서 ${_directionLabel(firstStepDirection)}하세요';
+    return Semantics(
+      label: semanticLabel,
+      excludeSemantics: true,
+      child: Container(
       decoration: BoxDecoration(
         color: ColorCollection.point.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
@@ -92,6 +101,7 @@ class NavigationStartOverviewCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }
