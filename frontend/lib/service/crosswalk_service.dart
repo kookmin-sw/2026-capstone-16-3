@@ -1,21 +1,12 @@
 import 'dart:convert';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-
-class CrosswalkInfo {
-  final bool acousticSignalInstalled;
-  final String guidanceSummary;
-
-  const CrosswalkInfo({
-    required this.acousticSignalInstalled,
-    required this.guidanceSummary,
-  });
-}
+import 'package:safepath/models/crosswalk_info.dart';
 
 class CrosswalkService {
   static const String _baseUrl = String.fromEnvironment('BASE_URL');
 
-  /// 횡단보도 음성신호기 정보 조회
+  /// 횡단보도 음성신호기 정보 조회 (공개 엔드포인트 — Authorization 헤더 불필요)
   /// 거리순 정렬 결과 중 0번째 항목만 사용
   static Future<CrosswalkInfo?> getNearby({
     required double lat,
