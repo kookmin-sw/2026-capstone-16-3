@@ -27,6 +27,9 @@ class RouteDebugOverlay extends StatefulWidget {
   final bool outsideThreshold;
   final double threshold;
   final double minDistanceToStep;
+  final double? segmentDist;
+  final int deviationCount;
+  final int pathIndex;
 
   const RouteDebugOverlay({
     super.key,
@@ -36,6 +39,9 @@ class RouteDebugOverlay extends StatefulWidget {
     required this.outsideThreshold,
     required this.threshold,
     this.minDistanceToStep = double.infinity,
+    this.segmentDist,
+    this.deviationCount = 0,
+    this.pathIndex = 0,
   });
 
   @override
@@ -55,7 +61,7 @@ class _RouteDebugOverlayState extends State<RouteDebugOverlay> {
       return Positioned(
         right: 8 + vp.right,
         top: 8 + vp.top,
-        child: GestureDetector(
+        child: ExcludeSemantics(child: GestureDetector(
           onTap: () => setState(() => _visible = true),
           child: Container(
             padding: const EdgeInsets.all(6),
@@ -65,17 +71,31 @@ class _RouteDebugOverlayState extends State<RouteDebugOverlay> {
             ),
             child: const Icon(Icons.navigation, color: Colors.white, size: 18),
           ),
-        ),
+        )),
       );
     }
 
     return Positioned(
       right: 8 + vp.right,
       top: 8 + vp.top,
-      child: Column(
+      child: ExcludeSemantics(child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // 이탈 감지 상태 표시
+          Container(
+            width: 210,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            color: Colors.black.withValues(alpha: 0.85),
+            child: Text(
+              'DEV  seg:${widget.segmentDist != null ? '${widget.segmentDist!.toStringAsFixed(1)}m' : '--'}  cnt:${widget.deviationCount}/3  path:${widget.pathIndex}',
+              style: TextStyle(
+                color: widget.deviationCount > 0 ? Colors.orange : Colors.cyan,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
           // 헤더 (닫기 버튼)
           GestureDetector(
             onTap: () => setState(() => _visible = false),
@@ -153,7 +173,7 @@ class _RouteDebugOverlayState extends State<RouteDebugOverlay> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }

@@ -60,7 +60,12 @@ class NavigationOverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final semanticLabel =
+        '총 거리 ${_formatDistance(distance)}, 총 소요시간 ${_formatTime(time)}, 경로 상태 ${_getStatusText(status)}';
+    return Semantics(
+      label: semanticLabel,
+      excludeSemantics: true,
+      child: Container(
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(10),
@@ -140,6 +145,7 @@ class NavigationOverviewCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }

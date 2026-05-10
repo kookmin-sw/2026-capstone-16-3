@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/service/sound_effect_service.dart';
@@ -49,6 +49,7 @@ class TextInputBar extends StatelessWidget {
                     return const SizedBox.shrink();
                   }
                   return IconButton(
+                    tooltip: '입력 지우기',
                     icon: const Icon(Icons.close, color: ColorCollection.main),
                     onPressed: () {
                       SoundEffectService().play(SoundEffect.buttonTap);
@@ -85,30 +86,37 @@ class TextInputBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 14),
-        Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          child: InkWell(
+        Semantics(
+          button: true,
+          label: '음성 입력',
+          enabled: micTap != null,
+          onTap: micTap,
+          excludeSemantics: true,
+          child: Material(
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(10),
-            onTap: micTap == null
-                ? null
-                : () {
-                    SoundEffectService().play(SoundEffect.buttonTap);
-              VibrationService().vibrate(VibrationEffect.buttonTap);
-                    micTap!();
-                  },
-            child: Container(
-              width: 55,
-              height: 55,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: ColorCollection.main,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.mic,
-                color: ColorCollection.point,
-                size: 40,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: micTap == null
+                  ? null
+                  : () {
+                      SoundEffectService().play(SoundEffect.buttonTap);
+                      VibrationService().vibrate(VibrationEffect.buttonTap);
+                      micTap!();
+                    },
+              child: Container(
+                width: 55,
+                height: 55,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: ColorCollection.main,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.mic,
+                  color: ColorCollection.point,
+                  size: 40,
+                ),
               ),
             ),
           ),

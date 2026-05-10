@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/routes/app_router.dart';
@@ -11,7 +11,11 @@ class MoreButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    return Semantics(
+      button: true,
+      label: '저장된 장소 더보기',
+      excludeSemantics: true,
+      child: Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
@@ -52,6 +56,7 @@ class MoreButton extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }

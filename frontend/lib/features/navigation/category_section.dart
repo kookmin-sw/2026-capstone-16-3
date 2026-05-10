@@ -19,11 +19,14 @@ class CategorySection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '대표 아이콘 설정',
-          style: AppTextStyles.title2.copyWith(
-            color: ColorCollection.point,
-            fontSize: 20,
+        Semantics(
+          header: true,
+          child: Text(
+            '대표 아이콘 설정',
+            style: AppTextStyles.title2.copyWith(
+              color: ColorCollection.point,
+              fontSize: 20,
+            ),
           ),
         ),
         const SizedBox(height: 15),

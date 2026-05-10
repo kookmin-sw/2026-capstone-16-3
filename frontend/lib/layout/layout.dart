@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/widgets/permission_onboarding_sheet.dart';
 import 'package:safepath/features/detection/detection_screen.dart';
@@ -24,8 +24,11 @@ class _MainLayoutState extends State<MainLayout> {
 
   late final List<Widget> _pages = [
     HomeScreen(onTabChange: _onTap),
-    DetectionScreen(onDetectingChanged: (v) => setState(() => _isDetecting = v)),
-    NavigationScreen(key: _navigationKey),
+    DetectionScreen(
+      onDetectingChanged: (v) => setState(() => _isDetecting = v),
+    ),
+    const NavigationScreen(withObstacleDetection: false),
+    const NavigationScreen(withObstacleDetection: true),
     SettingsScreen(scrollController: _settingsScrollController),
   ];
 
@@ -48,7 +51,8 @@ class _MainLayoutState extends State<MainLayout> {
   }
 
   void _onTap(int index) {
-    if (index == 3 && _settingsScrollController.hasClients) {
+    // 설정 탭으로 진입할 때 스크롤 top으로 리셋
+    if (index == 4 && _settingsScrollController.hasClients) {
       _settingsScrollController.jumpTo(0);
     }
     if (index == 2) {
@@ -72,46 +76,57 @@ class _MainLayoutState extends State<MainLayout> {
       },
       child: Scaffold(
         body: IndexedStack(index: _currentIndex, children: _pages),
-      bottomNavigationBar: _isDetecting ? null : Container(
-        decoration: const BoxDecoration(
-          border: Border(
-            top: BorderSide(color: ColorCollection.point, width: 1.0),
-          ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            SoundEffectService().play(SoundEffect.buttonTap);
-              VibrationService().vibrate(VibrationEffect.buttonTap);
-            _onTap(index);
-          },
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: ColorCollection.background,
-          selectedItemColor: ColorCollection.main,
-          selectedLabelStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            fontFamily: 'NanumSquareNeo',
-          ),
-          unselectedLabelStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            fontFamily: 'NanumSquareNeo',
-          ),
-          unselectedItemColor: ColorCollection.point,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.remove_red_eye_outlined),
-              label: '탐지',
-            ),
-            BottomNavigationBarItem(icon: Icon(Icons.navigation), label: '길찾기'),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: '설정'),
-          ],
-        ),
-      ),
+        bottomNavigationBar: _isDetecting
+            ? null
+            : Container(
+                decoration: const BoxDecoration(
+                  border: Border(
+                    top: BorderSide(color: ColorCollection.point, width: 1.0),
+                  ),
+                ),
+                child: BottomNavigationBar(
+                  currentIndex: _currentIndex,
+                  onTap: (index) {
+                    SoundEffectService().play(SoundEffect.buttonTap);
+                    VibrationService().vibrate(VibrationEffect.buttonTap);
+                    _onTap(index);
+                  },
+                  type: BottomNavigationBarType.fixed,
+                  backgroundColor: ColorCollection.background,
+                  selectedItemColor: ColorCollection.main,
+                  selectedLabelStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'NanumSquareNeo',
+                  ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    fontFamily: 'NanumSquareNeo',
+                  ),
+                  unselectedItemColor: ColorCollection.point,
+                  items: const [
+                    BottomNavigationBarItem(icon: Icon(Icons.home), label: '홈'),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.remove_red_eye_outlined),
+                      label: '탐지',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.navigation),
+                      label: '길찾기',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.directions_walk_rounded),
+                      label: '통합',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.settings),
+                      label: '설정',
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }
 }
-

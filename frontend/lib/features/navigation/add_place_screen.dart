@@ -318,9 +318,14 @@ class _AddPlaceScreenState extends State<AddPlaceScreen> {
                   left: 0,
                   right: 0,
                   child: isLoading
-                      ? const Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Center(child: CircularProgressIndicator()),
+                      ? Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Center(
+                            child: Semantics(
+                              label: '검색 중',
+                              child: const CircularProgressIndicator(),
+                            ),
+                          ),
                         )
                       : searchResults.isNotEmpty
                       ? ResultList(

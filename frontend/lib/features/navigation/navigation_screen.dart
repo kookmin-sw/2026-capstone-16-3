@@ -21,7 +21,9 @@ import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/vibration_service.dart';
 
 class NavigationScreen extends StatefulWidget {
-  const NavigationScreen({super.key});
+  final bool withObstacleDetection;
+
+  const NavigationScreen({super.key, this.withObstacleDetection = true});
 
   @override
   NavigationScreenState createState() => NavigationScreenState();
@@ -325,6 +327,7 @@ class NavigationScreenState extends State<NavigationScreen>
           'endX': _selectedLng!,
           'endY': _selectedLat!,
           'endName': _selectedName,
+          'withObstacleDetection': widget.withObstacleDetection,
         },
       );
 
@@ -520,11 +523,14 @@ class NavigationScreenState extends State<NavigationScreen>
                       crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          '저장된 장소',
-                          style: AppTextStyles.title2.copyWith(
-                            color: ColorCollection.point,
-                            fontSize: 20,
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            '저장된 장소',
+                            style: AppTextStyles.title2.copyWith(
+                              color: ColorCollection.point,
+                              fontSize: 20,
+                            ),
                           ),
                         ),
                         MoreButton(
@@ -598,11 +604,14 @@ class NavigationScreenState extends State<NavigationScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          '최근 장소',
-                          style: AppTextStyles.title2.copyWith(
-                            color: ColorCollection.point,
-                            fontSize: 20,
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            '최근 장소',
+                            style: AppTextStyles.title2.copyWith(
+                              color: ColorCollection.point,
+                              fontSize: 20,
+                            ),
                           ),
                         ),
                         if (_recentPlaces.isNotEmpty)
@@ -684,7 +693,7 @@ class NavigationScreenState extends State<NavigationScreen>
                   left: 0,
                   right: 0,
                   child: isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? Center(child: Semantics(label: '검색 중', child: const CircularProgressIndicator()))
                       : searchResults.isNotEmpty
                       ? ResultList(
                           results: searchResults,
@@ -747,16 +756,20 @@ class _ClearButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
+    return Semantics(
+      button: true,
+      label: '최근 장소 전체 삭제',
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(10),
-        onTap: () {
-          SoundEffectService().play(SoundEffect.buttonTap);
-          VibrationService().vibrate(VibrationEffect.buttonTap);
-          onTap();
-        },
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () {
+            SoundEffectService().play(SoundEffect.buttonTap);
+            VibrationService().vibrate(VibrationEffect.buttonTap);
+            onTap();
+          },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
@@ -782,6 +795,7 @@ class _ClearButton extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 }
