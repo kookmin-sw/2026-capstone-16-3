@@ -63,7 +63,6 @@ class NavigationScreenState extends State<NavigationScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    speech.initialize();
     _loadSavedPlaces();
     _loadRecentPlaces();
     destinationController.addListener(() {
