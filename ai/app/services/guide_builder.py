@@ -1121,7 +1121,6 @@ def _decide_tactile_guide_once(
     sentence_length = normalize_sentence_length(sentence_length)
     objects = scene["objects"]
 
-    # 1. detection 객체가 점자블록 위에 있는 경우
     blocking_objects = [
         obj
         for obj in objects
@@ -1129,7 +1128,20 @@ def _decide_tactile_guide_once(
         and obj.get("confidence", 0.0) >= MIN_GUIDE_CONF
     ]
 
-    if blocking_objects and not is_scene_announced_once("tactile_blocked_by_object"):
+    tactile_block = scene.get("tactile_block", {})
+    tactile_status = tactile_block.get("status")
+
+    # 상황이 사라지면 플래그 초기화 → 새 구간에서 다시 안내 가능
+    if not blocking_objects:
+        last_scene_announced.pop("tactile_blocked_by_object", None)
+    if tactile_status != "blocked_or_occluded":
+        last_scene_announced.pop("tactile_blocked_or_occluded", None)
+    if tactile_status != "broken":
+        last_scene_announced.pop("tactile_broken", None)
+
+    # 1. detection 객체가 점자블록 위에 있는 경우
+
+    if blocking_objects:
         primary = sorted(
             blocking_objects,
             key=lambda obj: (
@@ -1141,13 +1153,15 @@ def _decide_tactile_guide_once(
         ko = to_ko(primary["class"])
         direction = primary["clock_direction"]
 
-        voice = format_tactile_object_guide(
-            clock_direction=direction,
-            object_ko=ko,
-            sentence_length=sentence_length,
-        )
-
-        mark_scene_announced_once("tactile_blocked_by_object", frame_idx)
+        if not is_scene_announced_once("tactile_blocked_by_object"):
+            voice = format_tactile_object_guide(
+                clock_direction=direction,
+                object_ko=ko,
+                sentence_length=sentence_length,
+            )
+            mark_scene_announced_once("tactile_blocked_by_object", frame_idx)
+        else:
+            voice = ""
 
         return _make_gt(
             primary,
@@ -1157,55 +1171,54 @@ def _decide_tactile_guide_once(
             voice,
         )
 
-    tactile_block = scene.get("tactile_block", {})
-    tactile_status = tactile_block.get("status")
-
     # 2. detection은 없지만 점자블록이 가려졌거나 알 수 없는 장애물이 있는 경우
     if tactile_status == "blocked_or_occluded":
-        if not is_scene_announced_once("tactile_blocked_or_occluded"):
-            direction = tactile_block.get("clock_direction") or "12시"
+        direction = tactile_block.get("clock_direction") or "12시"
 
+        if not is_scene_announced_once("tactile_blocked_or_occluded"):
             voice = format_tactile_unknown_guide(
                 clock_direction=direction,
                 sentence_length=sentence_length,
             )
-
             mark_scene_announced_once("tactile_blocked_or_occluded", frame_idx)
+        else:
+            voice = ""
 
-            return {
-                "warning_needed": True,
-                "primary_object_id": None,
-                "primary_object_class": "장애물",
-                "primary_object_class_ko": "장애물",
-                "clock_direction": direction,
-                "distance": None,
-                "distance_m": None,
-                "action": "caution",
-                "priority": 2,
-                "reason": "점자블록 위 장애물 또는 가림 감지",
-                "voice_guide": voice,
-            }
+        return {
+            "warning_needed": True,
+            "primary_object_id": None,
+            "primary_object_class": "장애물",
+            "primary_object_class_ko": "장애물",
+            "clock_direction": direction,
+            "distance": None,
+            "distance_m": None,
+            "action": "caution",
+            "priority": 2,
+            "reason": "점자블록 위 장애물 또는 가림 감지",
+            "voice_guide": voice,
+        }
 
     # 3. 점자블록 끊김
     if tactile_status == "broken":
         if not is_scene_announced_once("tactile_broken"):
             voice = format_tactile_broken_guide(sentence_length)
-
             mark_scene_announced_once("tactile_broken", frame_idx)
+        else:
+            voice = ""
 
-            return {
-                "warning_needed": True,
-                "primary_object_id": None,
-                "primary_object_class": "tactile_block",
-                "primary_object_class_ko": "점자블록",
-                "clock_direction": "12시",
-                "distance": None,
-                "distance_m": None,
-                "action": "caution",
-                "priority": 2,
-                "reason": "전방 점자블록 끊김",
-                "voice_guide": voice,
-            }
+        return {
+            "warning_needed": True,
+            "primary_object_id": None,
+            "primary_object_class": "tactile_block",
+            "primary_object_class_ko": "점자블록",
+            "clock_direction": "12시",
+            "distance": None,
+            "distance_m": None,
+            "action": "caution",
+            "priority": 2,
+            "reason": "전방 점자블록 끊김",
+            "voice_guide": voice,
+        }
 
     return None
 
