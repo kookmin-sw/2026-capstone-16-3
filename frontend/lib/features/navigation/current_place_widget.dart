@@ -22,7 +22,10 @@ class CurrentPlaceWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return Semantics(
+      label: '$label, $location',
+      excludeSemantics: true,
+      child: Container(
       decoration: BoxDecoration(
         color: ColorCollection.point.withOpacity(0.1),
         borderRadius: BorderRadius.circular(10),
@@ -68,6 +71,7 @@ class CurrentPlaceWidget extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 }
+
