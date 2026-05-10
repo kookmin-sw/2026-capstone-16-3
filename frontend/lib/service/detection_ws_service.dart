@@ -118,14 +118,14 @@ class DetectionWsService {
 
     try {
       final json = jsonDecode(frame.body!) as Map<String, dynamic>;
-      // user_id 필드가 있는 탐지 이벤트만 처리 (success + exit 모두 emit)
-      if (!json.containsKey('user_id')) return;
+      // primaryObjectId 필드가 있는 탐지 이벤트만 처리 (success + exit 모두 emit)
+      if (!json.containsKey('primaryObjectId')) return;
 
       final event = DetectionEvent.fromJson(json);
       _controller?.add(event);
       debugPrint(
         '🟢 [WS] 수신(${event.status}): ${event.primaryObjectClass} / '
-        '${event.clockDirection} [${event.userId}]',
+        '${event.clockDirection} [${event.primaryObjectId}]',
       );
     } catch (e) {
       debugPrint('🔴 [WS] 파싱 오류: $e / body: ${frame.body}');

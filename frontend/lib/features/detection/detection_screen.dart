@@ -99,11 +99,11 @@ class _DetectionScreenState extends State<DetectionScreen> {
   void _onDetectionEvent(DetectionEvent event) {
     setState(() {
       if (!event.isActive) {
-        // 종료 이벤트: 해당 userId 카드 제거
-        _obstacles.removeWhere((e) => e.userId == event.userId);
+        // 종료 이벤트: 해당 primaryObjectId 카드 제거
+        _obstacles.removeWhere((e) => e.primaryObjectId == event.primaryObjectId);
         return;
       }
-      final idx = _obstacles.indexWhere((e) => e.userId == event.userId);
+      final idx = _obstacles.indexWhere((e) => e.primaryObjectId == event.primaryObjectId);
       if (idx != -1) {
         // 동일 ID 갱신: 위치 유지, 데이터만 업데이트
         _obstacles[idx] = event;
