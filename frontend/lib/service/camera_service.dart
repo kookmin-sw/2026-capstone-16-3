@@ -44,7 +44,7 @@ class CameraService {
   static const String _baseUrl = String.fromEnvironment('BASE_URL');
 
   /// true → 카메라 대신 테스트 이미지(assets/images/test_detection.jpg)를 주기 전송
-  static const bool useTestImage = false;
+  static const bool useTestImage = true;
 
   /// 캡처 전송 주기
   static const Duration _captureInterval = Duration(milliseconds: 500);
@@ -142,7 +142,7 @@ class CameraService {
 
   // ─── 캡처 & 전송 ──────────────────────────────────────────────────────────
 
-  static const _debugAssetPath = 'assets/images/test_detection.jpg';
+  static const _debugAssetPath = 'assets/images/test_detection(1).jpg';
 
   /// 사진을 찍고(또는 디버그 테스트 이미지를 로드하고) 서버로 전송한다.
   /// 성공/실패 결과를 captureEventStream으로 내보낸다.
@@ -153,12 +153,16 @@ class CameraService {
     try {
       final Uint8List bytes;
 
+      final String imageType;
+
       if (useTestImage) {
         // 디버그 모드: 카메라 대신 번들 테스트 이미지를 사용
         final byteData = await rootBundle.load(_debugAssetPath);
         bytes = byteData.buffer.asUint8List();
+        // 파일 확장자로 실제 포맷 판단 (PNG·JPEG 불일치 → 서버 500 방지)
+        imageType = _debugAssetPath.endsWith('.png') ? 'png' : 'jpeg';
         debugPrint(
-          '🟣 [Camera][DBG] 테스트 이미지 로드 완료 (${bytes.length} bytes) → 전송 시작',
+          '🟣 [Camera][DBG] 테스트 이미지 로드 완료 (${bytes.length} bytes, $imageType) → 전송 시작',
         );
       } else {
         if (_controller == null || !_controller!.value.isInitialized) return;
@@ -168,10 +172,11 @@ class CameraService {
         if (!_isRunning) return;
 
         bytes = await file.readAsBytes();
+        imageType = 'jpeg'; // 카메라는 항상 JPEG
         debugPrint('🟡 [Camera] 캡처 완료 (${bytes.length} bytes) → 전송 시작');
       }
 
-      final success = await _sendFrame(bytes);
+      final success = await _sendFrame(bytes, imageType: imageType);
 
       if (!_captureEventController.isClosed) {
         _captureEventController.add(
@@ -202,11 +207,12 @@ class CameraService {
   ///
   /// Response: { "success": bool, "data": {}, "error": { ... } }
   /// success=true이고 HTTP 200일 때만 전송 성공으로 처리한다.
-  Future<bool> _sendFrame(Uint8List bytes) async {
+  Future<bool> _sendFrame(Uint8List bytes, {String imageType = 'jpeg'}) async {
     final endpoint = '$_baseUrl/api/guide/image';
 
     final capturedAt = DateTime.now().toUtc().toIso8601String();
     final accessToken = await TokenStorage().accessToken;
+    final ext = imageType == 'png' ? 'png' : 'jpg';
 
     debugPrint('🟡 [Camera] BE 요청: POST $endpoint / captured_at: $capturedAt');
 
@@ -216,8 +222,8 @@ class CameraService {
         http.MultipartFile.fromBytes(
           'image',
           bytes,
-          filename: 'image_${DateTime.now().millisecondsSinceEpoch}.jpg',
-          contentType: MediaType('image', 'jpeg'),
+          filename: 'image_${DateTime.now().millisecondsSinceEpoch}.$ext',
+          contentType: MediaType('image', imageType),
         ),
       )
       ..fields['captured_at'] = capturedAt;
