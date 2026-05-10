@@ -63,6 +63,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   int _deviationCount = 0;
   bool _isRecalculating = false;
   int _currentPathIndex = 0;
+  double? _lastSegmentDist;
 
   // 횡단보도 음성신호기 캐시 (step index → CrosswalkInfo?)
   Map<int, CrosswalkInfo?> _crosswalkCache = {};
@@ -283,7 +284,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     final inPassThroughZone =
         _hasBeenOutsideThreshold && _minDistanceToStep < _arrivalThresholdMeters;
 
-    if (!inPassThroughZone) {
+    if (!inPassThroughZone || distance <= (_debugDistance ?? double.infinity)) {
       setState(() => _debugDistance = distance);
     }
 
@@ -317,15 +318,11 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
       }
     } else if (_hasBeenOutsideThreshold) {
-      // pass-through zone — 거리 증가 안내 방지를 위해 speakDistance 호출하지 않음
+      // pass-through zone — 8m 이하 행동 지시 허용 (dedup은 speakDistance 내부에서 처리)
+      NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
     } else {
-      // 처음부터 10m 이내 → 이미 지난 step으로 간주하고 skip (TTS 없음)
-      setState(() {
-        _currentStepIndex++;
-        _minDistanceToStep = double.infinity;
-        _debugDistance = null;
-      });
-      _speakNextStepOrDestination();
+      // 처음부터 _arrivalThresholdMeters 이내 → pass-through zone 즉시 활성화
+      _hasBeenOutsideThreshold = true;
     }
 
     _checkDeviation(position);
@@ -425,6 +422,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     if (closestSegIndex > _currentPathIndex) {
       _currentPathIndex = closestSegIndex;
     }
+    _lastSegmentDist = minDist;
 
     if (minDist > _deviationThresholdMeters) {
       _deviationCount++;
@@ -598,6 +596,12 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                                 startDirection: _startDirection,
                               );
                             } else if (currentStep != null) {
+                              final crosswalk = _crosswalkCache[_currentStepIndex];
+                              final acousticSignal =
+                                  (crosswalk?.acousticSignalInstalled == true &&
+                                          crosswalk!.guidanceSummary.isNotEmpty)
+                                      ? crosswalk.guidanceSummary
+                                      : null;
                               return NavigationStepCard(
                                 direction: _turnTypeToDirection(
                                   currentStep.turnType,
@@ -605,6 +609,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                                 instruction: currentStep.description ?? '',
                                 distance: _debugDistance?.round() ?? 0,
                                 isApproaching: _hasBeenOutsideThreshold,
+                                acousticSignal: acousticSignal,
                               );
                             } else if (_hasArrived) {
                               return Center(
@@ -677,6 +682,9 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
               outsideThreshold: _hasBeenOutsideThreshold,
               threshold: _arrivalThresholdMeters,
               minDistanceToStep: _minDistanceToStep,
+              segmentDist: _lastSegmentDist,
+              deviationCount: _deviationCount,
+              pathIndex: _currentPathIndex,
             ),
             const CameraDebugOverlay(anchorLeft: true),
             if (_isRecalculating)
