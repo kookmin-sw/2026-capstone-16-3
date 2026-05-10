@@ -46,7 +46,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   double? _endY;
   String _endName = '';
 
-  static const double _arrivalThresholdMeters = 10;
+  static const double _arrivalThresholdMeters = 15;
   static const double _passThroughOffsetMeters = 8;
   bool _hasBeenOutsideThreshold = false;
   double _minDistanceToStep = double.infinity;
@@ -62,6 +62,8 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   static const int _deviationCountThreshold = 3;
   int _deviationCount = 0;
   bool _isRecalculating = false;
+  int _currentPathIndex = 0;
+  double? _lastSegmentDist;
 
   // 횡단보도 음성신호기 캐시 (step index → CrosswalkInfo?)
   Map<int, CrosswalkInfo?> _crosswalkCache = {};
@@ -282,7 +284,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     final inPassThroughZone =
         _hasBeenOutsideThreshold && _minDistanceToStep < _arrivalThresholdMeters;
 
-    if (!inPassThroughZone) {
+    if (!inPassThroughZone || distance <= (_debugDistance ?? double.infinity)) {
       setState(() => _debugDistance = distance);
     }
 
@@ -316,15 +318,11 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
       }
     } else if (_hasBeenOutsideThreshold) {
-      // pass-through zone — 거리 증가 안내 방지를 위해 speakDistance 호출하지 않음
+      // pass-through zone — 8m 이하 행동 지시 허용 (dedup은 speakDistance 내부에서 처리)
+      NavigationTtsService().speakDistance(direction, distance.round(), step.description ?? '');
     } else {
-      // 처음부터 10m 이내 → 이미 지난 step으로 간주하고 skip (TTS 없음)
-      setState(() {
-        _currentStepIndex++;
-        _minDistanceToStep = double.infinity;
-        _debugDistance = null;
-      });
-      _speakNextStepOrDestination();
+      // 처음부터 _arrivalThresholdMeters 이내 → pass-through zone 즉시 활성화
+      _hasBeenOutsideThreshold = true;
     }
 
     _checkDeviation(position);
@@ -376,19 +374,55 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     }
   }
 
+  // 점 P에서 선분 AB까지의 최단 거리 (미터)
+  double _distanceToSegment(
+    double lat, double lng,
+    double lat1, double lng1,
+    double lat2, double lng2,
+  ) {
+    const double metersPerDegLat = 111320.0;
+    final double metersPerDegLng =
+        111320.0 * math.cos(lat * math.pi / 180);
+
+    final double px = (lng - lng1) * metersPerDegLng;
+    final double py = (lat - lat1) * metersPerDegLat;
+    final double ax = (lng2 - lng1) * metersPerDegLng;
+    final double ay = (lat2 - lat1) * metersPerDegLat;
+
+    final double segLenSq = ax * ax + ay * ay;
+    if (segLenSq == 0) {
+      return Geolocator.distanceBetween(lat, lng, lat1, lng1);
+    }
+
+    final double t = math.max(0, math.min(1, (px * ax + py * ay) / segLenSq));
+    final double dx = px - ax * t;
+    final double dy = py - ay * t;
+    return math.sqrt(dx * dx + dy * dy);
+  }
+
   void _checkDeviation(Position position) {
-    if (_routePath.isEmpty || _isRecalculating) return;
+    if (_routePath.length < 2 || _isRecalculating) return;
 
     double minDist = double.infinity;
-    for (final point in _routePath) {
-      final d = Geolocator.distanceBetween(
-        position.latitude,
-        position.longitude,
-        point.latitude,
-        point.longitude,
+    int closestSegIndex = _currentPathIndex;
+
+    for (int i = _currentPathIndex; i < _routePath.length - 1; i++) {
+      final d = _distanceToSegment(
+        position.latitude, position.longitude,
+        _routePath[i].latitude, _routePath[i].longitude,
+        _routePath[i + 1].latitude, _routePath[i + 1].longitude,
       );
-      if (d < minDist) minDist = d;
+      if (d < minDist) {
+        minDist = d;
+        closestSegIndex = i;
+      }
     }
+
+    // 경로 인덱스는 앞으로만 전진
+    if (closestSegIndex > _currentPathIndex) {
+      _currentPathIndex = closestSegIndex;
+    }
+    _lastSegmentDist = minDist;
 
     if (minDist > _deviationThresholdMeters) {
       _deviationCount++;
@@ -435,6 +469,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         _hasArrived = false;
         _isRecalculating = false;
         _crosswalkCache = {};
+        _currentPathIndex = 0;
       });
       _loadRoute(result);
       // 재탐색 후 overview 카드 없이 새 경로 첫 step 바로 안내
@@ -561,6 +596,12 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                                 startDirection: _startDirection,
                               );
                             } else if (currentStep != null) {
+                              final crosswalk = _crosswalkCache[_currentStepIndex];
+                              final acousticSignal =
+                                  (crosswalk?.acousticSignalInstalled == true &&
+                                          crosswalk!.guidanceSummary.isNotEmpty)
+                                      ? crosswalk.guidanceSummary
+                                      : null;
                               return NavigationStepCard(
                                 direction: _turnTypeToDirection(
                                   currentStep.turnType,
@@ -568,6 +609,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                                 instruction: currentStep.description ?? '',
                                 distance: _debugDistance?.round() ?? 0,
                                 isApproaching: _hasBeenOutsideThreshold,
+                                acousticSignal: acousticSignal,
                               );
                             } else if (_hasArrived) {
                               return Center(
@@ -640,6 +682,9 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
               outsideThreshold: _hasBeenOutsideThreshold,
               threshold: _arrivalThresholdMeters,
               minDistanceToStep: _minDistanceToStep,
+              segmentDist: _lastSegmentDist,
+              deviationCount: _deviationCount,
+              pathIndex: _currentPathIndex,
             ),
             const CameraDebugOverlay(anchorLeft: true),
             if (_isRecalculating)

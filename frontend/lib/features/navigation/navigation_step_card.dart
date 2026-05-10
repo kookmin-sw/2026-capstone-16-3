@@ -14,6 +14,7 @@ class NavigationStepCard extends StatelessWidget {
   final String instruction;
   final int? distance;
   final bool isApproaching;
+  final String? acousticSignal;
 
   const NavigationStepCard({
     super.key,
@@ -21,6 +22,7 @@ class NavigationStepCard extends StatelessWidget {
     required this.instruction,
     this.distance,
     this.isApproaching = true,
+    this.acousticSignal,
   });
 
   IconData _getDirectionIcon(DirectionType direction) {
@@ -171,6 +173,39 @@ class NavigationStepCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (acousticSignal != null && acousticSignal!.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: ColorCollection.main.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.campaign_rounded,
+                      color: ColorCollection.point,
+                      size: 35,
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          acousticSignal!,
+                          style: AppTextStyles.labelBold.copyWith(
+                            color: ColorCollection.point,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
