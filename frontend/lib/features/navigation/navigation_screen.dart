@@ -19,7 +19,9 @@ import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/vibration_service.dart';
 
 class NavigationScreen extends StatefulWidget {
-  const NavigationScreen({super.key});
+  final bool withObstacleDetection;
+
+  const NavigationScreen({super.key, this.withObstacleDetection = true});
 
   @override
   State<NavigationScreen> createState() => _NavigationScreenState();
@@ -247,6 +249,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
           'endX': _selectedLng!,
           'endY': _selectedLat!,
           'endName': _selectedName,
+          'withObstacleDetection': widget.withObstacleDetection,
         },
       );
 
