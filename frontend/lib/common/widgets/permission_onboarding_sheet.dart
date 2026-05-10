@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
@@ -13,6 +14,18 @@ import 'package:safepath/common/theme/text_styles.dart';
 /// [needsLocation] false → 카메라만 허용되면 true 반환 (장애물 탐지)
 class PermissionOnboardingSheet {
   const PermissionOnboardingSheet._();
+
+  static const String _kShownKey = 'permission_onboarding_shown';
+
+  /// 최초 1회만 권한 온보딩 시트를 표시한다 (SharedPreferences 기반).
+  /// 이미 표시된 적 있으면 즉시 반환.
+  static Future<void> showOnce(BuildContext context) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_kShownKey) ?? false) return;
+    await prefs.setBool(_kShownKey, true);
+    if (!context.mounted) return;
+    await show(context);
+  }
 
   /// 필수 권한이 이미 허용됐으면 즉시 true 반환 (시트 미표시).
   /// 그렇지 않으면 설명 시트를 표시하고 최종 허용 여부를 반환한다.
@@ -35,6 +48,55 @@ class PermissionOnboardingSheet {
       builder: (_) => _SheetContent(needsLocation: needsLocation),
     );
     return result ?? false;
+  }
+
+  /// 단순 거부 안내 — 영구 거부가 아닌 경우. "다시 시도" 안내로 충분.
+  static Future<void> _showDenialNotice(
+    BuildContext context, {
+    required bool cameraDenied,
+    required bool locationDenied,
+  }) async {
+    final items = [
+      if (cameraDenied) '카메라',
+      if (locationDenied) '위치',
+    ];
+    final permText = items.join('·');
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ColorCollection.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: ColorCollection.point, width: 2),
+        ),
+        title: Semantics(
+          header: true,
+          child: Text(
+            '$permText 권한이 필요합니다',
+            style: AppTextStyles.bodyBold.copyWith(color: ColorCollection.point),
+          ),
+        ),
+        content: Text(
+          '$permText 권한을 허용하지 않으면 해당 기능을 사용할 수 없습니다.\n'
+          '권한을 허용하려면 아래 버튼을 다시 눌러주세요.',
+          style: AppTextStyles.labelRegular.copyWith(
+            color: ColorCollection.point,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              '확인',
+              style: AppTextStyles.labelBold.copyWith(
+                color: ColorCollection.main,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   static Future<void> _showSettingsDialog(BuildContext context) async {
@@ -121,13 +183,26 @@ class _SheetContentState extends State<_SheetContent> {
 
     if (!mounted) return;
 
-    // 필수 권한이 영구 거부 상태이면 설정 안내 (비차단 — 안내 후 시트 닫힘)
     final cameraBlocked = camera.isPermanentlyDenied || camera.isRestricted;
     final locationBlocked = widget.needsLocation &&
         (location.isPermanentlyDenied || location.isRestricted);
+
     if (cameraBlocked || locationBlocked) {
+      // 영구 거부: 설정 앱으로 안내
       await PermissionOnboardingSheet._showSettingsDialog(context);
       if (!mounted) return;
+    } else {
+      // 단순 거부: 시트 닫히기 전에 차단 다이얼로그로 안내
+      final cameraDenied = !camera.isGranted;
+      final locationDenied = widget.needsLocation && !location.isGranted;
+      if (cameraDenied || locationDenied) {
+        await PermissionOnboardingSheet._showDenialNotice(
+          context,
+          cameraDenied: cameraDenied,
+          locationDenied: locationDenied,
+        );
+        if (!mounted) return;
+      }
     }
 
     final granted =
