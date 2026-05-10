@@ -206,11 +206,16 @@ class NavigationScreenState extends State<NavigationScreen>
 
   /// 음성 텍스트 입력 함수
   void startSpeechInput() async {
-    // 음성 인식 중복 실행 방지 - 다시 한 번 더 누르면 중지
     if (speech.isListening) {
       await speech.stop();
       return;
     }
+
+    if (!await PermissionOnboardingSheet.requestForFeature(
+      context,
+      needsMicrophone: true,
+      featureName: '음성 검색',
+    )) return;
 
     bool available = await speech.initialize(
       onStatus: (status) => debugPrint('status: $status'),
@@ -243,9 +248,7 @@ class NavigationScreenState extends State<NavigationScreen>
 
   /// 길찾기 시작 함수
   void startNavigation() async {
-    if (_selectedLat == null || _selectedLng == null) return;
-
-    // 이 모드에 필요한 권한만 확인 — 거부 시 해당 권한 특화 AlertDialog 표시
+    // 권한 확인 — 목적지 선택 여부와 무관하게 항상 먼저 확인
     if (!await PermissionOnboardingSheet.requestForFeature(
       context,
       needsCamera: widget.withObstacleDetection,
@@ -254,6 +257,7 @@ class NavigationScreenState extends State<NavigationScreen>
     )) return;
 
     if (!mounted) return;
+    if (_selectedLat == null || _selectedLng == null) return;
 
     // 권한이 방금 허용된 경우 위치를 재취득
     if (_currentPosition == null) {
