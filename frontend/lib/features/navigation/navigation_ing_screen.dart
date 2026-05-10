@@ -650,25 +650,29 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                 child: Container(
                   color: ColorCollection.main.withValues(alpha: 0.9),
                   padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: ColorCollection.point,
+                  child: Semantics(
+                    label: '경로 재탐색 중',
+                    excludeSemantics: true,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: ColorCollection.point,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        '경로 재탐색 중...',
-                        style: AppTextStyles.labelBold.copyWith(
-                          color: ColorCollection.point,
+                        const SizedBox(width: 10),
+                        Text(
+                          '경로 재탐색 중...',
+                          style: AppTextStyles.labelBold.copyWith(
+                            color: ColorCollection.point,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

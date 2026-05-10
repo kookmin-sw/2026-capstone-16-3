@@ -75,7 +75,16 @@ class NavigationStepCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final distDir = direction == DirectionType.straight
+        ? '${_formatDistance(distance)} 직진'
+        : '${_formatDistance(distance)} 후 ${_getDirectionLabel(direction)}';
+    final semanticLabel = instruction.isNotEmpty
+        ? '$distDir, $instruction. ${_getTtsMessage(direction, distance, instruction)}'
+        : '$distDir. ${_getTtsMessage(direction, distance, instruction)}';
+    return Semantics(
+      label: semanticLabel,
+      excludeSemantics: true,
+      child: Container(
       decoration: BoxDecoration(
         color: ColorCollection.point.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
@@ -165,6 +174,7 @@ class NavigationStepCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
