@@ -43,8 +43,8 @@ class CameraService {
 
   static const String _baseUrl = String.fromEnvironment('BASE_URL');
 
-  /// true → 카메라 대신 테스트 이미지(assets/images/test_detection.jpg)를 주기 전송
-  static const bool useTestImage = true;
+  /// true → 카메라 대신 테스트 이미지(assets/images/test_detection(2).jpg)를 주기 전송
+  static const bool useTestImage = false;
 
   /// 캡처 전송 주기
   static const Duration _captureInterval = Duration(milliseconds: 500);
@@ -142,7 +142,7 @@ class CameraService {
 
   // ─── 캡처 & 전송 ──────────────────────────────────────────────────────────
 
-  static const _debugAssetPath = 'assets/images/test_detection(1).jpg';
+  static const _debugAssetPath = 'assets/images/test_detection(2).jpg';
 
   /// 사진을 찍고(또는 디버그 테스트 이미지를 로드하고) 서버로 전송한다.
   /// 성공/실패 결과를 captureEventStream으로 내보낸다.
