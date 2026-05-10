@@ -38,8 +38,8 @@ class _SettingsNotificationWidgetState extends State<SettingsNotificationWidget>
   late bool _soundEffect;
   late bool _voiceGuide;
 
-  /// "설정 열기" 후 앱 복귀 시 권한을 재확인해야 함을 나타내는 플래그
-  bool _awaitingPermissionResult = false;
+  /// 마지막으로 확인한 OS 알림 권한 상태 — 변화 시에만 토글을 보정한다.
+  PermissionStatus? _lastPermissionStatus;
 
   @override
   void initState() {
@@ -57,35 +57,27 @@ class _SettingsNotificationWidgetState extends State<SettingsNotificationWidget>
     super.dispose();
   }
 
-  /// 앱 복귀 시 "설정 열기"를 통해 이동했었다면 권한을 재확인한다.
+  /// 앱 복귀 시마다 권한 변화를 감지한다.
+  /// 온보딩 시스템 팝업 이후 / OS 설정 복귀 이후 모두 처리된다.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _awaitingPermissionResult) {
-      _awaitingPermissionResult = false;
-      _recheckAndSyncPushAlert();
+    if (state == AppLifecycleState.resumed) {
+      _syncPushAlertWithPermission();
     }
   }
 
-  /// 앱 진입 시 저장된 ON 상태가 실제 권한과 불일치하면 OFF로 보정한다.
+  /// OS 알림 권한이 이전과 달라졌을 때만 토글 UI를 보정한다.
+  /// 권한 상태가 동일하면 사용자의 수동 OFF 설정을 유지한다.
   Future<void> _syncPushAlertWithPermission() async {
-    if (!_pushAlert) return;
-    final status = await Permission.notification.status;
-    if (!status.isGranted && mounted) {
-      setState(() => _pushAlert = false);
-      widget.onPushNotificationChanged?.call(false);
-    }
-  }
-
-  /// 권한 상태에 따라 토글 UI를 확정한다 (설정 복귀 후 또는 취소 후 호출).
-  Future<void> _recheckAndSyncPushAlert() async {
     final status = await Permission.notification.status;
     if (!mounted) return;
-    if (status.isGranted) {
-      setState(() => _pushAlert = true);
-      widget.onPushNotificationChanged?.call(true);
-    } else {
-      setState(() => _pushAlert = false);
-      widget.onPushNotificationChanged?.call(false);
+    if (_lastPermissionStatus != null && status == _lastPermissionStatus) return;
+    _lastPermissionStatus = status;
+
+    final granted = status.isGranted;
+    if (_pushAlert != granted) {
+      setState(() => _pushAlert = granted);
+      widget.onPushNotificationChanged?.call(granted);
     }
   }
 
@@ -109,22 +101,22 @@ class _SettingsNotificationWidgetState extends State<SettingsNotificationWidget>
       return;
     }
 
-    // 권한 거부 → AlertDialog 표시 (UI는 ON 유지)
-    final openedSettings = await _showPermissionGuidance();
+    // 권한 거부 → AlertDialog (UI는 ON 유지)
+    await _showPermissionGuidance();
     if (!mounted) return;
 
-    if (openedSettings) {
-      // 앱 복귀 시 didChangeAppLifecycleState가 재확인 처리
-      _awaitingPermissionResult = true;
-    } else {
-      // 취소 → 권한 재확인 후 결정
-      await _recheckAndSyncPushAlert();
+    // 다이얼로그 닫힌 후 현재 권한 재확인
+    // 취소: 여전히 거부 → OFF 복귀
+    // 설정 열기: 앱 이탈 직후엔 아직 거부 → OFF 복귀, 복귀 후 didChangeAppLifecycleState가 ON으로 재보정
+    final recheckStatus = await Permission.notification.status;
+    if (!mounted) return;
+    if (!recheckStatus.isGranted) {
+      setState(() => _pushAlert = false);
+      widget.onPushNotificationChanged?.call(false);
     }
   }
 
-  /// AlertDialog를 표시하고 "설정 열기"를 눌렀는지 여부를 반환한다.
-  Future<bool> _showPermissionGuidance() async {
-    bool openedSettings = false;
+  Future<void> _showPermissionGuidance() async {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -155,7 +147,6 @@ class _SettingsNotificationWidgetState extends State<SettingsNotificationWidget>
           ),
           TextButton(
             onPressed: () {
-              openedSettings = true;
               Navigator.pop(ctx);
               openAppSettings();
             },
@@ -169,7 +160,6 @@ class _SettingsNotificationWidgetState extends State<SettingsNotificationWidget>
         ],
       ),
     );
-    return openedSettings;
   }
 
   // ─── 빌드 ────────────────────────────────────────────────────────────────────
