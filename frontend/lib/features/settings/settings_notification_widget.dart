@@ -44,24 +44,39 @@ class _SettingsNotificationWidgetState
     _pushAlert = widget.initialPushNotificationEnabled;
     _soundEffect = widget.initialSoundEffectEnabled;
     _voiceGuide = widget.initialVoiceGuidanceEnabled;
+    _syncPushAlertWithPermission();
+  }
+
+  /// 앱 진입 시 저장된 ON 상태가 실제 권한과 불일치하면 OFF로 보정한다.
+  Future<void> _syncPushAlertWithPermission() async {
+    if (!_pushAlert) return;
+    final status = await Permission.notification.status;
+    if (!status.isGranted && mounted) {
+      setState(() => _pushAlert = false);
+      widget.onPushNotificationChanged?.call(false);
+    }
   }
 
   // ─── 푸시 알림 토글 ──────────────────────────────────────────────────────────
 
-  /// 토글은 사용자 의사(설정값)를 저장한다.
-  /// ON으로 켤 때만 OS 권한 상태를 확인하고, 권한이 없으면 안내 스낵바를 표시한다.
-  /// 권한 요청은 앱 시작 시 일괄 처리 예정 (TODO: app startup permission flow).
   Future<void> _onPushAlertChanged(bool value) async {
-    setState(() => _pushAlert = value);
-    widget.onPushNotificationChanged?.call(value);
-
-    if (value) {
-      final status = await Permission.notification.status;
-      if (!status.isGranted && mounted) {
-        _showPermissionGuidance();
-      }
+    if (!value) {
+      setState(() => _pushAlert = false);
+      widget.onPushNotificationChanged?.call(false);
+      return;
     }
-    // OFF → 추후 푸시 발송 로직에서 pushNotificationEnabled == false 이면 전송 스킵
+
+    // ON 시도 시 권한 확인 후 결정 — 미리 setState하지 않음
+    final status = await Permission.notification.status;
+    if (!mounted) return;
+
+    if (!status.isGranted) {
+      _showPermissionGuidance(); // 토글은 OFF 유지
+      return;
+    }
+
+    setState(() => _pushAlert = true);
+    widget.onPushNotificationChanged?.call(true);
   }
 
   void _showPermissionGuidance() {
