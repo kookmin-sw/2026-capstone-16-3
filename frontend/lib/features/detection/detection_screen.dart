@@ -39,6 +39,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
   // ─── 탐지 시작 ───────────────────────────────────────────────────────────
 
   Future<void> _startDetection() async {
+    // 시트 내부에서 거부 유형별 다이얼로그 안내가 완료된 후 false 반환
     if (!await PermissionOnboardingSheet.show(context, needsLocation: false)) return;
 
     SoundEffectService().play(SoundEffect.actionStart);
