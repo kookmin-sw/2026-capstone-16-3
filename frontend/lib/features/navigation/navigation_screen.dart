@@ -330,18 +330,11 @@ class NavigationScreenState extends State<NavigationScreen>
       throw Exception('위치 서비스가 꺼져 있습니다.');
     }
 
-    // 권한 확인
+    // 권한 확인 (시스템 팝업은 온보딩에서만 요청 — 여기서는 상태 확인만)
     permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied) {
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       throw Exception('위치 권한이 거부되었습니다.');
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      throw Exception('위치 권한이 영구적으로 거부되었습니다.');
     }
 
     // 정확도 20m 이하인 첫 번째 위치 반환 (최대 10초 대기, 초과 시 폴백)
