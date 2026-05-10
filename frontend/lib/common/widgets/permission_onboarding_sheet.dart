@@ -51,14 +51,36 @@ class PermissionOnboardingSheet {
   }
 
   /// 단순 거부 안내 — 영구 거부가 아닌 경우. "다시 시도" 안내로 충분.
-  static Future<void> _showDenialNotice(
+  /// 기능 시작 버튼에서 필요한 권한만 확인한다. 시스템 팝업 없이 상태만 읽고,
+  /// 거부된 권한이 있으면 해당 권한에 특화된 AlertDialog(설정 열기 포함)를 표시한다.
+  static Future<bool> requestForFeature(
     BuildContext context, {
-    required bool cameraDenied,
-    required bool locationDenied,
+    bool needsCamera = false,
+    bool needsLocation = false,
+    bool needsMicrophone = false,
+    required String featureName,
   }) async {
+    final camera = needsCamera
+        ? await Permission.camera.status
+        : PermissionStatus.granted;
+    final location = needsLocation
+        ? await Permission.locationWhenInUse.status
+        : PermissionStatus.granted;
+    final mic = needsMicrophone
+        ? await Permission.microphone.status
+        : PermissionStatus.granted;
+
+    if (!context.mounted) return false;
+
+    final cameraDenied = needsCamera && !camera.isGranted;
+    final locationDenied = needsLocation && !location.isGranted;
+    final micDenied = needsMicrophone && !mic.isGranted;
+    if (!cameraDenied && !locationDenied && !micDenied) return true;
+
     final items = [
       if (cameraDenied) '카메라',
       if (locationDenied) '위치',
+      if (micDenied) '마이크',
     ];
     final permText = items.join('·');
 
@@ -78,55 +100,15 @@ class PermissionOnboardingSheet {
           ),
         ),
         content: Text(
-          '$permText 권한을 허용하지 않으면 해당 기능을 사용할 수 없습니다.\n'
-          '권한을 허용하려면 아래 버튼을 다시 눌러주세요.',
-          style: AppTextStyles.labelRegular.copyWith(
-            color: ColorCollection.point,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              '확인',
-              style: AppTextStyles.labelBold.copyWith(
-                color: ColorCollection.main,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static Future<void> _showSettingsDialog(BuildContext context) async {
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: ColorCollection.background,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: ColorCollection.point, width: 2),
-        ),
-        title: Text(
-          '권한 설정 필요',
-          style: AppTextStyles.bodyBold.copyWith(color: ColorCollection.point),
-        ),
-        content: Text(
-          '일부 필수 권한이 거부되어 있습니다.\n'
-          '설정에서 권한을 허용하면 모든 기능을 사용하실 수 있습니다.',
-          style: AppTextStyles.labelRegular.copyWith(
-            color: ColorCollection.point,
-          ),
+          '$featureName을(를) 사용하려면 $permText 권한이 필요합니다.\n설정에서 권한을 허용해주세요.',
+          style: AppTextStyles.labelRegular.copyWith(color: ColorCollection.point),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(
               '닫기',
-              style: AppTextStyles.labelBold.copyWith(
-                color: ColorCollection.point,
-              ),
+              style: AppTextStyles.labelBold.copyWith(color: ColorCollection.point),
             ),
           ),
           TextButton(
@@ -136,15 +118,16 @@ class PermissionOnboardingSheet {
             },
             child: Text(
               '설정 열기',
-              style: AppTextStyles.labelBold.copyWith(
-                color: ColorCollection.main,
-              ),
+              style: AppTextStyles.labelBold.copyWith(color: ColorCollection.main),
             ),
           ),
         ],
       ),
     );
+
+    return false;
   }
+
 }
 
 // ─── 시트 본문 ────────────────────────────────────────────────────────────────
@@ -183,28 +166,8 @@ class _SheetContentState extends State<_SheetContent> {
 
     if (!mounted) return;
 
-    final cameraBlocked = camera.isPermanentlyDenied || camera.isRestricted;
-    final locationBlocked = widget.needsLocation &&
-        (location.isPermanentlyDenied || location.isRestricted);
-
-    if (cameraBlocked || locationBlocked) {
-      // 영구 거부: 설정 앱으로 안내
-      await PermissionOnboardingSheet._showSettingsDialog(context);
-      if (!mounted) return;
-    } else {
-      // 단순 거부: 시트 닫히기 전에 차단 다이얼로그로 안내
-      final cameraDenied = !camera.isGranted;
-      final locationDenied = widget.needsLocation && !location.isGranted;
-      if (cameraDenied || locationDenied) {
-        await PermissionOnboardingSheet._showDenialNotice(
-          context,
-          cameraDenied: cameraDenied,
-          locationDenied: locationDenied,
-        );
-        if (!mounted) return;
-      }
-    }
-
+    // 권한 결과와 무관하게 시트를 조용히 닫는다.
+    // 거부 안내는 각 기능 시작 버튼의 requestForFeature가 담당한다.
     final granted =
         camera.isGranted && (!widget.needsLocation || location.isGranted);
     Navigator.pop(context, granted);
