@@ -40,6 +40,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   int _currentStepIndex = 0;
   StreamSubscription<Position>? _positionSub;
   bool _routeLoaded = false;
+  bool _withObstacleDetection = true;
 
   // 목적지 정보 (재탐색 시 사용)
   double? _endX;
@@ -93,13 +94,14 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         _endX = args['endX'] as double?;
         _endY = args['endY'] as double?;
         _endName = (args['endName'] as String?) ?? '';
+        _withObstacleDetection = (args['withObstacleDetection'] as bool?) ?? true;
       } else {
         _route = args as RouteResult?;
       }
       if (_route != null) {
         _loadRoute(_route!);
         _startLocationTracking();
-        _startObstacleDetection();
+        if (_withObstacleDetection) _startObstacleDetection();
         _routeLoaded = true;
       }
     }
@@ -491,9 +493,11 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   void dispose() {
     NavigationTtsService().reset();
     _positionSub?.cancel();
-    _wsSub?.cancel();
-    CameraService().stop();
-    DetectionWsService().disconnect();
+    if (_withObstacleDetection) {
+      _wsSub?.cancel();
+      CameraService().stop();
+      DetectionWsService().disconnect();
+    }
     TtsService().stop();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -646,8 +650,8 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                             return const SizedBox.shrink();
                           }(),
                         ),
-                        // 장애물 안내 목록 — 스크롤 (최신 순)
-                        if (_obstacles.isNotEmpty) ...[
+                        // 장애물 안내 목록 — 스크롤 (최신 순, 통합 모드에서만 표시)
+                        if (_withObstacleDetection && _obstacles.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           Expanded(
                             child: ListView.separated(
@@ -686,7 +690,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
               deviationCount: _deviationCount,
               pathIndex: _currentPathIndex,
             ),
-            const CameraDebugOverlay(anchorLeft: true),
+            if (_withObstacleDetection) const CameraDebugOverlay(anchorLeft: true),
             if (_isRecalculating)
               Positioned(
                 top: 0,
