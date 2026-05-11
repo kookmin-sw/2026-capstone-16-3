@@ -38,11 +38,11 @@ CONF_SEG = float(os.getenv("CONF_SEG", "0.25"))
 MIN_GUIDE_CONF = float(os.getenv("MIN_GUIDE_CONF", "0.45"))
 
 # Distance thresholds, meter
-URGENT_DISTANCE_M = float(os.getenv("URGENT_DISTANCE_M", "5.0"))
-ALERT_DISTANCE_M = float(os.getenv("ALERT_DISTANCE_M", "9.0"))
-MAX_GUIDE_DISTANCE_M = float(os.getenv("MAX_GUIDE_DISTANCE_M", "13.0"))
-NEAR_M = float(os.getenv("NEAR_M", "5.0"))
-MID_M = float(os.getenv("MID_M", "9.0"))
+URGENT_DISTANCE_M = float(os.getenv("URGENT_DISTANCE_M", "3.0"))
+ALERT_DISTANCE_M = float(os.getenv("ALERT_DISTANCE_M", "5.5"))
+MAX_GUIDE_DISTANCE_M = float(os.getenv("MAX_GUIDE_DISTANCE_M", "8.0"))
+NEAR_M = float(os.getenv("NEAR_M", "3.0"))
+MID_M = float(os.getenv("MID_M", "5.5"))
 
 # Huge bbox sanity
 HUGE_BBOX_AREA_RATIO = float(os.getenv("HUGE_BBOX_AREA_RATIO", "0.20"))
@@ -84,3 +84,7 @@ print("BACKEND_GUIDE_EVENT_URL =", BACKEND_GUIDE_EVENT_URL)
 print("YOLO_DET_WEIGHTS =", YOLO_DET_WEIGHTS)
 print("YOLO_SEG_WEIGHTS =", YOLO_SEG_WEIGHTS)
 print("DEPTH_MODEL_NAME =", DEPTH_MODEL_NAME)
+
+
+DEPTH_SCALE_FACTOR = float(os.getenv("DEPTH_SCALE_FACTOR", "0.6515"))  # 실측 후 조정
+DEPTH_OFFSET_M = float(os.getenv("DEPTH_OFFSET_M", "-0.4844"))           # 선형 보정 b항
