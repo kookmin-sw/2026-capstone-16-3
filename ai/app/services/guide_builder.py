@@ -244,7 +244,7 @@ def format_tactile_object_guide(
     """
     점자블록 위 객체 안내문.
     SHORT:  12시 점자블록 위 스쿠터.
-    MEDIUM: 주의. 12시 점자블록 위 스쿠터, 오른쪽 우회.
+    MEDIUM: 주의. 12시 방향 점자블록 위 스쿠터, 오른쪽 우회바람.
     LONG:   주의. 12시 방향 점자블록 위에 스쿠터가 있습니다. 오른쪽으로 우회하세요.
     """
     sentence_length = normalize_sentence_length(sentence_length)
@@ -259,8 +259,7 @@ def format_tactile_object_guide(
             f"{detour_text}으로 우회하세요."
         )
 
-    return f"주의. {clock_direction} 점자블록 위 {object_ko}, {detour_text} 우회."
-
+    return f"주의. {clock_direction} 방향 점자블록 위 {object_ko}, {detour_text} 우회바람."
 
 def format_tactile_unknown_guide(
     clock_direction: str,
@@ -1116,8 +1115,8 @@ def build_voice_guide(
         tactile_gt["alert_level"] = alert_level_from_gt(tactile_gt)
         return tactile_gt
 
-    gt = _decide_primary_guide(scene, frame_idx, img_w, img_h)
-    gt = _append_scene_info(gt, scene, frame_idx)
+    gt = _decide_primary_guide(scene, frame_idx, img_w, img_h, sentence_length)
+    gt = _append_scene_info(gt, scene, frame_idx, sentence_length)
     gt["sentence_length"] = sentence_length
     gt["alert_level"] = alert_level_from_gt(gt)
     return gt
@@ -1138,7 +1137,6 @@ def _decide_tactile_guide_once(
     sentence_length = normalize_sentence_length(sentence_length)
     objects = scene["objects"]
 
-    # 1. detection 객체가 점자블록 위에 있는 경우
     blocking_objects = [
         obj
         for obj in objects
@@ -1146,7 +1144,20 @@ def _decide_tactile_guide_once(
         and obj.get("confidence", 0.0) >= MIN_GUIDE_CONF
     ]
 
-    if blocking_objects and not is_scene_announced_once("tactile_blocked_by_object"):
+    tactile_block = scene.get("tactile_block", {})
+    tactile_status = tactile_block.get("status")
+
+    # 상황이 사라지면 플래그 초기화 → 새 구간에서 다시 안내 가능
+    if not blocking_objects:
+        last_scene_announced.pop("tactile_blocked_by_object", None)
+    if tactile_status != "blocked_or_occluded":
+        last_scene_announced.pop("tactile_blocked_or_occluded", None)
+    if tactile_status != "broken":
+        last_scene_announced.pop("tactile_broken", None)
+
+    # 1. detection 객체가 점자블록 위에 있는 경우
+
+    if blocking_objects:
         primary = sorted(
             blocking_objects,
             key=lambda obj: (
@@ -1158,13 +1169,15 @@ def _decide_tactile_guide_once(
         ko = to_ko(primary["class"])
         direction = primary["clock_direction"]
 
-        voice = format_tactile_object_guide(
-            clock_direction=direction,
-            object_ko=ko,
-            sentence_length=sentence_length,
-        )
-
-        mark_scene_announced_once("tactile_blocked_by_object", frame_idx)
+        if not is_scene_announced_once("tactile_blocked_by_object"):
+            voice = format_tactile_object_guide(
+                clock_direction=direction,
+                object_ko=ko,
+                sentence_length=sentence_length,
+            )
+            mark_scene_announced_once("tactile_blocked_by_object", frame_idx)
+        else:
+            voice = ""
 
         return _make_gt(
             primary,
@@ -1174,60 +1187,60 @@ def _decide_tactile_guide_once(
             voice,
         )
 
-    tactile_block = scene.get("tactile_block", {})
-    tactile_status = tactile_block.get("status")
-
     # 2. detection은 없지만 점자블록이 가려졌거나 알 수 없는 장애물이 있는 경우
     if tactile_status == "blocked_or_occluded":
-        if not is_scene_announced_once("tactile_blocked_or_occluded"):
-            direction = tactile_block.get("clock_direction") or "12시"
+        direction = tactile_block.get("clock_direction") or "12시"
 
+        if not is_scene_announced_once("tactile_blocked_or_occluded"):
             voice = format_tactile_unknown_guide(
                 clock_direction=direction,
                 sentence_length=sentence_length,
             )
-
             mark_scene_announced_once("tactile_blocked_or_occluded", frame_idx)
+        else:
+            voice = ""
 
-            return {
-                "warning_needed": True,
-                "primary_object_id": None,
-                "primary_object_class": "unknown_obstacle",
-                "primary_object_class_ko": "장애물",
-                "clock_direction": direction,
-                "distance": None,
-                "distance_m": None,
-                "action": "caution",
-                "priority": 2,
-                "reason": "점자블록 위 장애물 또는 가림 감지",
-                "voice_guide": voice,
-            }
+        return {
+            "warning_needed": True,
+            "primary_object_id": None,
+            "primary_object_class": "장애물",
+            "primary_object_class_ko": "장애물",
+            "clock_direction": direction,
+            "distance": None,
+            "distance_m": None,
+            "action": "caution",
+            "priority": 2,
+            "reason": "점자블록 위 장애물 또는 가림 감지",
+            "voice_guide": voice,
+        }
 
     # 3. 점자블록 끊김
     if tactile_status == "broken":
         if not is_scene_announced_once("tactile_broken"):
             voice = format_tactile_broken_guide(sentence_length)
-
             mark_scene_announced_once("tactile_broken", frame_idx)
+        else:
+            voice = ""
 
-            return {
-                "warning_needed": True,
-                "primary_object_id": None,
-                "primary_object_class": "tactile_block",
-                "primary_object_class_ko": "점자블록",
-                "clock_direction": "12시",
-                "distance": None,
-                "distance_m": None,
-                "action": "caution",
-                "priority": 2,
-                "reason": "전방 점자블록 끊김",
-                "voice_guide": voice,
-            }
+        return {
+            "warning_needed": True,
+            "primary_object_id": None,
+            "primary_object_class": "tactile_block",
+            "primary_object_class_ko": "점자블록",
+            "clock_direction": "12시",
+            "distance": None,
+            "distance_m": None,
+            "action": "caution",
+            "priority": 2,
+            "reason": "전방 점자블록 끊김",
+            "voice_guide": voice,
+        }
 
     return None
 
 
-def _decide_primary_guide(scene: dict[str, Any], frame_idx: int, img_w: int, img_h: int) -> dict[str, Any]:
+def _decide_primary_guide(scene: dict[str, Any], frame_idx: int, img_w: int, img_h: int, sentence_length: str = "MEDIUM") -> dict[str, Any]:
+    sentence_length = normalize_sentence_length(sentence_length)
     objects = scene["objects"]
     zones = scene["_zones"]
     img_area = float(img_w * img_h)
@@ -1244,12 +1257,13 @@ def _decide_primary_guide(scene: dict[str, Any], frame_idx: int, img_w: int, img
     )
 
     if red_light and scene["crosswalk"]["exists"]:
+        red_voice = "정지. 빨간불." if sentence_length != "LONG" else "정지. 빨간불입니다."
         return _make_gt(
             red_light,
             "stop",
             1,
             "빨간 신호",
-            "정지. 빨간불입니다.",
+            red_voice,
             primary_class_override="traffic_light_red",
             primary_class_ko_override="빨간 신호등",
         )
@@ -1285,12 +1299,13 @@ def _decide_primary_guide(scene: dict[str, Any], frame_idx: int, img_w: int, img
         )
 
         if green and scene["crosswalk"]["exists"]:
+            green_voice = "파란불. 직진." if sentence_length != "LONG" else "파란불입니다. 직진하세요."
             return _make_gt(
                 green,
                 "go",
                 3,
                 "파란 신호",
-                "파란불입니다. 직진하세요.",
+                green_voice,
                 primary_class_override="traffic_light_green",
                 primary_class_ko_override="파란 신호등",
             )
@@ -1355,13 +1370,20 @@ def _decide_primary_guide(scene: dict[str, Any], frame_idx: int, img_w: int, img
             tid = int(primary["object_id"].replace("obj_", ""))
             ko = to_ko(primary["class"])
             cat = primary["_cat"]
+            clock = primary["clock_direction"]
 
             if cat["is_vehicle"] and primary["_approach_mps"] > VEHICLE_APPROACH_THRESH and primary["motion"] == "moved":
                 reason = f"{jo_iga(ko)} 빠르게 접근 중"
-                guide = f"정지! {primary['clock_direction']} 방향에서 {jo_iga(ko)} 빠르게 다가오고 있습니다."
+                if sentence_length == "LONG":
+                    guide = f"정지! {clock} 방향에서 {jo_iga(ko)} 빠르게 다가오고 있습니다."
+                else:
+                    guide = f"정지! {clock} {ko}."
             else:
-                reason = f"{primary['clock_direction']} 방향 매우 가까운 {ko}"
-                guide = f"정지! {primary['clock_direction']} 방향에 {jo_iga(ko)} 있습니다."
+                reason = f"{clock} 방향 매우 가까운 {ko}"
+                if sentence_length == "LONG":
+                    guide = f"정지! {clock} 방향에 {jo_iga(ko)} 있습니다."
+                else:
+                    guide = f"정지! {clock} {ko}."
 
             mark_announced(tid, frame_idx)
             return _make_gt(primary, "stop", 1, reason, guide)
@@ -1391,6 +1413,7 @@ def _decide_primary_guide(scene: dict[str, Any], frame_idx: int, img_w: int, img
     is_dynamic = cat["is_vehicle"] or cat["is_person"]
     is_moving_vehicle = cat["is_vehicle"] and primary["motion"] == "moved"
     ko = to_ko(primary["class"])
+    clock = primary["clock_direction"]
 
     safe_zones = {zone for zone, info in zones.items() if info["status"] == "safe"}
     zone_to_clock = {"left": "10시", "center": "12시", "right": "2시"}
@@ -1400,32 +1423,49 @@ def _decide_primary_guide(scene: dict[str, Any], frame_idx: int, img_w: int, img
         if distance_m < ALERT_DISTANCE_M:
             action = "stop"
             priority = 1
-            reason = f"{primary['clock_direction']} 방향 움직이는 {ko}"
-            guide = f"정지! {primary['clock_direction']} 방향에서 {jo_iga(ko)} 움직이고 있습니다."
+            reason = f"{clock} 방향 움직이는 {ko}"
+            if sentence_length == "LONG":
+                guide = f"정지! {clock} 방향에서 {jo_iga(ko)} 움직이고 있습니다."
+            else:
+                guide = f"정지! {clock} {ko}."
         else:
             action = "caution"
             priority = 2
-            reason = f"{primary['clock_direction']} 방향 움직이는 {ko}"
-            guide = f"주의. {primary['clock_direction']} 방향에 움직이는 {jo_iga(ko)} 있습니다."
+            reason = f"{clock} 방향 움직이는 {ko}"
+            if sentence_length == "LONG":
+                guide = f"주의. {clock} 방향에 움직이는 {jo_iga(ko)} 있습니다."
+            else:
+                guide = f"주의. {clock} {ko}."
     else:
-        detour = detour_direction(primary["clock_direction"], safe_clocks)
+        detour = detour_direction(clock, safe_clocks)
 
         if detour is None:
             if is_dynamic and distance_m < ALERT_DISTANCE_M:
                 action = "stop"
                 priority = 1
                 reason = "안전 우회 방향 없음"
-                guide = f"정지! {primary['clock_direction']} 방향에 {jo_iga(ko)} 있습니다."
+                if sentence_length == "LONG":
+                    guide = f"정지! {clock} 방향에 {jo_iga(ko)} 있습니다."
+                else:
+                    guide = f"정지! {clock} {ko}."
             else:
                 action = "caution"
                 priority = 2
-                reason = f"{primary['clock_direction']} 방향 {ko}"
-                guide = f"주의. {primary['clock_direction']} 방향에 {jo_iga(ko)} 있습니다."
+                reason = f"{clock} 방향 {ko}"
+                if sentence_length == "LONG":
+                    guide = f"주의. {clock} 방향에 {jo_iga(ko)} 있습니다."
+                else:
+                    guide = f"주의. {clock} {ko}."
         else:
             action = "detour"
             priority = 2
-            reason = f"{primary['clock_direction']} 방향에 {ko}"
-            guide = f"{primary['clock_direction']} 방향에 {jo_iga(ko)} 있습니다. {detour} 방향으로 우회하세요."
+            reason = f"{clock} 방향에 {ko}"
+            if sentence_length == "LONG":
+                guide = f"{clock} 방향에 {jo_iga(ko)} 있습니다. {detour} 방향으로 우회하세요."
+            elif sentence_length == "MEDIUM":
+                guide = f"주의. {clock} {ko}, {detour} 우회."
+            else:
+                guide = f"주의. {clock} {ko}."
 
     mark_announced(primary_tid, frame_idx)
     return _make_gt(primary, action, priority, reason, guide)
@@ -1474,20 +1514,21 @@ def _empty_gt(reason: str = "경로상 위험 없음") -> dict[str, Any]:
     }
 
 
-def _append_scene_info(gt: dict[str, Any], scene: dict[str, Any], frame_idx: int) -> dict[str, Any]:
+def _append_scene_info(gt: dict[str, Any], scene: dict[str, Any], frame_idx: int, sentence_length: str = "MEDIUM") -> dict[str, Any]:
+    sentence_length = normalize_sentence_length(sentence_length)
     extras = []
     added = []
     is_signal_guide = gt.get("primary_object_class") in {"traffic_light_red", "traffic_light_green"}
 
     if scene["crosswalk"]["exists"] and not is_signal_guide:
         if not is_scene_in_cooldown("crosswalk", frame_idx):
-            extras.append("전방에 횡단보도가 있습니다.")
+            extras.append("전방 횡단보도." if sentence_length == "SHORT" else "전방에 횡단보도가 있습니다.")
             added.append("crosswalk")
             mark_scene_announced("crosswalk", frame_idx)
 
     if scene["tactile_block"]["exists"]:
         if not is_scene_in_cooldown("tactile_block", frame_idx):
-            extras.append("전방에 점자블록이 있습니다.")
+            extras.append("전방 점자블록." if sentence_length == "SHORT" else "전방에 점자블록이 있습니다.")
             added.append("tactile_block")
             mark_scene_announced("tactile_block", frame_idx)
 
@@ -1531,7 +1572,6 @@ def build_backend_payload(
         "clock_direction": gt.get("clock_direction"),
         "distance": gt.get("distance"),
         "alert_level": gt.get("alert_level", "safe"),
-        "sentence_length": gt.get("sentence_length", "MEDIUM"),
     }
 
 
