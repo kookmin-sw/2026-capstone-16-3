@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/widgets/action_button_widget.dart';
@@ -13,6 +14,7 @@ import 'package:safepath/models/saved_place.dart';
 import 'package:safepath/routes/app_router.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:safepath/service/place_service.dart';
 import 'package:safepath/service/navigation_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
@@ -24,10 +26,11 @@ class NavigationScreen extends StatefulWidget {
   const NavigationScreen({super.key, this.withObstacleDetection = true});
 
   @override
-  State<NavigationScreen> createState() => _NavigationScreenState();
+  NavigationScreenState createState() => NavigationScreenState();
 }
 
-class _NavigationScreenState extends State<NavigationScreen> {
+class NavigationScreenState extends State<NavigationScreen>
+    with WidgetsBindingObserver {
   bool _isSelecting = false;
   final TextEditingController destinationController = TextEditingController();
   final stt.SpeechToText speech = stt.SpeechToText();
@@ -54,9 +57,12 @@ class _NavigationScreenState extends State<NavigationScreen> {
   List<SavedPlace> _savedPlaces = [];
   List<Map<String, dynamic>> _recentPlaces = [];
 
+  bool _locationInitialized = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     speech.initialize();
     _loadSavedPlaces();
     _loadRecentPlaces();
@@ -70,8 +76,22 @@ class _NavigationScreenState extends State<NavigationScreen> {
         searchPlaces();
       });
     });
+  }
 
+  /// MainLayout이 온보딩 완료 후 또는 길찾기 탭 전환 시 호출.
+  /// 최초 1회만 실행하며, 앱 재개 시 retry는 didChangeAppLifecycleState가 담당.
+  void initLocationIfNeeded() {
+    if (_locationInitialized || !mounted) return;
+    _locationInitialized = true;
     _initLocation();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 앱 복귀 시 위치 미초기화 상태이면 재시도 (설정에서 권한 허용 후 복귀 대응)
+    if (state == AppLifecycleState.resumed && _currentPosition == null && mounted) {
+      _initLocation();
+    }
   }
 
   Future<void> _loadRecentPlaces() async {
@@ -98,6 +118,64 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   Future<void> _initLocation() async {
+    // 권한 미허용이면 조기 종료 (권한 요청은 온보딩에서 처리)
+    final permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
+      setState(() => currentLocation = '위치 권한이 필요합니다');
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: ColorCollection.background,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: const BorderSide(color: ColorCollection.point, width: 2),
+          ),
+          title: Semantics(
+            header: true,
+            child: Text(
+              '위치 권한이 필요합니다',
+              style: AppTextStyles.bodyBold.copyWith(
+                color: ColorCollection.point,
+              ),
+            ),
+          ),
+          content: Text(
+            '길찾기를 사용하려면 위치 권한이 필요합니다.\n'
+            '설정에서 위치 권한을 허용해주세요.',
+            style: AppTextStyles.labelRegular.copyWith(
+              color: ColorCollection.point,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(
+                '닫기',
+                style: AppTextStyles.labelBold.copyWith(
+                  color: ColorCollection.point,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                openAppSettings();
+              },
+              child: Text(
+                '설정 열기',
+                style: AppTextStyles.labelBold.copyWith(
+                  color: ColorCollection.main,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     try {
       final position = await getCurrentLocation();
       if (!mounted) return;
@@ -167,9 +245,9 @@ class _NavigationScreenState extends State<NavigationScreen> {
     return false;
   }
 
-  /// destinationController의 listener 해제
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     destinationController.dispose();
     _debounce?.cancel();
     _reverseGeocodeRetry?.cancel();
