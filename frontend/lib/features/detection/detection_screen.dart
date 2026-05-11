@@ -31,9 +31,6 @@ class _DetectionScreenState extends State<DetectionScreen> {
   /// primaryObjectId별 마지막 수신 시각 — stale 판별에 사용
   final Map<String, DateTime> _lastSeen = {};
 
-  /// 탐지 시작 후 수신된 이벤트 총 횟수
-  int _detectedCount = 0;
-
   /// WS STOMP 연결 완료 여부
   bool _wsConnected = false;
 
@@ -77,7 +74,6 @@ class _DetectionScreenState extends State<DetectionScreen> {
       _isDetecting = true;
       _wsConnected = false;
       _obstacles.clear();
-      _detectedCount = 0;
     });
 
     widget.onDetectingChanged?.call(true);
@@ -121,7 +117,6 @@ class _DetectionScreenState extends State<DetectionScreen> {
       if (idx != -1) {
         _obstacles[idx] = event;
       } else {
-        _detectedCount++;
         _obstacles.insert(0, event);
       }
     });
@@ -171,7 +166,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
           child: _isDetecting
               ? DetectionActiveView(
                   onStop: _stopDetection,
-                  detectedCount: _detectedCount,
+                  detectedCount: _obstacles.length,
                   obstacles: _obstacles,
                   wsConnected: _wsConnected,
                 )
