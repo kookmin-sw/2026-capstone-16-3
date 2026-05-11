@@ -2,6 +2,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:safepath/service/api_client.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ─── 안내 문장 길이 enum ──────────────────────────────────────────────────────
 
@@ -74,22 +75,21 @@ class UserSettings {
     guidanceSpeed: 2.0,
   );
 
+  /// 서버 응답에서 파싱. 로컬 전용 필드(soundEffect, pushNotification)는 포함하지 않음.
   factory UserSettings.fromJson(Map<String, dynamic> json) => UserSettings(
     sentenceLength: MessageLength.fromBackend(json['sentenceLength'] as String?),
-    vibrationStrength:
-        (json['vibrationStrength'] as num?)?.toInt() ?? 50,
+    vibrationStrength: (json['vibrationStrength'] as num?)?.toInt() ?? 50,
     voiceGuidanceEnabled: json['voiceGuidanceEnabled'] as bool? ?? true,
-    soundEffectEnabled: json['soundEffectEnabled'] as bool? ?? true,
-    pushNotificationEnabled: json['pushNotificationEnabled'] as bool? ?? true,
+    soundEffectEnabled: true,   // 로컬 전용 — fetch()에서 SharedPreferences로 덮어씀
+    pushNotificationEnabled: true, // 로컬 전용 — fetch()에서 SharedPreferences로 덮어씀
     guidanceSpeed: (json['guidanceSpeed'] as num?)?.toDouble() ?? 2.0,
   );
 
-  Map<String, dynamic> toJson() => {
+  /// 서버에 전송할 필드만 포함. 로컬 전용 필드는 제외.
+  Map<String, dynamic> toServerJson() => {
     'sentenceLength': sentenceLength.backendValue,
     'vibrationStrength': vibrationStrength,
     'voiceGuidanceEnabled': voiceGuidanceEnabled,
-    'soundEffectEnabled': soundEffectEnabled,
-    'pushNotificationEnabled': pushNotificationEnabled,
     'guidanceSpeed': double.parse(guidanceSpeed.toStringAsFixed(1)),
   };
 
@@ -120,41 +120,62 @@ class UserSettingsService {
 
   static const String _baseUrl = String.fromEnvironment('BASE_URL');
 
+  // 로컬 전용 설정 키 (서버 비관여)
+  static const String _kPushNotif = 'push_notification_enabled';
+  static const String _kSoundEffect = 'sound_effect_enabled';
+
   Future<UserSettings> fetch() async {
     final uri = Uri.parse('$_baseUrl/api/users/me/settings');
     debugPrint('🟢 [Settings] GET 요청: $uri');
+
+    UserSettings serverSettings;
     try {
       final response = await ApiClient().get(uri);
       debugPrint('🟢 [Settings] GET 응답: ${response.statusCode} / ${response.body}');
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
-        final settings = UserSettings.fromJson(body['data'] as Map<String, dynamic>);
-        debugPrint(
-          '✅ [Settings] GET 성공 → '
-          'sentenceLength=${settings.sentenceLength.backendValue}, '
-          'vibration=${settings.vibrationStrength}, '
-          'voiceGuide=${settings.voiceGuidanceEnabled}, '
-          'soundEffect=${settings.soundEffectEnabled}, '
-          'pushNotification=${settings.pushNotificationEnabled}, '
-          'speed=${settings.guidanceSpeed}',
-        );
-        return settings;
+        serverSettings = UserSettings.fromJson(body['data'] as Map<String, dynamic>);
+      } else {
+        debugPrint('🔴 [Settings] GET 실패: ${response.statusCode}');
+        serverSettings = UserSettings.defaults;
       }
-      debugPrint('🔴 [Settings] GET 실패: ${response.statusCode}');
     } catch (e) {
       debugPrint('🔴 [Settings] GET 오류: $e');
+      serverSettings = UserSettings.defaults;
     }
-    debugPrint('⚠️ [Settings] 기본값으로 fallback');
-    return UserSettings.defaults;
+
+    // 로컬 전용 필드는 SharedPreferences 값 우선 적용
+    final prefs = await SharedPreferences.getInstance();
+    final localPush = prefs.getBool(_kPushNotif);
+    final localSound = prefs.getBool(_kSoundEffect);
+    final settings = serverSettings.copyWith(
+      pushNotificationEnabled: localPush,
+      soundEffectEnabled: localSound,
+    );
+
+    debugPrint(
+      '✅ [Settings] 로드 완료 → '
+      'sentenceLength=${settings.sentenceLength.backendValue}, '
+      'vibration=${settings.vibrationStrength}, '
+      'voiceGuide=${settings.voiceGuidanceEnabled}, '
+      'soundEffect=${settings.soundEffectEnabled} (local=${localSound ?? "없음"}), '
+      'pushNotification=${settings.pushNotificationEnabled} (local=${localPush ?? "없음"}), '
+      'speed=${settings.guidanceSpeed}',
+    );
+    return settings;
   }
 
   Future<void> patch(UserSettings settings) async {
+    // 로컬 전용 필드는 SharedPreferences에 즉시 저장
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kPushNotif, settings.pushNotificationEnabled);
+    await prefs.setBool(_kSoundEffect, settings.soundEffectEnabled);
+
+    // 서버에는 서버 관리 필드만 전송
     final uri = Uri.parse('$_baseUrl/api/users/me/settings');
-    debugPrint(
-      '🟢 [Settings] PATCH 요청: $uri / body=${settings.toJson()}',
-    );
+    debugPrint('🟢 [Settings] PATCH 요청: $uri / body=${settings.toServerJson()}');
     try {
-      final response = await ApiClient().patch(uri, body: settings.toJson());
+      final response = await ApiClient().patch(uri, body: settings.toServerJson());
       debugPrint('🟢 [Settings] PATCH 응답: ${response.statusCode} / ${response.body}');
       if (response.statusCode == 200) {
         debugPrint('✅ [Settings] PATCH 성공');
