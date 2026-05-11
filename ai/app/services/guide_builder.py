@@ -8,6 +8,8 @@ import numpy as np
 
 from app.core.config import (
     ALERT_DISTANCE_M,
+    DEPTH_SCALE_FACTOR,    
+    DEPTH_OFFSET_M,        
     DYNAMIC_OBJ_COOLDOWN_FRAMES,
     HUGE_BBOX_AREA_RATIO,
     HUGE_BBOX_MAX_DIST,
@@ -395,7 +397,21 @@ def bbox_distance_raw(depth_m: np.ndarray, bbox_xyxy: list[float], src_wh: tuple
     patch = depth_m[ya:yb, xa:xb]
     if patch.size == 0:
         return float("nan")
-    return float(np.percentile(patch, 50))
+
+    # bbox 안에서 "가까운 쪽" depth만 사용 (도로면 픽셀 제거)
+    # 하단 10% 띠 안에서도 가장 가까운 25% 픽셀만 골라서 중앙값을 취함
+    # 이러면 차량 아래 도로면이 섞여도 차체 픽셀이 우선됨
+    flat = patch.flatten()
+    flat = flat[np.isfinite(flat) & (flat > 0)]
+    if flat.size == 0:
+        return float("nan")
+    k = max(1, int(flat.size * 0.25))
+    nearest_pixels = np.partition(flat, k - 1)[:k]
+    raw = float(np.median(nearest_pixels))
+
+    # scale factor
+    print(f"[DEPTH_RAW] {raw:.2f}m  (bbox h_ratio={bbox_h/src_h:.2f})")
+    return raw * DEPTH_SCALE_FACTOR + DEPTH_OFFSET_M
 
 
 def bbox_distance(depth_m: np.ndarray, bbox_xyxy: list[float], src_wh: tuple[int, int]) -> float:
