@@ -100,8 +100,8 @@ class CustomButton extends StatelessWidget {
     this.subtitleColor = ColorCollection.point,
     this.titleStyle,
     this.subtitleStyle,
-    this.iconTitleSpacing = 10,
-    this.titleSubtitleSpacing = 13,
+    this.iconTitleSpacing = 2,
+    this.titleSubtitleSpacing = 4,
     this.onTap,
   });
 
@@ -120,7 +120,7 @@ class CustomButton extends StatelessWidget {
             ? null
             : () {
                 SoundEffectService().play(SoundEffect.buttonTap);
-              VibrationService().vibrate(VibrationEffect.buttonTap);
+                VibrationService().vibrate(VibrationEffect.buttonTap);
                 onTap!();
               },
         borderRadius: BorderRadius.circular(borderRadius),
@@ -156,9 +156,8 @@ class CustomButton extends StatelessWidget {
                   SizedBox(height: titleSubtitleSpacing),
                   Text(
                     subtitle!,
-                    style: (subtitleStyle ?? AppTextStyles.bodyRegular).copyWith(
-                      color: subtitleColor,
-                    ),
+                    style: (subtitleStyle ?? AppTextStyles.bodyRegular)
+                        .copyWith(color: subtitleColor),
                     textAlign: TextAlign.center,
                   ),
                 ],
