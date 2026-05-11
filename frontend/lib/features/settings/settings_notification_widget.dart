@@ -32,40 +32,107 @@ class SettingsNotificationWidget extends StatefulWidget {
       _SettingsNotificationWidgetState();
 }
 
-class _SettingsNotificationWidgetState
-    extends State<SettingsNotificationWidget> {
+class _SettingsNotificationWidgetState extends State<SettingsNotificationWidget>
+    with WidgetsBindingObserver {
   late bool _pushAlert;
   late bool _soundEffect;
   late bool _voiceGuide;
 
+  PermissionStatus? _lastPermissionStatus;
+
+  /// "설정 열기" 후 앱 복귀 시에만 ON 전환을 허용하는 플래그
+  bool _awaitingPermissionResult = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pushAlert = widget.initialPushNotificationEnabled;
     _soundEffect = widget.initialSoundEffectEnabled;
     _voiceGuide = widget.initialVoiceGuidanceEnabled;
+    _syncPushAlertWithPermission();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    if (_awaitingPermissionResult) {
+      _awaitingPermissionResult = false;
+      _recheckAfterSettings();
+    } else {
+      _syncPushAlertWithPermission();
+    }
+  }
+
+  /// 권한이 거부로 바뀐 경우만 OFF로 보정한다.
+  /// 권한이 허용되어 있어도 인앱에서 수동으로 OFF한 설정은 건드리지 않는다.
+  Future<void> _syncPushAlertWithPermission() async {
+    final status = await Permission.notification.status;
+    if (!mounted) return;
+    if (_lastPermissionStatus != null && status == _lastPermissionStatus) return;
+    _lastPermissionStatus = status;
+
+    if (!status.isGranted && _pushAlert) {
+      setState(() => _pushAlert = false);
+      widget.onPushNotificationChanged?.call(false);
+    }
+  }
+
+  /// "설정 열기" 후 복귀 시 권한 결과에 따라 ON/OFF를 확정한다.
+  Future<void> _recheckAfterSettings() async {
+    final status = await Permission.notification.status;
+    if (!mounted) return;
+    _lastPermissionStatus = status;
+    final granted = status.isGranted;
+    if (_pushAlert != granted) {
+      setState(() => _pushAlert = granted);
+      widget.onPushNotificationChanged?.call(granted);
+    }
   }
 
   // ─── 푸시 알림 토글 ──────────────────────────────────────────────────────────
 
-  /// 토글은 사용자 의사(설정값)를 저장한다.
-  /// ON으로 켤 때만 OS 권한 상태를 확인하고, 권한이 없으면 안내 스낵바를 표시한다.
-  /// 권한 요청은 앱 시작 시 일괄 처리 예정 (TODO: app startup permission flow).
   Future<void> _onPushAlertChanged(bool value) async {
-    setState(() => _pushAlert = value);
-    widget.onPushNotificationChanged?.call(value);
-
-    if (value) {
-      final status = await Permission.notification.status;
-      if (!status.isGranted && mounted) {
-        _showPermissionGuidance();
-      }
+    if (!value) {
+      setState(() => _pushAlert = false);
+      widget.onPushNotificationChanged?.call(false);
+      return;
     }
-    // OFF → 추후 푸시 발송 로직에서 pushNotificationEnabled == false 이면 전송 스킵
+
+    // 낙관적 UI: 즉시 ON으로 표시
+    setState(() => _pushAlert = true);
+
+    final status = await Permission.notification.status;
+    if (!mounted) return;
+
+    if (status.isGranted) {
+      widget.onPushNotificationChanged?.call(true);
+      return;
+    }
+
+    // 권한 거부 → AlertDialog (UI는 ON 유지)
+    await _showPermissionGuidance();
+    if (!mounted) return;
+
+    // 다이얼로그 닫힌 후 권한 재확인
+    // 취소: 여전히 거부 → OFF 복귀
+    // 설정 열기: 이탈 직후엔 아직 거부 → OFF 복귀, 복귀 후 _recheckAfterSettings가 ON 재보정
+    final recheckStatus = await Permission.notification.status;
+    if (!mounted) return;
+    if (!recheckStatus.isGranted) {
+      setState(() => _pushAlert = false);
+      widget.onPushNotificationChanged?.call(false);
+    }
   }
 
-  void _showPermissionGuidance() {
-    showDialog<void>(
+  Future<void> _showPermissionGuidance() async {
+    await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: ColorCollection.background,
@@ -95,6 +162,7 @@ class _SettingsNotificationWidgetState
           ),
           TextButton(
             onPressed: () {
+              _awaitingPermissionResult = true;
               Navigator.pop(ctx);
               openAppSettings();
             },
