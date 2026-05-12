@@ -116,5 +116,11 @@ class DetectionEvent {
     "crosswalk": "횡단보도",
     "tactile_block": "점자블록 끊김",
     "unknown": "장애물",
+    "backpack": "백팩",
+    "handbag": "핸드백",
+    "bottle": "병",
+    "dining table": "탁자",
+    "tv": "모니터",
+    "laptop": "노트북",
   };
 }
