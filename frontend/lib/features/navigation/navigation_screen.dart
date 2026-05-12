@@ -88,7 +88,9 @@ class NavigationScreenState extends State<NavigationScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // 앱 복귀 시 위치 미초기화 상태이면 재시도 (설정에서 권한 허용 후 복귀 대응)
-    if (state == AppLifecycleState.resumed && _currentPosition == null && mounted) {
+    if (state == AppLifecycleState.resumed &&
+        _currentPosition == null &&
+        mounted) {
       _initLocation();
     }
   }
@@ -132,16 +134,17 @@ class NavigationScreenState extends State<NavigationScreen>
 
       // 초기 위치 획득 후 20m 이상 이동 시 위치·주소 갱신
       _positionStream?.cancel();
-      _positionStream = Geolocator.getPositionStream(
-        locationSettings: AndroidSettings(
-          accuracy: LocationAccuracy.best,
-          distanceFilter: 20,
-        ),
-      ).listen((pos) {
-        if (!mounted) return;
-        _currentPosition = pos;
-        _fetchAddress(pos);
-      });
+      _positionStream =
+          Geolocator.getPositionStream(
+            locationSettings: AndroidSettings(
+              accuracy: LocationAccuracy.best,
+              distanceFilter: 20,
+            ),
+          ).listen((pos) {
+            if (!mounted) return;
+            _currentPosition = pos;
+            _fetchAddress(pos);
+          });
     } catch (e) {
       debugPrint('🔴 위치 초기화 실패: $e');
       if (mounted) setState(() => currentLocation = '현재 위치 불러오는 중...');
@@ -160,7 +163,9 @@ class NavigationScreenState extends State<NavigationScreen>
     if (_applyGeocodeResult(result)) return;
 
     // exactAddress 미획득 → 5초마다 재시도
-    _reverseGeocodeRetry = Timer.periodic(const Duration(seconds: 5), (_) async {
+    _reverseGeocodeRetry = Timer.periodic(const Duration(seconds: 5), (
+      _,
+    ) async {
       final retryResult = await PlaceService.reverseGeocode(
         lat: _currentPosition?.latitude ?? position.latitude,
         lng: _currentPosition?.longitude ?? position.longitude,
@@ -214,7 +219,8 @@ class NavigationScreenState extends State<NavigationScreen>
       context,
       needsMicrophone: true,
       featureName: '음성 검색',
-    )) return;
+    ))
+      return;
 
     bool available = await speech.initialize(
       onStatus: (status) => debugPrint('status: $status'),
@@ -252,8 +258,9 @@ class NavigationScreenState extends State<NavigationScreen>
       context,
       needsCamera: widget.withObstacleDetection,
       needsLocation: true,
-      featureName: widget.withObstacleDetection ? '통합 모드' : '스마트 길찾기',
-    )) return;
+      featureName: widget.withObstacleDetection ? '통합 모드' : '길찾기',
+    ))
+      return;
 
     if (!mounted) return;
     if (_selectedLat == null || _selectedLng == null) return;
@@ -339,11 +346,13 @@ class NavigationScreenState extends State<NavigationScreen>
     // 정확도 20m 이하인 첫 번째 위치 반환 (최대 10초 대기, 초과 시 폴백)
     try {
       return await Geolocator.getPositionStream(
-        locationSettings: AndroidSettings(
-          accuracy: LocationAccuracy.best,
-          distanceFilter: 0,
-        ),
-      ).firstWhere((p) => p.accuracy <= 20).timeout(const Duration(seconds: 10));
+            locationSettings: AndroidSettings(
+              accuracy: LocationAccuracy.best,
+              distanceFilter: 0,
+            ),
+          )
+          .firstWhere((p) => p.accuracy <= 20)
+          .timeout(const Duration(seconds: 10));
     } catch (_) {
       final last = await Geolocator.getLastKnownPosition();
       if (last != null) return last;
@@ -352,7 +361,6 @@ class NavigationScreenState extends State<NavigationScreen>
       );
     }
   }
-
 
   /// 장소 검색 함수 (새 쿼리 입력 시 초기화)
   void searchPlaces() async {
@@ -655,7 +663,12 @@ class NavigationScreenState extends State<NavigationScreen>
                   left: 0,
                   right: 0,
                   child: isLoading
-                      ? Center(child: Semantics(label: '검색 중', child: const CircularProgressIndicator()))
+                      ? Center(
+                          child: Semantics(
+                            label: '검색 중',
+                            child: const CircularProgressIndicator(),
+                          ),
+                        )
                       : searchResults.isNotEmpty
                       ? ResultList(
                           results: searchResults,
@@ -732,32 +745,32 @@ class _ClearButton extends StatelessWidget {
             VibrationService().vibrate(VibrationEffect.buttonTap);
             onTap();
           },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: ColorCollection.point.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: ColorCollection.point, width: 1),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.delete_outline_rounded,
-                size: 18,
-                color: ColorCollection.point,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '전체 삭제',
-                style: AppTextStyles.labelRegular.copyWith(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: ColorCollection.point.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: ColorCollection.point, width: 1),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.delete_outline_rounded,
+                  size: 18,
                   color: ColorCollection.point,
                 ),
-              ),
-            ],
+                const SizedBox(width: 4),
+                Text(
+                  '전체 삭제',
+                  style: AppTextStyles.labelRegular.copyWith(
+                    color: ColorCollection.point,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 }

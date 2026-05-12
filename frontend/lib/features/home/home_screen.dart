@@ -42,7 +42,7 @@ class HomeScreen extends StatelessWidget {
                   icon: Icons.navigation,
                   iconColor: ColorCollection.main,
                   iconSize: 38,
-                  title: '스마트 길찾기',
+                  title: '길찾기',
                   subtitle: '가장 안전한 경로로 안내합니다.',
                   backgroundColor: ColorCollection.background,
                   titleColor: ColorCollection.main,
