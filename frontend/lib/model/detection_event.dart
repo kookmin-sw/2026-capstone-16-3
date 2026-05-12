@@ -114,6 +114,7 @@ class DetectionEvent {
     "bench": "벤치",
     "barricade": "바리케이드",
     "crosswalk": "횡단보도",
-    "tactile_block": "점자블록",
+    "tactile_block": "점자블록 끊김",
+    "unknown": "장애물",
   };
 }
