@@ -21,6 +21,7 @@ class _MainLayoutState extends State<MainLayout> {
 
   final _settingsScrollController = ScrollController();
   final _navigationKey = GlobalKey<NavigationScreenState>();
+  final _integratedKey = GlobalKey<NavigationScreenState>();
 
   late final List<Widget> _pages = [
     HomeScreen(onTabChange: _onTap),
@@ -28,7 +29,7 @@ class _MainLayoutState extends State<MainLayout> {
       onDetectingChanged: (v) => setState(() => _isDetecting = v),
     ),
     NavigationScreen(key: _navigationKey, withObstacleDetection: false),
-    const NavigationScreen(withObstacleDetection: true),
+    NavigationScreen(key: _integratedKey, withObstacleDetection: true),
     SettingsScreen(scrollController: _settingsScrollController),
   ];
 
@@ -40,7 +41,10 @@ class _MainLayoutState extends State<MainLayout> {
       // 최초 로그인 후 1회만 권한 온보딩 표시
       await PermissionOnboardingSheet.showOnce(context);
       // 온보딩 완료 후 위치 초기화 (권한 허용 여부와 무관하게 시도 — 내부에서 denied 처리)
-      if (mounted) _navigationKey.currentState?.initLocationIfNeeded();
+      if (mounted) {
+        _navigationKey.currentState?.initLocationIfNeeded();
+        _integratedKey.currentState?.initLocationIfNeeded();
+      }
     });
   }
 
@@ -57,6 +61,9 @@ class _MainLayoutState extends State<MainLayout> {
     }
     if (index == 2) {
       _navigationKey.currentState?.initLocationIfNeeded();
+    }
+    if (index == 3) {
+      _integratedKey.currentState?.initLocationIfNeeded();
     }
     setState(() {
       _currentIndex = index;
