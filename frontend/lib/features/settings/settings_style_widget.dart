@@ -30,14 +30,14 @@ class SettingsStyleWidget extends StatefulWidget {
 
 class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
   static const double _ttsMin = 0.5;
-  static const double _ttsMax = 5.0;
-  static const double _ttsStep = 0.5;
+  static const double _ttsMax = 7.0;
+  static const double _ttsStep = 0.25;
 
   static const int _vibMax = 100;
   static const int _vibStep = 10;
 
   late MessageLength _messageLength;
-  late double _ttsSpeed; // 0.5 ~ 5.0, step 0.5
+  late double _ttsSpeed; // 0.5 ~ 5.0, step 0.25
   late int _vibration; // 0 ~ 100, step 10
 
   @override
@@ -45,7 +45,10 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
     super.initState();
     _messageLength = widget.initialSettings.sentenceLength;
 
-    final rawSpeed = widget.initialSettings.guidanceSpeed.clamp(_ttsMin, _ttsMax);
+    final rawSpeed = widget.initialSettings.guidanceSpeed.clamp(
+      _ttsMin,
+      _ttsMax,
+    );
     _ttsSpeed = (((rawSpeed - _ttsMin) / _ttsStep).round() * _ttsStep + _ttsMin)
         .clamp(_ttsMin, _ttsMax);
 
@@ -83,7 +86,7 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
             label: '안내 문장 빠르기',
             buttonLabel: '빠르기',
             description: '안내 메시지의 재생 속도를 조절합니다.',
-            displayValue: '${_ttsSpeed.toStringAsFixed(1)}배속',
+            displayValue: _formatSpeed(_ttsSpeed),
             canDecrease: _ttsSpeed > _ttsMin,
             canIncrease: _ttsSpeed < _ttsMax,
             onDecrease: _decreaseSpeed,
@@ -111,8 +114,20 @@ class _SettingsStyleWidgetState extends State<SettingsStyleWidget> {
     height: 28,
   );
 
-  String _speedLabel(double speed) =>
-      '${speed.toStringAsFixed(1).replaceAll('.', '점')}배속';
+  String _formatSpeed(double speed) =>
+      speed % 1 == 0 ? '${speed.toInt()} 배속' : '${speed.toStringAsFixed(2)} 배속';
+
+  String _speedLabel(double speed) {
+    if (speed % 1 == 0) return '${speed.toInt()} 배속';
+    const digits = ['영', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'];
+    final parts = speed.toStringAsFixed(2).split('.');
+    final decKorean = parts[1]
+        .replaceAll(RegExp(r'0+$'), '')
+        .split('')
+        .map((d) => digits[int.parse(d)])
+        .join();
+    return '${parts[0]}점$decKorean 배속';
+  }
 
   void _decreaseSpeed() {
     final next = (_ttsSpeed - _ttsStep).clamp(_ttsMin, _ttsMax);
@@ -231,7 +246,9 @@ class _SegmentedRow<T> extends StatelessWidget {
                       child: Text(
                         optLabel,
                         style: AppTextStyles.labelBold.copyWith(
-                          color: isSelected ? Colors.white : ColorCollection.point,
+                          color: isSelected
+                              ? Colors.white
+                              : ColorCollection.point,
                           fontWeight: FontWeight.w700,
                         ),
                       ),

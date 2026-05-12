@@ -40,6 +40,7 @@ class NavigationScreenState extends State<NavigationScreen>
 
   /// 위치 변수
   String currentLocation = "현재 위치 불러오는 중...";
+  bool _locationFailed = false;
   String selectedLocation = "목적지를 선택해 주세요.";
   double? _selectedLat;
   double? _selectedLng;
@@ -77,7 +78,6 @@ class NavigationScreenState extends State<NavigationScreen>
     });
   }
 
-  /// MainLayout이 온보딩 완료 후 또는 길찾기 탭 전환 시 호출.
   /// 최초 1회만 실행하며, 앱 재개 시 retry는 didChangeAppLifecycleState가 담당.
   void initLocationIfNeeded() {
     if (_locationInitialized || !mounted) return;
@@ -127,7 +127,8 @@ class NavigationScreenState extends State<NavigationScreen>
     }
 
     try {
-      final position = await getCurrentLocation();
+      final position = await getCurrentLocation()
+          .timeout(const Duration(seconds: 30));
       if (!mounted) return;
       _currentPosition = position;
       await _fetchAddress(position);
@@ -147,7 +148,10 @@ class NavigationScreenState extends State<NavigationScreen>
           });
     } catch (e) {
       debugPrint('🔴 위치 초기화 실패: $e');
-      if (mounted) setState(() => currentLocation = '현재 위치 불러오는 중...');
+      if (mounted) setState(() {
+        currentLocation = '현재 위치를 가져올 수 없습니다';
+        _locationFailed = true;
+      });
     }
   }
 
@@ -280,7 +284,6 @@ class NavigationScreenState extends State<NavigationScreen>
     SoundEffectService().play(SoundEffect.actionStart);
     VibrationService().vibrate(VibrationEffect.actionStart);
 
-    _positionStream?.cancel();
     setState(() => isLoading = true);
 
     try {
@@ -292,6 +295,12 @@ class NavigationScreenState extends State<NavigationScreen>
         startName: currentLocation,
         endName: _selectedName,
       );
+
+      if (!mounted) return;
+
+      // navigation_ing_screen이 열리기 전에 스트림을 취소해야 geolocator 스트림 충돌 방지
+      await _positionStream?.cancel();
+      _positionStream = null;
 
       if (!mounted) return;
 
@@ -317,6 +326,7 @@ class NavigationScreenState extends State<NavigationScreen>
         _selectedName = '';
         currentLocation = "현재 위치 불러오는 중...";
       });
+      _locationInitialized = false;
       _initLocation();
     } catch (e) {
       debugPrint('🔴 [Navigation] 길찾기 오류: $e');
@@ -354,11 +364,14 @@ class NavigationScreenState extends State<NavigationScreen>
           .firstWhere((p) => p.accuracy <= 20)
           .timeout(const Duration(seconds: 10));
     } catch (_) {
-      final last = await Geolocator.getLastKnownPosition();
-      if (last != null) return last;
+      try {
+        final last = await Geolocator.getLastKnownPosition()
+            .timeout(const Duration(seconds: 5));
+        if (last != null) return last;
+      } catch (_) {}
       return await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.best,
-      );
+      ).timeout(const Duration(seconds: 10));
     }
   }
 
@@ -470,9 +483,27 @@ class NavigationScreenState extends State<NavigationScreen>
                       },
                     ),
                     const SizedBox(height: 16),
-                    CurrentPlaceWidget(
-                      label: '현재 위치',
-                      location: currentLocation,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CurrentPlaceWidget(
+                            label: '현재 위치',
+                            location: currentLocation,
+                          ),
+                        ),
+                        if (_locationFailed)
+                          IconButton(
+                            icon: const Icon(Icons.refresh),
+                            tooltip: '위치 재시도',
+                            onPressed: () {
+                              setState(() {
+                                currentLocation = '현재 위치 불러오는 중...';
+                                _locationFailed = false;
+                              });
+                              _initLocation();
+                            },
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     CurrentPlaceWidget(

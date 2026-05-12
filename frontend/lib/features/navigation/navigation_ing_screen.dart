@@ -53,6 +53,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   double _minDistanceToStep = double.infinity;
   double? _debugDistance;
   double? _rawDistance; // freeze 없이 항상 갱신되는 실제 GPS 거리
+  double? _lastGpsAccuracy;
   bool _hasArrived = false;
   bool _showStartOverview = false;
   bool _hasShownStartOverview = false;
@@ -251,16 +252,23 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   }
 
   void _startLocationTracking() {
+    debugPrint('🗺️ [GPS] 위치 추적 시작');
+    // navigation_screen이 pushNamed 전에 스트림을 취소하므로 딜레이 불필요
     _positionSub = Geolocator.getPositionStream(
       locationSettings: AndroidSettings(
         accuracy: LocationAccuracy.best,
         distanceFilter: 0,
         intervalDuration: Duration.zero,
       ),
-    ).listen(_onPositionUpdate);
+    ).listen(
+      _onPositionUpdate,
+      onError: (e) => debugPrint('🔴 [GPS] 스트림 에러: $e'),
+    );
   }
 
   void _onPositionUpdate(Position position) {
+    _lastGpsAccuracy = position.accuracy;
+    debugPrint('📍 [GPS] 위치 수신 acc:${position.accuracy.toStringAsFixed(1)}m');
     if (position.accuracy > 20) return;
 
     if (_currentStepIndex >= _pointSteps.length) {
@@ -718,6 +726,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
               segmentDist: _lastSegmentDist,
               deviationCount: _deviationCount,
               pathIndex: _currentPathIndex,
+              gpsAccuracy: _lastGpsAccuracy,
             ),
             if (_withObstacleDetection) const CameraDebugOverlay(anchorLeft: true),
             if (_isRecalculating)

@@ -100,8 +100,8 @@ class CustomButton extends StatelessWidget {
     this.subtitleColor = ColorCollection.point,
     this.titleStyle,
     this.subtitleStyle,
-    this.iconTitleSpacing = 10,
-    this.titleSubtitleSpacing = 13,
+    this.iconTitleSpacing = 2,
+    this.titleSubtitleSpacing = 4,
     this.onTap,
   });
 

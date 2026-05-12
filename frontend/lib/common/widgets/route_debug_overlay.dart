@@ -31,6 +31,7 @@ class RouteDebugOverlay extends StatefulWidget {
   final double? segmentDist;
   final int deviationCount;
   final int pathIndex;
+  final double? gpsAccuracy;
 
   const RouteDebugOverlay({
     super.key,
@@ -44,6 +45,7 @@ class RouteDebugOverlay extends StatefulWidget {
     this.segmentDist,
     this.deviationCount = 0,
     this.pathIndex = 0,
+    this.gpsAccuracy,
   });
 
   @override
@@ -90,9 +92,9 @@ class _RouteDebugOverlayState extends State<RouteDebugOverlay> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             color: Colors.black.withValues(alpha: 0.85),
             child: Text(
-              'DEV  seg:${widget.segmentDist != null ? '${widget.segmentDist!.toStringAsFixed(1)}m' : '--'}  cnt:${widget.deviationCount}/3  path:${widget.pathIndex}',
+              'DEV  acc:${widget.gpsAccuracy != null ? '${widget.gpsAccuracy!.toStringAsFixed(1)}m' : '--'}  seg:${widget.segmentDist != null ? '${widget.segmentDist!.toStringAsFixed(1)}m' : '--'}  cnt:${widget.deviationCount}/3',
               style: TextStyle(
-                color: widget.deviationCount > 0 ? Colors.orange : Colors.cyan,
+                color: (widget.gpsAccuracy != null && widget.gpsAccuracy! > 20) ? Colors.red : (widget.deviationCount > 0 ? Colors.orange : Colors.cyan),
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
               ),
