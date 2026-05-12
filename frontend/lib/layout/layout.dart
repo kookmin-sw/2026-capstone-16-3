@@ -27,7 +27,7 @@ class _MainLayoutState extends State<MainLayout> {
     DetectionScreen(
       onDetectingChanged: (v) => setState(() => _isDetecting = v),
     ),
-    const NavigationScreen(withObstacleDetection: false),
+    NavigationScreen(key: _navigationKey, withObstacleDetection: false),
     const NavigationScreen(withObstacleDetection: true),
     SettingsScreen(scrollController: _settingsScrollController),
   ];
