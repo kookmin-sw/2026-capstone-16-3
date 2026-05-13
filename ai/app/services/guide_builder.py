@@ -1361,7 +1361,12 @@ def _decide_primary_guide(scene: dict[str, Any], frame_idx: int, img_w: int, img
         primary = None
 
         if vehicle_urgent:
-            _, primary = vehicle_urgent[0]
+            for _, obj in vehicle_urgent:
+                tid = int(obj["object_id"].replace("obj_", ""))
+                cooldown = STATIC_OBJ_COOLDOWN_FRAMES if not obj["is_dynamic"] else DYNAMIC_OBJ_COOLDOWN_FRAMES
+                if not is_in_cooldown(tid, frame_idx, cooldown):
+                    primary = obj
+                    break
         else:
             for _, obj in non_vehicle_urgent:
                 tid = int(obj["object_id"].replace("obj_", ""))
