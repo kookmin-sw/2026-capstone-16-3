@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/widgets/permission_onboarding_sheet.dart';
 import 'package:safepath/features/detection/detection_screen.dart';
@@ -6,7 +7,9 @@ import 'package:safepath/features/home/home_screen.dart';
 import 'package:safepath/features/navigation/navigation_screen.dart';
 import 'package:safepath/features/settings/settings_screen.dart';
 import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/tts_service.dart';
 import 'package:safepath/service/vibration_service.dart';
+import 'package:safepath/service/weather_service.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -48,13 +51,56 @@ class _MainLayoutState extends State<MainLayout> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      debugPrint('🌤 [Weather] 온보딩 시작');
       // 최초 로그인 후 1회만 권한 온보딩 표시
       await PermissionOnboardingSheet.showOnce(context);
+      debugPrint('🌤 [Weather] 온보딩 완료, mounted: $mounted');
       // 온보딩 완료 후 위치 초기화 (권한 허용 여부와 무관하게 시도 — 내부에서 denied 처리)
       // 앱 시작 시 길찾기 탭만 초기화 — 통합 탭은 탭 전환 시 초기화
       // (두 화면 동시 초기화 시 geolocator 스트림 충돌 발생)
       if (mounted) _navigationKey.currentState?.initLocationIfNeeded();
+      _speakWeather();
     });
+  }
+
+  Future<void> _speakWeather() async {
+    debugPrint('🌤 [Weather] _speakWeather 시작');
+    try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        debugPrint('🌤 [Weather] 위치 권한 없음 — 스킵');
+        return;
+      }
+      Position? position = await Geolocator.getLastKnownPosition()
+          .timeout(const Duration(seconds: 5))
+          .catchError((_) => null);
+      position ??= await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.low,
+      ).timeout(const Duration(seconds: 10));
+      debugPrint(
+        '🌤 [Weather] 위치: ${position.latitude}, ${position.longitude}',
+      );
+      final description = await WeatherService().fetchDescription(
+        lat: position.latitude,
+        lon: position.longitude,
+      );
+      debugPrint(
+        '🌤 [Weather] description 수신: $description, mounted: $mounted',
+      );
+      if (description != null && description.isNotEmpty && mounted) {
+        debugPrint('🌤 [Weather] TTS 호출');
+        await TtsService().speak(
+          description,
+          interrupt: false,
+          channel: TtsChannel.navigation,
+        );
+      } else {
+        debugPrint('🌤 [Weather] TTS 스킵 — description 없음 또는 unmounted');
+      }
+    } catch (e) {
+      debugPrint('🌤 [Weather] 위치 조회 실패: $e');
+    }
   }
 
   @override
