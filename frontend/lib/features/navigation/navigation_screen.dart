@@ -22,8 +22,13 @@ import 'package:safepath/service/vibration_service.dart';
 
 class NavigationScreen extends StatefulWidget {
   final bool withObstacleDetection;
+  final Future<void> Function()? onBeforeNavigationStart;
 
-  const NavigationScreen({super.key, this.withObstacleDetection = true});
+  const NavigationScreen({
+    super.key,
+    this.withObstacleDetection = true,
+    this.onBeforeNavigationStart,
+  });
 
   @override
   NavigationScreenState createState() => NavigationScreenState();
@@ -85,10 +90,20 @@ class NavigationScreenState extends State<NavigationScreen>
     _initLocation();
   }
 
+  /// 다른 NavigationScreen 인스턴스가 길찾기 시작 전 호출해 스트림 충돌 방지.
+  Future<void> cancelPositionStream() async {
+    await _positionStream?.cancel();
+    _positionStream = null;
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // 앱 복귀 시 위치 미초기화 상태이면 재시도 (설정에서 권한 허용 후 복귀 대응)
-    if (state == AppLifecycleState.resumed && _currentPosition == null && mounted) {
+    // _locationInitialized가 true일 때만 — 한 번도 방문하지 않은 탭은 재시도 불필요
+    if (state == AppLifecycleState.resumed &&
+        _locationInitialized &&
+        _currentPosition == null &&
+        mounted) {
       _initLocation();
     }
   }
@@ -291,9 +306,11 @@ class NavigationScreenState extends State<NavigationScreen>
 
       if (!mounted) return;
 
-      // navigation_ing_screen이 열리기 전에 스트림을 취소해야 geolocator 스트림 충돌 방지
+      // 자신의 스트림 취소 후, 다른 NavigationScreen 스트림도 취소
+      // (geolocator는 동시 스트림을 지원하지 않아 navigation_ing_screen 스트림이 이벤트를 못 받음)
       await _positionStream?.cancel();
       _positionStream = null;
+      await widget.onBeforeNavigationStart?.call();
 
       if (!mounted) return;
 
@@ -329,41 +346,29 @@ class NavigationScreenState extends State<NavigationScreen>
   }
 
   /// 현재 위치 위도,경도 가져오기
+  ///
+  /// getPositionStream()을 쓰지 않는 이유: firstWhere()가 완료돼도 스트림이 즉시
+  /// 해제되지 않아 navigation_ing_screen의 GPS 스트림과 충돌함. 일회성 호출만 사용.
   Future<Position> getCurrentLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) throw Exception('위치 서비스가 꺼져 있습니다.');
 
-    // 위치 서비스 활성화 확인
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw Exception('위치 서비스가 꺼져 있습니다.');
-    }
-
-    // 권한 확인 (시스템 팝업은 온보딩에서만 요청 — 여기서는 상태 확인만)
-    permission = await Geolocator.checkPermission();
+    final permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       throw Exception('위치 권한이 거부되었습니다.');
     }
 
-    // 정확도 20m 이하인 첫 번째 위치 반환 (최대 10초 대기, 초과 시 폴백)
+    // 캐시된 위치가 있으면 먼저 반환 (정확도 50m 이내)
     try {
-      return await Geolocator.getPositionStream(
-        locationSettings: AndroidSettings(
-          accuracy: LocationAccuracy.best,
-          distanceFilter: 0,
-        ),
-      ).firstWhere((p) => p.accuracy <= 20).timeout(const Duration(seconds: 10));
-    } catch (_) {
-      try {
-        final last = await Geolocator.getLastKnownPosition()
-            .timeout(const Duration(seconds: 5));
-        if (last != null) return last;
-      } catch (_) {}
-      return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.best,
-      ).timeout(const Duration(seconds: 10));
-    }
+      final last = await Geolocator.getLastKnownPosition()
+          .timeout(const Duration(seconds: 3));
+      if (last != null && last.accuracy <= 50) return last;
+    } catch (_) {}
+
+    return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.best,
+    ).timeout(const Duration(seconds: 15));
   }
 
 
@@ -440,7 +445,7 @@ class NavigationScreenState extends State<NavigationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomTitleBar(title: '길찾기'),
+      appBar: CustomTitleBar(title: widget.withObstacleDetection ? '통합모드' : '길찾기'),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
