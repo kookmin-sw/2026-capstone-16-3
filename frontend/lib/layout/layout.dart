@@ -81,7 +81,7 @@ class _MainLayoutState extends State<MainLayout> {
       debugPrint(
         '🌤 [Weather] 위치: ${position.latitude}, ${position.longitude}',
       );
-      final description = await WeatherService().fetchDescription(
+      final description = await WeatherService().fetchWeatherMessage(
         lat: position.latitude,
         lon: position.longitude,
       );
