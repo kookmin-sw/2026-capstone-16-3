@@ -409,7 +409,7 @@ def bbox_distance_raw(depth_m: np.ndarray, bbox_xyxy: list[float], src_wh: tuple
     raw = float(np.median(nearest_pixels))
 
     # scale factor
-    print(f"[DEPTH_RAW] {raw:.2f}m  (bbox h_ratio={bbox_h/src_h:.2f})")
+    # print(f"[DEPTH_RAW] {raw:.2f}m  (bbox h_ratio={bbox_h/src_h:.2f})")
     return raw * DEPTH_SCALE_FACTOR + DEPTH_OFFSET_M
 
 
@@ -840,8 +840,7 @@ def estimate_approach_speed(track_id: int, motion: str) -> float:
 
 
 def is_in_cooldown(track_id: int, current_frame: int, cooldown_frames: int) -> bool:
-    last = last_announced_frame.get(track_id)
-    return last is not None and (current_frame - last) < cooldown_frames
+    return track_id in last_announced_frame
 
 
 def mark_announced(track_id: int, frame_idx: int) -> None:
@@ -1030,6 +1029,8 @@ def compute_risk_score(obj: dict[str, Any], scene_img_area: float) -> float:
         return -1.0
     if obj["confidence"] < MIN_GUIDE_CONF:
         return -1.0
+    if cat["is_person"]:
+        return -1.0
 
     if cat["is_vehicle"]:
         base = 5.0
@@ -1142,6 +1143,7 @@ def _decide_tactile_guide_once(
         for obj in objects
         if obj.get("blocks_tactile", False)
         and obj.get("confidence", 0.0) >= MIN_GUIDE_CONF
+        and not obj.get("_cat", {}).get("is_person", False)
     ]
 
     tactile_block = scene.get("tactile_block", {})
@@ -1281,7 +1283,8 @@ def _decide_primary_guide(scene: dict[str, Any], frame_idx: int, img_w: int, img
         area_ratio = max(0.0, (x2 - x1) * (y2 - y1)) / img_area
         is_huge = area_ratio >= HUGE_BBOX_AREA_RATIO and distance_m < HUGE_BBOX_MAX_DIST
 
-        if distance_m <= MAX_GUIDE_DISTANCE_M or is_huge:
+        # if distance_m <= MAX_GUIDE_DISTANCE_M or is_huge:
+        if distance_m <= MAX_GUIDE_DISTANCE_M:
             if not in_walking_view(obj["clock_direction"]) and not is_huge:
                 continue
             candidates.append(obj)
@@ -1322,7 +1325,9 @@ def _decide_primary_guide(scene: dict[str, Any], frame_idx: int, img_w: int, img
     def is_urgent_candidate(score: float, obj: dict[str, Any]) -> bool:
         cat = obj["_cat"]
         distance_m = obj["distance_m"]
-        is_dynamic = cat["is_vehicle"] or cat["is_person"]
+        if cat["is_person"]:
+            return False
+        is_dynamic = cat["is_vehicle"]
 
         x1, y1, x2, y2 = obj["bbox_xyxy"]
         area_ratio = max(0.0, (x2 - x1) * (y2 - y1)) / img_area
