@@ -8,6 +8,7 @@ import 'package:safepath/features/navigation/navigation_screen.dart';
 import 'package:safepath/features/settings/settings_screen.dart';
 import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/tts_service.dart';
+import 'package:safepath/service/user_settings_service.dart';
 import 'package:safepath/service/vibration_service.dart';
 import 'package:safepath/service/weather_service.dart';
 
@@ -81,25 +82,32 @@ class _MainLayoutState extends State<MainLayout> {
       debugPrint(
         '🌤 [Weather] 위치: ${position.latitude}, ${position.longitude}',
       );
-      final description = await WeatherService().fetchWeatherMessage(
-        lat: position.latitude,
-        lon: position.longitude,
-      );
-      debugPrint(
-        '🌤 [Weather] description 수신: $description, mounted: $mounted',
-      );
-      if (description != null && description.isNotEmpty && mounted) {
-        debugPrint('🌤 [Weather] TTS 호출');
+
+      // 설정 로드와 날씨 API 호출을 병렬 처리
+      final results = await Future.wait([
+        UserSettingsService().fetch(),
+        WeatherService().fetchWeatherMessage(
+          lat: position.latitude,
+          lon: position.longitude,
+        ),
+      ]);
+      final settings = results[0] as UserSettings;
+      final message = results[1] as String?;
+
+      debugPrint('🌤 [Weather] message 수신: $message, mounted: $mounted');
+      if (message != null && message.isNotEmpty && mounted) {
+        await TtsService().setSpeechRate(settings.guidanceSpeed);
+        debugPrint('🌤 [Weather] TTS 호출 (speed: ${settings.guidanceSpeed})');
         await TtsService().speak(
-          description,
+          message,
           interrupt: false,
           channel: TtsChannel.navigation,
         );
       } else {
-        debugPrint('🌤 [Weather] TTS 스킵 — description 없음 또는 unmounted');
+        debugPrint('🌤 [Weather] TTS 스킵 — message 없음 또는 unmounted');
       }
     } catch (e) {
-      debugPrint('🌤 [Weather] 위치 조회 실패: $e');
+      debugPrint('🌤 [Weather] 오류: $e');
     }
   }
 
