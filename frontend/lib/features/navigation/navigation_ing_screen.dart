@@ -590,6 +590,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                                 ? (_route!.totalTime / 60).ceil()
                                 : 0,
                             status: _routeStatus,
+                            showStatus: _withObstacleDetection,
                           ),
                         ),
                         Padding(
