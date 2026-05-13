@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.safepath"
+    namespace = "com.retriever.gilbeot"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -23,7 +23,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.safepath"
+        applicationId = "com.retriever.gilbeot"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -37,11 +37,27 @@ android {
         manifestPlaceholders["kakaoNativeAppKey"] = localProps.getProperty("kakaoNativeAppKey", "")
     }
 
+    val localProps = Properties()
+    val localPropsFile = rootProject.file("local.properties")
+    if (localPropsFile.exists()) localProps.load(localPropsFile.inputStream())
+
+    signingConfigs {
+        create("release") {
+            val sf = localProps.getProperty("storeFile")
+            if (sf != null) {
+                storeFile = file(sf)
+                storePassword = localProps.getProperty("storePassword", "")
+                keyAlias = localProps.getProperty("keyAlias", "")
+                keyPassword = localProps.getProperty("keyPassword", "")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            val sf = localProps.getProperty("storeFile")
+            signingConfig = if (sf != null) signingConfigs.getByName("release")
+                            else signingConfigs.getByName("debug")
         }
     }
 }
