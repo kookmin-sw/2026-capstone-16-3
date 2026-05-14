@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from typing import Any
-
+import time
 import cv2
 import numpy as np
 
@@ -97,11 +97,15 @@ track_history: dict[int, deque] = defaultdict(lambda: deque(maxlen=TRACK_HISTORY
 last_announced_frame: dict[int, int] = {}
 last_scene_announced: dict[str, int] = {}
 
+# 동일한 최종 안내 문장 반복 방지용
+VOICE_TEXT_COOLDOWN_SECONDS = 10.0
+last_voice_announced_at: dict[str, float] = {}
 
 def reset_runtime_state() -> None:
     track_history.clear()
     last_announced_frame.clear()
     last_scene_announced.clear()
+    last_voice_announced_at.clear()
 
 
 # =========================================================
@@ -879,6 +883,36 @@ def is_scene_announced_once(scene_key: str) -> bool:
 def mark_scene_announced_once(scene_key: str, frame_idx: int) -> None:
     last_scene_announced[scene_key] = frame_idx
 
+def suppress_repeated_voice_text(
+    gt: dict[str, Any],
+    cooldown_seconds: float = VOICE_TEXT_COOLDOWN_SECONDS,
+) -> dict[str, Any]:
+    """
+    최종 voice_guide 문장 전체가 cooldown_seconds 이내에 동일하게 반복되면 음성 안내만 제거한다.
+
+    예)
+    - "주의. 전방 점자블록 끊김, 천천히 이동."
+      → 10초 안에 동일 문장 반복 시 제거
+
+    - "전방에 점자블록이 있습니다. 주의. 전방 점자블록 끊김, 천천히 이동."
+      → 전체 문장이 다르므로 별도 안내로 허용
+    """
+    voice = gt.get("voice_guide", "")
+
+    if not voice:
+        return gt
+
+    now = time.monotonic()
+    last = last_voice_announced_at.get(voice)
+
+    if last is not None and (now - last) < cooldown_seconds:
+        gt["voice_guide"] = ""
+        gt["suppressed_voice_guide"] = voice
+        gt["suppress_reason"] = "same_voice_text_cooldown"
+        return gt
+
+    last_voice_announced_at[voice] = now
+    return gt
 
 # =========================================================
 # Scene build / guide policy
@@ -1184,16 +1218,27 @@ def build_voice_guide(
         frame_idx=frame_idx,
         sentence_length=sentence_length,
     )
+
     if tactile_gt is not None:
         tactile_gt["scene_info_added"] = []
         tactile_gt["sentence_length"] = sentence_length
         tactile_gt["alert_level"] = alert_level_from_gt(tactile_gt)
+
+        # 최종 안내문장 기준 10초 중복 방지
+        tactile_gt = suppress_repeated_voice_text(tactile_gt)
+        tactile_gt["alert_level"] = alert_level_from_gt(tactile_gt)
+
         return tactile_gt
 
     gt = _decide_primary_guide(scene, frame_idx, img_w, img_h, sentence_length)
     gt = _append_scene_info(gt, scene, frame_idx, sentence_length)
     gt["sentence_length"] = sentence_length
     gt["alert_level"] = alert_level_from_gt(gt)
+
+    # 최종 안내문장 기준 10초 중복 방지
+    gt = suppress_repeated_voice_text(gt)
+    gt["alert_level"] = alert_level_from_gt(gt)
+
     return gt
 
 
