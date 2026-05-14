@@ -68,7 +68,6 @@ KO_LABEL = {
     "bench": "벤치",
     "barricade": "바리케이드",
     "crosswalk": "횡단보도",
-    "zebra": "횡단보도",
 }
 
 SEG_CLASS_MAP = {
@@ -83,6 +82,12 @@ WALKING_VIEW_HOURS = {9, 10, 11, 12, 1, 2, 3}
 
 # bbox 하단 영역 중 점자블록 mask와 5% 이상 겹치면 점자블록 위 장애물로 판단
 TACTILE_OVERLAP_THRESH = 0.05
+
+# 보행 경로/도로 필터 threshold
+PATH_OVERLAP_THRESH = 0.10
+ROAD_OVERLAP_SUPPRESS_THRESH = 0.50
+ROAD_VEHICLE_NEAR_EXCEPTION_M = 2.0       # 이 거리 이내 차량은 roadway여도 경고
+ROAD_VEHICLE_APPROACH_EXCEPTION_M = 4.0  # 빠르게 접근 중인 차량은 이 거리까지 경고
 
 # 안내문 길이 옵션
 VALID_SENTENCE_LENGTHS = {"SHORT", "MEDIUM", "LONG"}
@@ -538,7 +543,12 @@ def path_overlap_ratio(bbox_xyxy: list[float], path_mask: np.ndarray) -> float:
     return float(region.mean()) if region.size else 0.0
 
 
-def road_overlap_ratio(bbox_xyxy: list[float], road_mask: np.ndarray) -> float:
+def road_overlap_ratio(
+    bbox_xyxy: list[float],
+    road_mask: np.ndarray,
+    use_lower_part: bool = True,
+    lower_ratio: float = 1 / 3,
+) -> float:
     if not road_mask.any():
         return 0.0
 
@@ -549,6 +559,12 @@ def road_overlap_ratio(bbox_xyxy: list[float], road_mask: np.ndarray) -> float:
 
     if x2 <= x1 or y2 <= y1:
         return 0.0
+
+    # 객체 발밑(하단부)이 도로에 있는지를 기준으로 판단
+    if use_lower_part:
+        box_h = y2 - y1
+        y1 = int(y2 - box_h * lower_ratio)
+        y1 = max(0, y1)
 
     region = road_mask[y1:y2, x1:x2]
     return float(region.mean()) if region.size else 0.0
@@ -1021,6 +1037,64 @@ def build_scene_from_model_outputs(
     }
 
 
+def is_guide_candidate_object(obj: dict[str, Any], scene: dict[str, Any], img_area: float) -> bool:
+    """
+    실제 음성 안내 후보로 포함할 객체인지 판단한다.
+
+    - 보행 경로/점자블록 위 장애물은 후보 유지
+    - roadway 위 차량은 기본 제외
+    - 단, 매우 가까움 / 빠른 접근 / 화면 크게 차지 / 횡단보도 상황은 예외
+    """
+    cat = obj["_cat"]
+    distance_m = obj.get("distance_m")
+
+    if distance_m is None or distance_m != distance_m:
+        return False
+    if obj.get("confidence", 0.0) < MIN_GUIDE_CONF:
+        return False
+    if cat.get("is_person", False):
+        return False
+
+    # 점자블록 위 객체는 무조건 후보
+    if obj.get("blocks_tactile", False):
+        return True
+
+    # 신호등은 횡단보도가 있을 때만 후보
+    if cat.get("is_traffic_light", False):
+        return bool(scene.get("crosswalk", {}).get("exists", False))
+
+    # 보행 가능 영역 위 객체는 후보
+    if obj.get("on_path", False):
+        return True
+
+    road_ovl = obj.get("_road_overlap", 0.0)
+    path_ovl = obj.get("_path_overlap", 0.0)
+
+    x1, y1, x2, y2 = obj["bbox_xyxy"]
+    area_ratio = max(0.0, (x2 - x1) * (y2 - y1)) / img_area if img_area > 0 else 0.0
+    is_huge = area_ratio >= HUGE_BBOX_AREA_RATIO and distance_m < HUGE_BBOX_MAX_DIST
+
+    # 도로 위 차량은 기본 제외, 단 예외 조건 충족 시 유지
+    if cat.get("is_vehicle", False) and road_ovl >= ROAD_OVERLAP_SUPPRESS_THRESH and path_ovl < PATH_OVERLAP_THRESH:
+        # 예외 1: 너무 가까움 — 보행 영역을 이미 침범했을 가능성
+        if distance_m <= ROAD_VEHICLE_NEAR_EXCEPTION_M:
+            return True
+        # 예외 2: 빠르게 접근 중
+        if (
+            obj.get("_approach_mps", 0.0) > VEHICLE_APPROACH_THRESH
+            and obj.get("track_age", 0) >= VEHICLE_MIN_TRACK_AGE
+            and obj.get("motion") == "moved"
+            and distance_m <= ROAD_VEHICLE_APPROACH_EXCEPTION_M
+        ):
+            return True
+        # 예외 3: 화면을 크게 차지함
+        if is_huge:
+            return True
+        return False
+
+    return False
+
+
 def compute_risk_score(obj: dict[str, Any], scene_img_area: float) -> float:
     cat = obj["_cat"]
     distance_m = obj["distance_m"]
@@ -1143,7 +1217,6 @@ def _decide_tactile_guide_once(
         for obj in objects
         if obj.get("blocks_tactile", False)
         and obj.get("confidence", 0.0) >= MIN_GUIDE_CONF
-        and not obj.get("_cat", {}).get("is_person", False)
     ]
 
     tactile_block = scene.get("tactile_block", {})
@@ -1283,9 +1356,10 @@ def _decide_primary_guide(scene: dict[str, Any], frame_idx: int, img_w: int, img
         area_ratio = max(0.0, (x2 - x1) * (y2 - y1)) / img_area
         is_huge = area_ratio >= HUGE_BBOX_AREA_RATIO and distance_m < HUGE_BBOX_MAX_DIST
 
-        # if distance_m <= MAX_GUIDE_DISTANCE_M or is_huge:
         if distance_m <= MAX_GUIDE_DISTANCE_M:
             if not in_walking_view(obj["clock_direction"]) and not is_huge:
+                continue
+            if not is_guide_candidate_object(obj, scene, img_area):
                 continue
             candidates.append(obj)
 
