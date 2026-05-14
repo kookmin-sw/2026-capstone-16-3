@@ -53,5 +53,26 @@
 	<string>목적지 음성 입력을 위해 음성 인식 기능이 필요합니다.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>실시간 위치 기반 길안내를 위해 위치 접근이 필요합니다.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>kakaokompassauth</string>
+		<string>kakaolink</string>
+		<string>kakaotalk</string>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>kakao$(KAKAO_NATIVE_APP_KEY)</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

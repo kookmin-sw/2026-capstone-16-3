@@ -9,8 +9,8 @@ void main() async {
   KakaoSdk.init(nativeAppKey: kakaoNativeAppKey);
 
   // TODO: 키 해시 확인 후 삭제
-  final keyHash = await KakaoSdk.origin;
-  debugPrint('🔑 KEY HASH: $keyHash');
+  // final keyHash = await KakaoSdk.origin;
+  // debugPrint('🔑 KEY HASH: $keyHash');
 
   runApp(const App());
 }
