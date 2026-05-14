@@ -11,7 +11,7 @@ import 'package:safepath/service/vibration_service.dart';
 /// // 아이콘 + 큰제목 + 부제목
 /// CustomButton(
 ///   icon: Icons.location_on,
-///   title: '스마트 길찾기',
+///   title: '길찾기',
 ///   subtitle: '가장 안전한 경로로 안내합니다.',
 ///   onTap: () {},
 /// )

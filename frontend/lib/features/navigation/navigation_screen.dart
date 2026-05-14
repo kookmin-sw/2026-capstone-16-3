@@ -140,30 +140,33 @@ class NavigationScreenState extends State<NavigationScreen>
     }
 
     try {
-      final position = await getCurrentLocation()
-          .timeout(const Duration(seconds: 30));
+      final position = await getCurrentLocation().timeout(
+        const Duration(seconds: 30),
+      );
       if (!mounted) return;
       _currentPosition = position;
       await _fetchAddress(position);
 
       // 초기 위치 획득 후 20m 이상 이동 시 위치·주소 갱신
       _positionStream?.cancel();
-      _positionStream = Geolocator.getPositionStream(
-        locationSettings: AndroidSettings(
-          accuracy: LocationAccuracy.best,
-          distanceFilter: 20,
-        ),
-      ).listen((pos) {
-        if (!mounted) return;
-        _currentPosition = pos;
-        _fetchAddress(pos);
-      });
+      _positionStream =
+          Geolocator.getPositionStream(
+            locationSettings: AndroidSettings(
+              accuracy: LocationAccuracy.best,
+              distanceFilter: 20,
+            ),
+          ).listen((pos) {
+            if (!mounted) return;
+            _currentPosition = pos;
+            _fetchAddress(pos);
+          });
     } catch (e) {
       debugPrint('🔴 위치 초기화 실패: $e');
-      if (mounted) setState(() {
-        currentLocation = '현재 위치를 가져올 수 없습니다';
-        _locationFailed = true;
-      });
+      if (mounted)
+        setState(() {
+          currentLocation = '현재 위치를 가져올 수 없습니다';
+          _locationFailed = true;
+        });
     }
   }
 
@@ -179,7 +182,9 @@ class NavigationScreenState extends State<NavigationScreen>
     if (_applyGeocodeResult(result)) return;
 
     // exactAddress 미획득 → 5초마다 재시도
-    _reverseGeocodeRetry = Timer.periodic(const Duration(seconds: 5), (_) async {
+    _reverseGeocodeRetry = Timer.periodic(const Duration(seconds: 5), (
+      _,
+    ) async {
       final retryResult = await PlaceService.reverseGeocode(
         lat: _currentPosition?.latitude ?? position.latitude,
         lng: _currentPosition?.longitude ?? position.longitude,
@@ -233,7 +238,8 @@ class NavigationScreenState extends State<NavigationScreen>
       context,
       needsMicrophone: true,
       featureName: '음성 검색',
-    )) return;
+    ))
+      return;
 
     bool available = await speech.initialize(
       onStatus: (status) => debugPrint('status: $status'),
@@ -271,8 +277,9 @@ class NavigationScreenState extends State<NavigationScreen>
       context,
       needsCamera: widget.withObstacleDetection,
       needsLocation: true,
-      featureName: widget.withObstacleDetection ? '통합 모드' : '스마트 길찾기',
-    )) return;
+      featureName: widget.withObstacleDetection ? '통합 모드' : '길찾기',
+    ))
+      return;
 
     if (!mounted) return;
     if (_selectedLat == null || _selectedLng == null) return;
@@ -361,8 +368,9 @@ class NavigationScreenState extends State<NavigationScreen>
 
     // 캐시된 위치가 있으면 먼저 반환 (정확도 50m 이내)
     try {
-      final last = await Geolocator.getLastKnownPosition()
-          .timeout(const Duration(seconds: 3));
+      final last = await Geolocator.getLastKnownPosition().timeout(
+        const Duration(seconds: 3),
+      );
       if (last != null && last.accuracy <= 50) return last;
     } catch (_) {}
 
@@ -370,7 +378,6 @@ class NavigationScreenState extends State<NavigationScreen>
       desiredAccuracy: LocationAccuracy.best,
     ).timeout(const Duration(seconds: 15));
   }
-
 
   /// 장소 검색 함수 (새 쿼리 입력 시 초기화)
   void searchPlaces() async {
@@ -445,7 +452,9 @@ class NavigationScreenState extends State<NavigationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomTitleBar(title: widget.withObstacleDetection ? '통합모드' : '길찾기'),
+      appBar: CustomTitleBar(
+        title: widget.withObstacleDetection ? '통합모드' : '길찾기',
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
@@ -691,7 +700,12 @@ class NavigationScreenState extends State<NavigationScreen>
                   left: 0,
                   right: 0,
                   child: isLoading
-                      ? Center(child: Semantics(label: '검색 중', child: const CircularProgressIndicator()))
+                      ? Center(
+                          child: Semantics(
+                            label: '검색 중',
+                            child: const CircularProgressIndicator(),
+                          ),
+                        )
                       : searchResults.isNotEmpty
                       ? ResultList(
                           results: searchResults,
@@ -768,32 +782,32 @@ class _ClearButton extends StatelessWidget {
             VibrationService().vibrate(VibrationEffect.buttonTap);
             onTap();
           },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: ColorCollection.point.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: ColorCollection.point, width: 1),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.delete_outline_rounded,
-                size: 18,
-                color: ColorCollection.point,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                '전체 삭제',
-                style: AppTextStyles.labelRegular.copyWith(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: ColorCollection.point.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: ColorCollection.point, width: 1),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.delete_outline_rounded,
+                  size: 18,
                   color: ColorCollection.point,
                 ),
-              ),
-            ],
+                const SizedBox(width: 4),
+                Text(
+                  '전체 삭제',
+                  style: AppTextStyles.labelRegular.copyWith(
+                    color: ColorCollection.point,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 }
