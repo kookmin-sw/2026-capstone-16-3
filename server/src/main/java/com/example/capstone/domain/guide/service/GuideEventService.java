@@ -28,7 +28,8 @@ public class GuideEventService {
                 request.primaryObjectClass(),
                 request.clockDirection(),
                 request.distance(),
-                request.alertLevel()
+                request.alertLevel(),
+                request.primaryObjectId()
         );
 
         messagingTemplate.convertAndSendToUser(

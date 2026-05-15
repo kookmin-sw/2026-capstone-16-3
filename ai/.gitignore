@@ -53,6 +53,8 @@ uploads/
 
 # Model weights
 models/yolo/*
+!models/yolo/training/
+!models/yolo/training/**
 models/segformer/*
 
 !models/yolo/.gitkeep

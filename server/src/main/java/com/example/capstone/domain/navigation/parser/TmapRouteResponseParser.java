@@ -53,7 +53,8 @@ public class TmapRouteResponseParser {
                             lon,
                             properties.path("description").asText(),
                             properties.has("turnType") ? properties.path("turnType").asInt() : null,
-                            properties.path("pointType").asText()
+                            properties.path("pointType").asText(),
+                            properties.path("facilityType").asText()
                     ));
                 }
 
@@ -73,7 +74,8 @@ public class TmapRouteResponseParser {
                             "LINE",
                             path,
                             properties.has("distance") ? properties.path("distance").asInt() : null,
-                            properties.has("time") ? properties.path("time").asInt() : null
+                            properties.has("time") ? properties.path("time").asInt() : null,
+                            properties.path("facilityType").asText()
                     ));
                 }
             }

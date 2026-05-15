@@ -6,6 +6,7 @@ public record RouteLineStep(
         String type,
         List<RoutePoint> path,
         Integer distance,
-        Integer time
+        Integer time,
+        String facilityType
 ) implements RouteStep {
 }

@@ -39,8 +39,19 @@ public class RecentPlace extends BaseEntity {
     @Column(name = "name", nullable = false, length = 255)
     private String name;
 
-    @Column(name = "address", length = 500)
-    private String address;
+    /**
+     * 최근 검색 목록에 표시할 주소.
+     * 도로명 주소를 우선 저장하고, 도로명 변환이 불가능할 때만 지번 주소를 저장한다.
+     */
+    @Column(name = "road_address", length = 500)
+    private String roadAddress;
+
+    /**
+     * 카카오 원본 지번 주소.
+     * 기존 address 값이 지번으로 저장된 데이터도 조회 시 도로명 주소로 보정하기 위해 보관한다.
+     */
+    @Column(name = "jibun_address", length = 500)
+    private String jibunAddress;
 
     @Column(name = "latitude", nullable = false)
     private Double latitude;
@@ -53,13 +64,15 @@ public class RecentPlace extends BaseEntity {
 
     public void update(
             String name,
-            String address,
+            String roadAddress,
+            String jibunAddress,
             Double latitude,
             Double longitude,
             Instant searchedAt
     ) {
         this.name = name;
-        this.address = address;
+        this.roadAddress = roadAddress;
+        this.jibunAddress = jibunAddress;
         this.latitude = latitude;
         this.longitude = longitude;
         this.searchedAt = searchedAt;

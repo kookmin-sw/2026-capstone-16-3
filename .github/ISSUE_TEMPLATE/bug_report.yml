@@ -1,0 +1,102 @@
+name: 버그 리포트 (Bug Report)
+description: 오류나 예상치 못한 동작을 보고해주세요.
+title: "[BUG] "
+labels: [bug]
+assignees: []
+
+body:
+  - type: dropdown
+    id: layer
+    attributes:
+      label: 🗂️ 발생 레이어
+      description: 버그가 발생한 레이어를 선택해주세요.
+      options:
+        - Frontend (Flutter)
+        - Server (Spring Boot)
+        - AI (FastAPI / YOLO / SegFormer)
+        - 전체 연동 (E2E)
+        - 모름
+    validations:
+      required: true
+
+  - type: dropdown
+    id: domain
+    attributes:
+      label: 🧩 관련 도메인
+      description: 버그와 관련된 기능 도메인을 선택해주세요.
+      options:
+        - auth (카카오 로그인 / 토큰)
+        - guide (위험 감지 / 안내 이벤트)
+        - navigation (경로 안내)
+        - place (장소 검색)
+        - user (사용자 정보)
+        - weather (날씨)
+        - AI 추론 (이미지 분석 / alert_level)
+        - 기타 / 해당 없음
+    validations:
+      required: true
+
+  - type: textarea
+    id: bug-description
+    attributes:
+      label: 🐞 버그 설명
+      description: 어떤 버그가 발생했는지 명확하고 간단하게 설명해주세요.
+      placeholder: 예) 카메라로 촬영 후 AI 분석 결과가 앱에 전달되지 않습니다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: 📍 재현 방법
+      description: 버그를 어떻게 재현할 수 있는지 단계별로 작성해주세요.
+      placeholder: |
+        1. 앱 실행 후 카카오 로그인합니다.
+        2. 카메라 화면으로 이동합니다.
+        3. 촬영 버튼을 누릅니다.
+        4. 안내 메시지가 나오지 않고 화면이 멈춥니다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: 🖥️ 기대 동작
+      description: 정상적으로 동작했을 때 어떤 결과가 나와야 하는지 설명해주세요.
+      placeholder: 예) AI 분석 완료 후 alert_level에 따라 음성 안내가 출력되어야 합니다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-log
+    attributes:
+      label: 🪵 에러 로그 / 스택 트레이스
+      description: Flutter 콘솔, Spring Boot 로그, FastAPI 로그 등 관련 에러를 붙여넣어 주세요.
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: device
+    attributes:
+      label: 📱 기기 및 OS 버전
+      description: 테스트한 기기 모델과 OS 버전을 작성해주세요.
+      placeholder: 예) Galaxy S23 / Android 14, iPhone 15 / iOS 17
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 📸 스크린샷
+      description: 가능하다면 스크린샷을 첨부해주세요. (드래그하여 업로드 가능)
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 💬 추가 내용
+      description: 기타 관련 로그, 네트워크 응답, 배경 설명이 있다면 작성해주세요.
+    validations:
+      required: false

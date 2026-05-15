@@ -1,0 +1,556 @@
+---
+title: "길벗"
+layout: splash
+permalink: /
+
+header:
+  overlay_image: /assets/images/header-image-2.png
+  overlay_filter: linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.62))
+  actions:
+    - label: "Demo 보기"
+      url: "#demo"
+      class: "btn--primary"
+    - label: "GitHub"
+      url: "https://github.com/kookmin-sw/2026-capstone-16"
+      class: "btn--light-outline"
+
+excerpt: >
+  시각장애인 및 보행약자를 위한 AI 기반 안전 보행 보조 플랫폼
+
+---
+
+<!-- markdownlint-disable MD025 MD033 -->
+
+<section id="intro" class="gilbut-section">
+  <h2>프로젝트 소개</h2>
+
+  <p class="section-lead">
+    길벗은 시각장애인 및 보행약자가 실외 보행 중 마주치는 위험 요소를
+    스마트폰 카메라와 AI로 인식하고, 음성 안내와 진동 피드백으로 전달하는
+    모바일 기반 안전 보행 보조 플랫폼입니다.
+  </p>
+
+  <div class="intro-grid">
+    <div class="intro-card gilbut-card">
+      <h3>문제 정의</h3>
+      <p>
+        시각장애인과 저시력자는 보행 중 장애물, 횡단보도, 신호등,
+        점자블록 단절과 같은 위험 요소를 즉각적으로 인지하기 어렵습니다.
+        이는 충돌, 낙상, 잘못된 방향 판단으로 이어질 수 있습니다.
+      </p>
+    </div>
+
+    <div class="intro-card gilbut-card">
+      <h3>기존 한계</h3>
+      <p>
+        기존 서비스는 길찾기, 사물 인식, 영상 도움 요청 등 개별 기능에
+        집중되어 있어 실제 보행 중 위험 요소가 사용자 경로 위에 있는지,
+        얼마나 가까운지, 어떻게 피해야 하는지 안내하는 데 한계가 있습니다.
+      </p>
+    </div>
+
+    <div class="intro-card gilbut-card">
+      <h3>길벗 목표</h3>
+      <p>
+        길벗은 실시간 장애물 탐지, 보행 가능 영역 분석, 길찾기,
+        횡단보도 정보를 결합하여 사용자가 화면을 보지 않아도
+        안전하게 이동할 수 있도록 음성 및 진동 기반 안내를 제공합니다.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="features" class="gilbut-section">
+  <h2>주요 기능</h2>
+
+  <!--
+  - 장애물 탐지
+  - 횡단보도 안내
+  - 음성/진동 안내
+  - 길찾기
+  - 보행 가능 영역 분석
+  - 실시간 위험 알림
+  -->
+
+  <div class="feature-grid-4">
+    <div class="feature-card gilbut-card">
+      <h3>🚧 장애물 탐지 및 회피 방향 안내</h3>
+      <ul>
+        <li>스마트폰 카메라 영상 기반 보행 위험 장애물 실시간 탐지</li>
+        <li>YOLOv11s로 사람, 차량, 자전거, 킥보드 등 객체 인식</li>
+        <li>YOLOv26-SEG로 보행 가능 영역 분석</li>
+        <li>Depth Anything V2 모델을 활용한 사용자와 장애물 간 거리 추정</li>
+        <li>장애물 위치·거리·위험도 기반 회피 방향 안내</li>
+      </ul>
+    </div>
+
+    <div class="feature-card gilbut-card">
+      <h3>🗺️ 길찾기</h3>
+      <ul>
+        <li>현재 위치와 목적지 기반 보행 경로 안내</li>
+        <li>TMAP 보행자 경로 API 활용</li>
+        <li>이동 거리, 소요 시간, 회전 지점 정보 제공</li>
+        <li>횡단보도 및 음향신호기 존재 여부 안내</li>
+      </ul>
+    </div>
+
+    <div class="feature-card gilbut-card">
+      <h3>🔊 음성 및 햅틱 안내</h3>
+      <ul>
+        <li>음성(TTS)과 진동(햅틱) 기반 안내</li>
+        <li>위험 상황, 방향 안내, 길찾기 정보 전달</li>
+        <li>화면 확인 없이 정보 인지 가능</li>
+        <li>음성 속도·안내 문구 길이 등 사용자 맞춤 설정</li>
+      </ul>
+    </div>
+
+    <div class="feature-card gilbut-card">
+      <h3>♿ 접근성 중심 UI</h3>
+      <ul>
+        <li>시각장애인 사용성을 고려한 모바일 UI</li>
+        <li>큰 버튼 중심의 직관적인 구조</li>
+        <li>최소 조작으로 주요 기능 접근</li>
+        <li>누구나 쉽게 사용할 수 있는 인터페이스 설계</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="demo" class="gilbut-section">
+  <h2>소개 영상</h2>
+
+  <div class="video-container">
+    <iframe
+      src="https://youtu.be/9PLm9LIociU?si=9jFVxfd4oRFXOJ1Q"
+      title="YouTube video player"
+      frameborder="0"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      referrerpolicy="strict-origin-when-cross-origin"
+      allowfullscreen>
+    </iframe>
+  </div>
+</section>
+
+<section id="architecture" class="gilbut-section">
+  <h2>시스템 아키텍처</h2>
+
+  <!--
+  - 아키텍처 이미지 -> 프론트 -> 백 -> AI -> 외부 API -> 데이터 흐름
+  - 구조 설명 -> 사용 기술 설명
+  - badge 방식
+  -->
+
+  <img
+    src="{{ '/assets/images/architecture.png' | relative_url }}"
+    alt="Tech Stack"
+    class="architecture-image"
+  />
+
+  <div class="tech-stack-section">
+    <h3>Frontend</h3>
+
+    <div class="badge-group">
+      <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter">
+      <img src="https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white" alt="Dart">
+    </div>
+
+    <h3>Backend</h3>
+
+    <div class="badge-group">
+      <img src="https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot">
+      <img src="https://img.shields.io/badge/REST_API-FF6C37?style=for-the-badge&logo=postman&logoColor=white" alt="REST API">
+      <img src="https://img.shields.io/badge/NGINX-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="NGINX">
+      <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+    </div>
+
+    <h3>AI / ML</h3>
+
+    <div class="badge-group">
+      <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI">
+      <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch">
+      <img src="https://img.shields.io/badge/YOLOv11s-00FFFF?style=for-the-badge&logoColor=black" alt="YOLOv11s">
+      <img src="https://img.shields.io/badge/YOLO--SEG-00CFFF?style=for-the-badge&logoColor=black" alt="YOLO-SEG">
+      <img src="https://img.shields.io/badge/ByteTrack-FF4500?style=for-the-badge&logoColor=white" alt="ByteTrack">
+      <img src="https://img.shields.io/badge/Depth--Anything-8A2BE2?style=for-the-badge&logoColor=white" alt="Depth Anything">
+    </div>
+
+    <h3>External API</h3>
+
+    <div class="badge-group">
+      <img src="https://img.shields.io/badge/TMAP_API-FF6D00?style=for-the-badge&logoColor=white" alt="TMAP">
+      <img src="https://img.shields.io/badge/Kakao_Local_API-FFCD00?style=for-the-badge&logo=kakao&logoColor=black" alt="Kakao Local API">
+      <img src="https://img.shields.io/badge/Naver_API-03C75A?style=for-the-badge&logo=naver&logoColor=white" alt="Naver API">
+      <img src="https://img.shields.io/badge/OpenWeather_API-EB6E4B?style=for-the-badge&logo=openweathermap&logoColor=white" alt="OpenWeather API">
+      <img src="https://img.shields.io/badge/공공데이터_포털-0066CC?style=for-the-badge&logoColor=white" alt="공공데이터 포털">
+      <img src="https://img.shields.io/badge/서울시_횡단보도_API-005BAC?style=for-the-badge&logoColor=white" alt="서울시 횡단보도 API">
+      <img src="https://img.shields.io/badge/서울시_음향신호기_API-007BFF?style=for-the-badge&logoColor=white" alt="서울시 음향신호기 API">
+    </div>
+
+    <h3>Data</h3>
+
+    <div class="badge-group">
+      <img src="https://img.shields.io/badge/Roboflow-7B2FF7?style=for-the-badge&logo=roboflow&logoColor=white" alt="Roboflow">
+      <img src="https://img.shields.io/badge/AIHub_인도보행영상-00A86B?style=for-the-badge&logoColor=white" alt="AIHub">
+    </div>
+
+    <h3>Collaboration</h3>
+
+    <div class="badge-group">
+      <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
+      <img src="https://img.shields.io/badge/Notion-000000?style=for-the-badge&logo=notion&logoColor=white" alt="Notion">
+      <img src="https://img.shields.io/badge/Figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white" alt="Figma">
+    </div>
+  </div>
+</section>
+
+<section id="guide" class="gilbut-section">
+  <h2>사용법</h2>
+
+  <!--
+  - 사용 흐름
+  - 로그인 -> 목적지 입력 -> 보행 시작 -> 장애물 탐지 -> 음성 안내 -> 설정 변경
+  -->
+
+  <div class="guide-grid">
+    <div class="guide-card gilbut-card">
+      <img src="{{ '/assets/images/testguide1.png' | relative_url }}" alt="시작 화면 & 홈 화면">
+
+      <h3>시작 화면 / 홈 화면</h3>
+
+      <p>
+        카카오 로그인 후 장애물 탐지, 길찾기, 설정 기능에 접근합니다.
+      </p>
+    </div>
+
+    <div class="guide-card gilbut-card">
+      <img src="{{ '/assets/images/testguide2.png' | relative_url }}" alt="장애물 탐지 화면">
+
+      <h3>장애물 탐지 화면</h3>
+
+      <p>
+        탐지 시작 버튼을 누르면 카메라가 실시간으로 장애물을 감지하고 진동으로 알려줍니다.
+      </p>
+    </div>
+
+    <div class="guide-card gilbut-card">
+      <img src="{{ '/assets/images/testguide3.png' | relative_url }}" alt="길찾기 화면">
+
+      <h3>길찾기 화면</h3>
+
+      <p>
+        목적지를 키보드 또는 음성으로 입력하고 안내를 시작합니다.
+      </p>
+    </div>
+
+    <div class="guide-card gilbut-card">
+      <img src="{{ '/assets/images/testguide4.png' | relative_url }}" alt="저장된 장소 관리">
+
+      <h3>저장된 장소 관리</h3>
+
+      <p>
+        자주 가는 장소를 저장하고, 카테고리 아이콘으로 구분하여 빠르게 선택합니다.
+      </p>
+    </div>
+
+    <div class="guide-card gilbut-card">
+      <img src="{{ '/assets/images/testguide5.png' | relative_url }}" alt="길찾기 중 & 설정 화면">
+
+      <h3>길찾기 중 / 설정 화면</h3>
+
+      <p>
+        남은 거리·소요 시간·위험 요소를 안내하고, 안내 문구 길이와 진동 강도를 조절합니다.
+      </p>
+    </div>
+
+    <div class="guide-card gilbut-card">
+      <img src="{{ '/assets/images/testguide6.png' | relative_url }}" alt="설정 & 계정 화면">
+
+      <h3>설정 / 계정 화면</h3>
+
+      <p>
+        알림·소리 설정, 앱 정보 확인, 로그아웃 및 회원 탈퇴를 할 수 있습니다.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="folder-structure" class="gilbut-section">
+  <h2>폴더 구조</h2>
+
+  <div class="folder-tree">
+    <pre><code>capstone-2026-16/
+    ├── .github/                      # GitHub 관련 설정
+    │   └── workflows/                # GitHub Actions CI/CD 워크플로우 파일
+    │
+    ├── frontend/                     # Flutter 기반 모바일 애플리케이션
+    │   ├── android/                  # Android 플랫폼 설정 및 빌드 파일
+    │   ├── ios/                      # iOS 플랫폼 설정 및 빌드 파일
+    │   ├── assets/                   # 앱에서 사용하는 이미지, 아이콘, 리소스
+    │   ├── lib/                      # Flutter 주요 소스 코드
+    │   │   ├── screens/              # 화면 단위 UI
+    │   │   ├── widgets/              # 재사용 가능한 UI 컴포넌트
+    │   │   ├── services/             # API, 위치, 카메라, TTS 등 서비스 로직
+    │   │   └── models/               # 요청/응답 및 상태 데이터 모델
+    │   ├── pubspec.yaml              # Flutter 의존성 및 에셋 설정
+    │   └── pubspec.lock              # Flutter 패키지 잠금 파일
+    │
+    ├── server/                       # Spring Boot 기반 백엔드 서버
+    │   ├── src/                      # 백엔드 애플리케이션 소스 코드
+    │   │   ├── main/java/            # Java 21 기반 서버 코드
+    │   │   │   ├── domain/           # auth, user, place, navigation, crosswalk 등 도메인 로직
+    │   │   │   └── global/           # 공통 설정, 예외 처리, 보안, 응답 구조
+    │   │   └── main/resources/       # application.yml 등 설정 파일
+    │   ├── gradle/                   # Gradle Wrapper 관련 파일
+    │   ├── build.gradle              # 서버 의존성 및 빌드 설정
+    │   ├── settings.gradle           # Gradle 프로젝트 설정
+    │   ├── gradlew                   # Linux/macOS용 Gradle 실행 스크립트
+    │   ├── gradlew.bat               # Windows용 Gradle 실행 스크립트
+    │   └── Dockerfile                # 백엔드 서버 Docker 이미지 빌드 파일
+    │
+    ├── ai/                           # FastAPI 기반 AI 분석 서버
+    │   ├── app/                      # AI 서버 애플리케이션 소스 코드
+    │   │   ├── api/                  # 이미지 분석 및 안내 이벤트 API
+    │   │   ├── services/             # 객체 탐지, 추적, 거리 추정, 안내 생성 로직
+    │   │   └── utils/                # 전처리, 후처리, 공통 유틸리티
+    │   ├── models/                   # YOLO, YOLO-SEG, Depth 모델 파일
+    │   └── requirements.txt          # Python 패키지 의존성 목록
+    │
+    ├── docs/                         # GitHub Pages 프로젝트 소개 사이트
+    │   ├── _pages/                   # 시스템 구조, AI, API, Demo, Team 등 상세 페이지
+    │   ├── _layouts/                 # Minimal Mistakes 레이아웃 파일
+    │   ├── _includes/                # 재사용 가능한 섹션 컴포넌트
+    │   ├── _sass/                    # 커스텀 및 테마 SCSS 스타일
+    │   ├── _data/                    # 내비게이션 등 Jekyll 데이터 파일
+    │   ├── assets/                   # 문서 사이트 이미지, CSS, JS 리소스
+    │   ├── _config.yml               # Jekyll 사이트 설정 파일
+    │   └── index.md                  # GitHub Pages 메인 페이지
+    │
+    ├── .gitignore                    # Git에서 제외할 파일 및 폴더 패턴
+    └── README.md                     # 프로젝트 최상위 README 파일</code></pre>
+  </div>
+</section>
+
+<section id="team" class="gilbut-section">
+  <h2>팀원 소개</h2>
+
+  <div class="team-grid">
+    <div class="team-card gilbut-card">
+      <img src="{{ '/assets/images/team/hanyeojin.png' | relative_url }}" alt="한여진">
+
+      <h3>한여진 <span>(팀장)</span></h3>
+
+      <p>
+        프론트엔드 개발<br>
+        접근성 중심 모바일 앱 UI 구현<br>
+        길찾기 로직 개발
+      </p>
+    </div>
+
+    <div class="team-card gilbut-card">
+      <img src="{{ '/assets/images/team/yangnarae.png' | relative_url }}" alt="양나래">
+
+      <h3>양나래</h3>
+
+      <p>
+        백엔드 개발<br>
+        사용자 관리·경로 탐색 기능<br>
+        인증 및 AI 연동 API 개발
+      </p>
+    </div>
+
+    <div class="team-card gilbut-card">
+      <img src="{{ '/assets/images/team/leeilhwan.png' | relative_url }}" alt="이일환">
+
+      <h3>이일환 <span>(부팀장)</span></h3>
+
+      <p>
+        AI 개발<br>
+        장애물 탐지 모델 개발<br>
+        안내 문장 생성
+      </p>
+    </div>
+
+    <div class="team-card gilbut-card">
+      <img src="{{ '/assets/images/team/hwangyeonju.png' | relative_url }}" alt="황연주">
+
+      <h3>황연주</h3>
+
+      <p>
+        프론트엔드 개발<br>
+        카메라 기반 이미지 전송 및<br>
+        AI 결과 연동 기능 개발
+      </p>
+    </div>
+
+    <div class="team-card gilbut-card">
+      <img src="{{ '/assets/images/team/jeonyechan.png' | relative_url }}" alt="전예찬">
+
+      <h3>전예찬</h3>
+
+      <p>
+        백엔드 개발<br>
+        장소 검색·상세 조회·즐겨찾기 등<br>
+        위치 기반 기능 개발
+      </p>
+    </div>
+
+    <div class="team-card gilbut-card">
+      <img src="{{ '/assets/images/team/kimyeji.png' | relative_url }}" alt="김예지">
+
+      <h3>김예지</h3>
+
+      <p>
+        AI 개발<br>
+        보행 가능 영역 분할<br>
+        Object Tracking
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="references" class="gilbut-section">
+  <h2>참고 자료</h2>
+
+  <p class="section-lead">
+    길벗 프로젝트의 접근성 설계, 보행 경로 안내, AI 모델 개발, 데이터셋 구축에 참고한
+    주요 문헌 및 공식 문서입니다.
+  </p>
+
+  <div class="reference-grid">
+    <div class="reference-card gilbut-card">
+      <h3>접근성 및 사용자 경험</h3>
+
+      <ul class="reference-list">
+        <li>
+          <a href="https://www.w3.org/TR/WCAG21/" target="_blank" rel="noopener">
+            Web Content Accessibility Guidelines (WCAG) 2.1
+          </a>
+          <span>W3C · 2018</span>
+        </li>
+
+        <li>
+          <a href="https://moldstud.com/articles/p-inclusive-mobile-app-typography-guidelines-crafting-accessible-designs-for-all-users" target="_blank" rel="noopener">
+            Accessible Typography Guidelines for Inclusive Mobile App Design
+          </a>
+          <span>MoldStud · 2025</span>
+        </li>
+
+        <li>
+          <a href="https://dl.acm.org/doi/10.1145/572020.572038" target="_blank" rel="noopener">
+            The design of auditory user interfaces for blind users
+          </a>
+          <span>H. Donker, P. Klante, P. Gorny · 2002</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="reference-card gilbut-card">
+      <h3>지도·위치·외부 API</h3>
+
+      <ul class="reference-list">
+        <li>
+          <a href="https://openapi.sk.com/products/detail?linkMenuSeq=45" target="_blank" rel="noopener">
+            SK Open API 보행자 경로 안내
+          </a>
+          <span>SK Open API</span>
+        </li>
+
+        <li>
+          <a href="https://developers.kakao.com/docs/ko/local/dev-guide" target="_blank" rel="noopener">
+            Kakao Developers Local API 문서
+          </a>
+          <span>Kakao Developers</span>
+        </li>
+
+        <li>
+          <a href="https://api.ncloud-docs.com/docs/ai-naver-mapsgeocoding-geocode" target="_blank" rel="noopener">
+            Naver Maps Geocoding API 문서
+          </a>
+          <span>Naver Cloud Platform</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="reference-card gilbut-card">
+      <h3>AI 모델 및 연구 논문</h3>
+
+      <ul class="reference-list">
+        <li>
+          <a href="https://docs.ultralytics.com/" target="_blank" rel="noopener">
+            Ultralytics YOLO 문서
+          </a>
+          <span>Ultralytics · 2024</span>
+        </li>
+
+        <li>
+          <a href="https://arxiv.org/abs/2403.12415" target="_blank" rel="noopener">
+            VisionGPT: LLM-Assisted Real-Time Anomaly Detection for Visual Navigation
+          </a>
+          <span>Hao Wang 외 · 2024</span>
+        </li>
+
+        <li>
+          <a href="https://arxiv.org/abs/2105.15203" target="_blank" rel="noopener">
+            SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers
+          </a>
+          <span>Xie, Wang, Yu 외 · 2021</span>
+        </li>
+
+        <li>
+          <a href="https://huggingface.co/docs/transformers/en/model_doc/segformer" target="_blank" rel="noopener">
+            Hugging Face SegFormer 문서
+          </a>
+          <span>Hugging Face · 2021</span>
+        </li>
+
+        <li>
+          <a href="https://github.com/DepthAnything/Depth-Anything-V2" target="_blank" rel="noopener">
+            Depth Anything V2 GitHub
+          </a>
+          <span>Depth Anything · 2024</span>
+        </li>
+
+        <li>
+          <a href="https://arxiv.org/abs/2406.09414" target="_blank" rel="noopener">
+            Depth Anything V2
+          </a>
+          <span>Lihe Yang 외 · 2024</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="reference-card gilbut-card">
+      <h3>데이터 및 공공 자료</h3>
+
+      <ul class="reference-list">
+        <li>
+          <a href="https://www.data.go.kr/" target="_blank" rel="noopener">
+            공공데이터포털
+          </a>
+          <span>전국 횡단보도 데이터 활용</span>
+        </li>
+
+        <li>
+          <a href="https://data.seoul.go.kr/" target="_blank" rel="noopener">
+            서울 열린데이터광장
+          </a>
+          <span>서울 횡단보도 및 음향신호기 데이터 활용</span>
+        </li>
+
+        <li>
+          <a href="https://aihub.or.kr/aidata/136" target="_blank" rel="noopener">
+            AIHub 인도 보행 영상 데이터셋
+          </a>
+          <span>객체 탐지 및 보행 환경 분석 데이터</span>
+        </li>
+
+        <li>
+          <a href="https://public.roboflow.com/" target="_blank" rel="noopener">
+            Roboflow Public Datasets
+          </a>
+          <span>AI 학습 및 데이터 관리 참고</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
