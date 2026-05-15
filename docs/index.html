@@ -4,7 +4,7 @@ layout: splash
 permalink: /
 
 header:
-  overlay_image: /assets/images/demo.png
+  overlay_image: /assets/images/header-image-2.png
   overlay_filter: linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.62))
   actions:
     - label: "Demo 보기"
@@ -24,9 +24,40 @@ excerpt: >
 <section id="intro" class="gilbut-section">
   <h2>프로젝트 소개</h2>
 
-  <ul>
-    <li>문제 정의 -&gt; 기존 한계 -&gt; 길벗 목표</li>
-  </ul>
+  <p class="section-lead">
+    길벗은 시각장애인 및 보행약자가 실외 보행 중 마주치는 위험 요소를
+    스마트폰 카메라와 AI로 인식하고, 음성 안내와 진동 피드백으로 전달하는
+    모바일 기반 안전 보행 보조 플랫폼입니다.
+  </p>
+
+  <div class="intro-grid">
+    <div class="intro-card gilbut-card">
+      <h3>문제 정의</h3>
+      <p>
+        시각장애인과 저시력자는 보행 중 장애물, 횡단보도, 신호등,
+        점자블록 단절과 같은 위험 요소를 즉각적으로 인지하기 어렵습니다.
+        이는 충돌, 낙상, 잘못된 방향 판단으로 이어질 수 있습니다.
+      </p>
+    </div>
+
+    <div class="intro-card gilbut-card">
+      <h3>기존 한계</h3>
+      <p>
+        기존 서비스는 길찾기, 사물 인식, 영상 도움 요청 등 개별 기능에
+        집중되어 있어 실제 보행 중 위험 요소가 사용자 경로 위에 있는지,
+        얼마나 가까운지, 어떻게 피해야 하는지 안내하는 데 한계가 있습니다.
+      </p>
+    </div>
+
+    <div class="intro-card gilbut-card">
+      <h3>길벗 목표</h3>
+      <p>
+        길벗은 실시간 장애물 탐지, 보행 가능 영역 분석, 길찾기,
+        횡단보도 정보를 결합하여 사용자가 화면을 보지 않아도
+        안전하게 이동할 수 있도록 음성 및 진동 기반 안내를 제공합니다.
+      </p>
+    </div>
+  </div>
 </section>
 
 <section id="features" class="gilbut-section">
@@ -47,7 +78,8 @@ excerpt: >
       <ul>
         <li>스마트폰 카메라 영상 기반 보행 위험 장애물 실시간 탐지</li>
         <li>YOLOv11s로 사람, 차량, 자전거, 킥보드 등 객체 인식</li>
-        <li>YOLOv8-SEG로 보행 가능 영역 분석</li>
+        <li>YOLOv26-SEG로 보행 가능 영역 분석</li>
+        <li>Depth Anything V2 모델을 활용한 사용자와 장애물 간 거리 추정</li>
         <li>장애물 위치·거리·위험도 기반 회피 방향 안내</li>
       </ul>
     </div>
@@ -379,13 +411,146 @@ excerpt: >
 <section id="references" class="gilbut-section">
   <h2>참고 자료</h2>
 
-  <ul>
-    <li><a href="https://tmapapi.tmapmobility.com/">TMAP 보행자 API 공식 문서</a></li>
-    <li><a href="https://docs.ultralytics.com/">Ultralytics YOLOv11 문서</a></li>
-    <li><a href="https://www.data.go.kr/">공공데이터포털</a></li>
-    <li>서울 열린데이터광장</li>
-    <li>Kakao Local API</li>
-    <li>AIHub</li>
-    <li>Roboflow</li>
-  </ul>
+  <p class="section-lead">
+    길벗 프로젝트의 접근성 설계, 보행 경로 안내, AI 모델 개발, 데이터셋 구축에 참고한
+    주요 문헌 및 공식 문서입니다.
+  </p>
+
+  <div class="reference-grid">
+    <div class="reference-card gilbut-card">
+      <h3>접근성 및 사용자 경험</h3>
+
+      <ul class="reference-list">
+        <li>
+          <a href="https://www.w3.org/TR/WCAG21/" target="_blank" rel="noopener">
+            Web Content Accessibility Guidelines (WCAG) 2.1
+          </a>
+          <span>W3C · 2018</span>
+        </li>
+
+        <li>
+          <a href="https://moldstud.com/articles/p-inclusive-mobile-app-typography-guidelines-crafting-accessible-designs-for-all-users" target="_blank" rel="noopener">
+            Accessible Typography Guidelines for Inclusive Mobile App Design
+          </a>
+          <span>MoldStud · 2025</span>
+        </li>
+
+        <li>
+          <a href="https://dl.acm.org/doi/10.1145/572020.572038" target="_blank" rel="noopener">
+            The design of auditory user interfaces for blind users
+          </a>
+          <span>H. Donker, P. Klante, P. Gorny · 2002</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="reference-card gilbut-card">
+      <h3>지도·위치·외부 API</h3>
+
+      <ul class="reference-list">
+        <li>
+          <a href="https://openapi.sk.com/products/detail?linkMenuSeq=45" target="_blank" rel="noopener">
+            SK Open API 보행자 경로 안내
+          </a>
+          <span>SK Open API</span>
+        </li>
+
+        <li>
+          <a href="https://developers.kakao.com/docs/ko/local/dev-guide" target="_blank" rel="noopener">
+            Kakao Developers Local API 문서
+          </a>
+          <span>Kakao Developers</span>
+        </li>
+
+        <li>
+          <a href="https://api.ncloud-docs.com/docs/ai-naver-mapsgeocoding-geocode" target="_blank" rel="noopener">
+            Naver Maps Geocoding API 문서
+          </a>
+          <span>Naver Cloud Platform</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="reference-card gilbut-card">
+      <h3>AI 모델 및 연구 논문</h3>
+
+      <ul class="reference-list">
+        <li>
+          <a href="https://docs.ultralytics.com/" target="_blank" rel="noopener">
+            Ultralytics YOLO 문서
+          </a>
+          <span>Ultralytics · 2024</span>
+        </li>
+
+        <li>
+          <a href="https://arxiv.org/abs/2403.12415" target="_blank" rel="noopener">
+            VisionGPT: LLM-Assisted Real-Time Anomaly Detection for Visual Navigation
+          </a>
+          <span>Hao Wang 외 · 2024</span>
+        </li>
+
+        <li>
+          <a href="https://arxiv.org/abs/2105.15203" target="_blank" rel="noopener">
+            SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers
+          </a>
+          <span>Xie, Wang, Yu 외 · 2021</span>
+        </li>
+
+        <li>
+          <a href="https://huggingface.co/docs/transformers/en/model_doc/segformer" target="_blank" rel="noopener">
+            Hugging Face SegFormer 문서
+          </a>
+          <span>Hugging Face · 2021</span>
+        </li>
+
+        <li>
+          <a href="https://github.com/DepthAnything/Depth-Anything-V2" target="_blank" rel="noopener">
+            Depth Anything V2 GitHub
+          </a>
+          <span>Depth Anything · 2024</span>
+        </li>
+
+        <li>
+          <a href="https://arxiv.org/abs/2406.09414" target="_blank" rel="noopener">
+            Depth Anything V2
+          </a>
+          <span>Lihe Yang 외 · 2024</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="reference-card gilbut-card">
+      <h3>데이터 및 공공 자료</h3>
+
+      <ul class="reference-list">
+        <li>
+          <a href="https://www.data.go.kr/" target="_blank" rel="noopener">
+            공공데이터포털
+          </a>
+          <span>전국 횡단보도 데이터 활용</span>
+        </li>
+
+        <li>
+          <a href="https://data.seoul.go.kr/" target="_blank" rel="noopener">
+            서울 열린데이터광장
+          </a>
+          <span>서울 횡단보도 및 음향신호기 데이터 활용</span>
+        </li>
+
+        <li>
+          <a href="https://aihub.or.kr/aidata/136" target="_blank" rel="noopener">
+            AIHub 인도 보행 영상 데이터셋
+          </a>
+          <span>객체 탐지 및 보행 환경 분석 데이터</span>
+        </li>
+
+        <li>
+          <a href="https://public.roboflow.com/" target="_blank" rel="noopener">
+            Roboflow Public Datasets
+          </a>
+          <span>AI 학습 및 데이터 관리 참고</span>
+        </li>
+      </ul>
+    </div>
+  </div>
 </section>
