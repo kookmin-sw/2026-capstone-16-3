@@ -36,7 +36,7 @@ yolo: YOLO | None = None
 seg: YOLO | None = None
 
 # Swagger 단일 이미지 테스트에서는 track보다 predict가 안정적임
-USE_TRACKING = False
+USE_TRACKING = True
 
 # 서버 터미널에 YOLO 검출 결과 출력
 DEBUG_YOLO_DETECTION = True

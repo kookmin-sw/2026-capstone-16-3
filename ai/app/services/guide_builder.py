@@ -860,7 +860,8 @@ def estimate_approach_speed(track_id: int, motion: str) -> float:
 
 
 def is_in_cooldown(track_id: int, current_frame: int, cooldown_frames: int) -> bool:
-    return track_id in last_announced_frame
+    last = last_announced_frame.get(track_id)
+    return last is not None and (current_frame - last) < cooldown_frames
 
 
 def mark_announced(track_id: int, frame_idx: int) -> None:
