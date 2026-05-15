@@ -110,7 +110,11 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       if (_route != null) {
         _loadRoute(_route!);
         _startLocationTracking();
-        if (_withObstacleDetection) _startObstacleDetection();
+        if (_withObstacleDetection) {
+          _startObstacleDetection();
+        } else {
+          TtsService().speak('길찾기를 시작합니다.', interrupt: true, channel: TtsChannel.navigation);
+        }
         _routeLoaded = true;
       }
     }
@@ -133,6 +137,8 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     await TtsService().stop();
     if (_withObstacleDetection) {
       TtsService().speak('통합 모드를 종료합니다.', interrupt: true);
+    } else {
+      TtsService().speak('길찾기를 종료합니다.', interrupt: true);
     }
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
