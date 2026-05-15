@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/theme/color_collection.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 /// 커스텀 버튼 위젯
 ///
@@ -9,7 +11,7 @@ import 'package:safepath/common/theme/color_collection.dart';
 /// // 아이콘 + 큰제목 + 부제목
 /// CustomButton(
 ///   icon: Icons.location_on,
-///   title: '스마트 길찾기',
+///   title: '길찾기',
 ///   subtitle: '가장 안전한 경로로 안내합니다.',
 ///   onTap: () {},
 /// )
@@ -98,8 +100,8 @@ class CustomButton extends StatelessWidget {
     this.subtitleColor = ColorCollection.point,
     this.titleStyle,
     this.subtitleStyle,
-    this.iconTitleSpacing = 10,
-    this.titleSubtitleSpacing = 13,
+    this.iconTitleSpacing = 2,
+    this.titleSubtitleSpacing = 4,
     this.onTap,
   });
 
@@ -114,7 +116,13 @@ class CustomButton extends StatelessWidget {
       onTap: onTap,
       excludeSemantics: true,
       child: InkWell(
-        onTap: onTap,
+        onTap: onTap == null
+            ? null
+            : () {
+                SoundEffectService().play(SoundEffect.buttonTap);
+                VibrationService().vibrate(VibrationEffect.buttonTap);
+                onTap!();
+              },
         borderRadius: BorderRadius.circular(borderRadius),
         child: Container(
           width: width,
@@ -148,9 +156,8 @@ class CustomButton extends StatelessWidget {
                   SizedBox(height: titleSubtitleSpacing),
                   Text(
                     subtitle!,
-                    style: (subtitleStyle ?? AppTextStyles.bodyRegular).copyWith(
-                      color: subtitleColor,
-                    ),
+                    style: (subtitleStyle ?? AppTextStyles.bodyRegular)
+                        .copyWith(color: subtitleColor),
                     textAlign: TextAlign.center,
                   ),
                 ],

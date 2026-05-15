@@ -4,14 +4,17 @@ import 'package:safepath/features/detection/obstacle_card_widget.dart';
 ///
 /// 수신 형식:
 /// {
-///   "status": "success",
-///   "guideText": "1시 방향에 오토바이가 있습니다. 중앙을 유지하며 천천히 직진하세요.",
-///   "primaryObjectClass": "motorcycle",
-///   "clockDirection": "1시",
+///   "primaryObjectId": "string",   ← 장애물 식별자 (위젯 생명주기 관리 키)
+///   "status": "success" | "exit",  ← "exit" 이면 해당 위젯 제거
+///   "guideText": "string",
+///   "primaryObjectClass": "string",
+///   "clockDirection": "string",
 ///   "distance": "near" | "mid" | "far",
 ///   "alertLevel": "high" | "medium" | "low"
 /// }
 class DetectionEvent {
+  final String primaryObjectId;
+  final String status;
   final String guideText;
   final String primaryObjectClass;
   final String clockDirection;
@@ -19,6 +22,8 @@ class DetectionEvent {
   final String alertLevel; // "high" | "medium" | "low"
 
   const DetectionEvent({
+    required this.primaryObjectId,
+    required this.status,
     required this.guideText,
     required this.primaryObjectClass,
     required this.clockDirection,
@@ -26,13 +31,24 @@ class DetectionEvent {
     required this.alertLevel,
   });
 
+  /// 활성 탐지 이벤트 여부 (false 이면 해당 primaryObjectId 위젯 제거)
+  bool get isActive => status == 'success';
+
   factory DetectionEvent.fromJson(Map<String, dynamic> json) {
     return DetectionEvent(
-      guideText: json['guideText'] as String? ?? '',
-      primaryObjectClass: json['primaryObjectClass'] as String? ?? '',
-      clockDirection: json['clockDirection'] as String? ?? '',
-      distance: json['distance'] as String? ?? 'far',
-      alertLevel: json['alertLevel'] as String? ?? 'low',
+      primaryObjectId:
+          (json['primaryObjectId'] ?? json['primary_object_id'] ?? '')
+              as String,
+      status: (json['status'] ?? '') as String,
+      guideText: (json['guideText'] ?? json['guide_text'] ?? '') as String,
+      primaryObjectClass:
+          (json['primaryObjectClass'] ?? json['primary_object_class'] ?? '')
+              as String,
+      clockDirection:
+          (json['clockDirection'] ?? json['clock_direction'] ?? '') as String,
+      distance: (json['distance'] ?? 'far') as String,
+      alertLevel:
+          (json['alertLevel'] ?? json['alert_level'] ?? 'low') as String,
     );
   }
 
@@ -65,33 +81,46 @@ class DetectionEvent {
       _objectClassKo[primaryObjectClass] ?? primaryObjectClass;
 
   static const Map<String, String> _objectClassKo = {
-    'motorcycle': '오토바이',
-    'bicycle': '자전거',
-    'person': '사람',
-    'car': '자동차',
-    'truck': '트럭',
-    'scooter': '스쿠터',
-    'wheelchair': '휠체어',
-    'barricade': '바리케이드',
-    'bollard': '볼라드',
-    'pole': '기둥',
-    'bus': '버스',
-    'tree_trunk': '가로수 기둥',
-    'stop': '정류장',
-    'table': '테이블',
-    'traffic_light': '신호등',
-    'fire_hydrant': '소화전',
-    'stop_sign': '정지 표지판',
-    'bench': '벤치',
-    'dog': '개',
-    'cat': '고양이',
-    'backpack': '가방',
-    'umbrella': '우산',
-    'handbag': '핸드백',
-    'suitcase': '여행가방',
-    'chair': '의자',
-    'potted plant': '화분',
-    'tv': 'TV',
-    'laptop': '노트북',
+    "wheelchair": "휠체어",
+    "truck": "트럭",
+    "tree_trunk": "나무",
+    "traffic_sign": "교통표지판",
+    "traffic_light": "신호등",
+    "traffic_light_controller": "신호제어기",
+    "table": "탁자",
+    "stroller": "유모차",
+    "stop": "정지표지판",
+    "scooter": "스쿠터",
+    "potted_plant": "화분",
+    "power_controller": "전력제어함",
+    "pole": "기둥",
+    "person": "사람",
+    "parking_meter": "주차정산기",
+    "movable_signage": "이동식 안내표지",
+    "motorcycle": "오토바이",
+    "motorbike": "오토바이",
+    "kiosk": "키오스크",
+    "fire_hydrant": "소화전",
+    "dog": "개",
+    "chair": "의자",
+    "cat": "고양이",
+    "carrier": "운반수레",
+    "car": "차량",
+    "vehicle": "차량",
+    "bus": "버스",
+    "bollard": "볼라드",
+    "bicycle": "자전거",
+    "bike": "자전거",
+    "bench": "벤치",
+    "barricade": "바리케이드",
+    "crosswalk": "횡단보도",
+    "tactile_block": "점자블록 끊김",
+    "unknown": "장애물",
+    "backpack": "백팩",
+    "handbag": "핸드백",
+    "bottle": "병",
+    "dining table": "탁자",
+    "tv": "모니터",
+    "laptop": "노트북",
   };
 }

@@ -12,13 +12,17 @@ enum DirectionType {
 class NavigationStepCard extends StatelessWidget {
   final DirectionType direction;
   final String instruction;
-  final int distance;
+  final int? distance;
+  final bool isApproaching;
+  final String? acousticSignal;
 
   const NavigationStepCard({
     super.key,
     required this.direction,
     required this.instruction,
-    required this.distance,
+    this.distance,
+    this.isApproaching = true,
+    this.acousticSignal,
   });
 
   IconData _getDirectionIcon(DirectionType direction) {
@@ -47,18 +51,44 @@ class NavigationStepCard extends StatelessWidget {
     }
   }
 
-  String _formatDistance(int distance) {
-    if (distance >= 1000) {
-      return '${(distance / 1000).toStringAsFixed(1)}km';
-    }
+  String _getTtsMessage(DirectionType direction, int? distance, String instruction) {
+    if (!isApproaching) return instruction.isNotEmpty ? instruction : '계속 직진하세요';
+    if (distance == null) return '계속 직진하세요';
+
+    final action = switch (direction) {
+      DirectionType.straight => '직진',
+      DirectionType.left => '좌회전',
+      DirectionType.right => '우회전',
+      DirectionType.crosswalk => '횡단보도를 이용',
+    };
+
+    if (direction == DirectionType.straight) return '계속 직진하세요';
+    if (distance <= 8) return '$action하세요';
+    if (distance <= 20) return '잠시 후 $action하세요';
+    if (distance <= 40) return instruction.isNotEmpty ? instruction : '잠시 후 $action하세요';
+    return '계속 직진하세요';
+  }
+
+  String _formatDistance(int? distance) {
+    if (distance == null) return '--';
+    if (distance >= 1000) return '${(distance / 1000).toStringAsFixed(1)}km';
     return '${distance}m';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final distDir = direction == DirectionType.straight
+        ? '${_formatDistance(distance)} 직진'
+        : '${_formatDistance(distance)} 후 ${_getDirectionLabel(direction)}';
+    final semanticLabel = instruction.isNotEmpty
+        ? '$distDir, $instruction. ${_getTtsMessage(direction, distance, instruction)}'
+        : '$distDir. ${_getTtsMessage(direction, distance, instruction)}';
+    return Semantics(
+      label: semanticLabel,
+      excludeSemantics: true,
+      child: Container(
       decoration: BoxDecoration(
-        color: ColorCollection.point.withOpacity(0.1),
+        color: ColorCollection.point.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: ColorCollection.main, width: 2),
       ),
@@ -88,7 +118,9 @@ class NavigationStepCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${_formatDistance(distance)} ${_getDirectionLabel(direction)}',
+                        direction == DirectionType.straight
+                            ? '${_formatDistance(distance)} 직진'
+                            : '${_formatDistance(distance)} 후 ${_getDirectionLabel(direction)}',
                         style: AppTextStyles.title2.copyWith(
                           color: ColorCollection.point,
                           fontSize: 20,
@@ -96,10 +128,12 @@ class NavigationStepCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        '다음 안내까지',
+                        instruction,
                         style: AppTextStyles.labelRegular.copyWith(
                           color: ColorCollection.point,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
@@ -113,7 +147,7 @@ class NavigationStepCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               decoration: BoxDecoration(
-                color: ColorCollection.main.withOpacity(0.5),
+                color: ColorCollection.main.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -129,7 +163,7 @@ class NavigationStepCard extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text(
-                        instruction,
+                        _getTtsMessage(direction, distance, instruction),
                         style: AppTextStyles.labelBold.copyWith(
                           color: ColorCollection.point,
                         ),
@@ -139,9 +173,43 @@ class NavigationStepCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (acousticSignal != null && acousticSignal!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: ColorCollection.main.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.campaign_rounded,
+                      color: ColorCollection.point,
+                      size: 35,
+                    ),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          acousticSignal!,
+                          style: AppTextStyles.labelBold.copyWith(
+                            color: ColorCollection.point,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
+    ),
     );
   }
 }

@@ -13,8 +13,31 @@ class SignInScreen extends StatefulWidget {
   State<SignInScreen> createState() => _SignInScreenState();
 }
 
-class _SignInScreenState extends State<SignInScreen> {
+class _SignInScreenState extends State<SignInScreen> with WidgetsBindingObserver {
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// 로그인 대기 중 앱으로 복귀(뒤로가기 / SDK hang / 외부 요인)하면 로딩 해제.
+  /// _kakaoAuthPending 플래그 없이 _isLoading 단독 체크:
+  ///   _isLoading이 true인 상태는 로그인 플로우 중일 때뿐이고,
+  ///   성공 후 화면 전환(pushReplacement) 시점에는 mounted가 false여서 조건 불충족.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isLoading && mounted) {
+      setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _onKakaoLogin() async {
     setState(() => _isLoading = true);
@@ -22,27 +45,52 @@ class _SignInScreenState extends State<SignInScreen> {
       await AuthService().signInWithKakao();
       if (!mounted) return;
 
-      // 신규/기존 유저 모두 홈으로 (카카오 회원가입은 SDK가 자동 처리)
       Navigator.pushReplacementNamed(context, AppRouter.home);
+    } on AuthCancelledException {
+      // 사용자가 직접 취소 — 오류 메시지 없이 초기 화면으로 복귀
     } on AuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: ColorCollection.red,
-        ),
-      );
+      await _showErrorDialog(e.message);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('로그인에 실패했습니다. 다시 시도해주세요.'),
-          backgroundColor: ColorCollection.red,
-        ),
-      );
+      await _showErrorDialog('로그인에 실패했습니다.\n다시 시도해주세요.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _showErrorDialog(String message) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ColorCollection.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: ColorCollection.point, width: 2),
+        ),
+        title: Text(
+          '오류',
+          style: AppTextStyles.bodyBold.copyWith(color: ColorCollection.point),
+        ),
+        content: Text(
+          message,
+          style: AppTextStyles.labelRegular.copyWith(
+            color: ColorCollection.point,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              '확인',
+              style: AppTextStyles.labelBold.copyWith(
+                color: ColorCollection.main,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

@@ -17,9 +17,9 @@ class HomeScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             children: [
-              const SizedBox(height: 33),
+              const SizedBox(height: 24),
               const Center(child: LogoWidget()),
-              const SizedBox(height: 49),
+              const SizedBox(height: 24),
               Expanded(
                 child: CustomButton(
                   icon: Icons.remove_red_eye,
@@ -36,13 +36,13 @@ class HomeScreen extends StatelessWidget {
                   onTap: () => onTabChange(1),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
               Expanded(
                 child: CustomButton(
-                  icon: Icons.location_on,
+                  icon: Icons.navigation,
                   iconColor: ColorCollection.main,
                   iconSize: 38,
-                  title: '스마트 길찾기',
+                  title: '길찾기',
                   subtitle: '가장 안전한 경로로 안내합니다.',
                   backgroundColor: ColorCollection.background,
                   titleColor: ColorCollection.main,
@@ -53,7 +53,24 @@ class HomeScreen extends StatelessWidget {
                   onTap: () => onTabChange(2),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+              Expanded(
+                child: CustomButton(
+                  icon: Icons.directions_walk_rounded,
+                  iconColor: ColorCollection.main,
+                  iconSize: 38,
+                  title: '통합 모드',
+                  subtitle: '경로 안내와 장애물 감지를 함께 제공합니다.',
+                  backgroundColor: ColorCollection.background,
+                  titleColor: ColorCollection.main,
+                  titleStyle: AppTextStyles.title2,
+                  subtitleColor: ColorCollection.point,
+                  subtitleStyle: AppTextStyles.labelRegular,
+                  borderColor: ColorCollection.main,
+                  onTap: () => onTabChange(3),
+                ),
+              ),
+              const SizedBox(height: 16),
               Expanded(
                 child: CustomButton(
                   icon: Icons.settings,
@@ -67,10 +84,10 @@ class HomeScreen extends StatelessWidget {
                   subtitleColor: ColorCollection.point,
                   subtitleStyle: AppTextStyles.labelRegular,
                   borderColor: ColorCollection.main,
-                  onTap: () => onTabChange(3),
+                  onTap: () => onTabChange(4),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
             ],
           ),
         ),

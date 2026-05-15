@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
+import 'package:safepath/features/splash/auth_gate.dart';
 import 'package:safepath/routes/app_router.dart';
 
 class App extends StatelessWidget {
@@ -15,7 +16,7 @@ class App extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: ColorCollection.main),
         scaffoldBackgroundColor: ColorCollection.background,
       ),
-      initialRoute: AppRouter.signin,
+      home: const AuthGate(),
       onGenerateRoute: AppRouter.generateRoute,
     );
   }

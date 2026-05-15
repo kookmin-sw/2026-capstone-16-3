@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
+
+import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/text_styles.dart';
 import 'package:safepath/common/theme/color_collection.dart';
+import 'package:safepath/common/widgets/permission_onboarding_sheet.dart';
 import 'package:safepath/common/widgets/action_button_widget.dart';
 import 'package:safepath/common/widgets/text_input_bar.dart';
 import 'package:safepath/common/widgets/title_bar_widget.dart';
@@ -9,20 +11,31 @@ import 'package:safepath/features/navigation/current_place_widget.dart';
 import 'package:safepath/features/navigation/more_button.dart';
 import 'package:safepath/features/navigation/navigation_result_list.dart';
 import 'package:safepath/features/navigation/saved_place_widget.dart';
-import 'package:safepath/data/saved_place_dummy.dart';
+import 'package:safepath/models/saved_place.dart';
 import 'package:safepath/routes/app_router.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:geolocator/geolocator.dart';
 import 'package:safepath/service/place_service.dart';
+import 'package:safepath/service/navigation_service.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class NavigationScreen extends StatefulWidget {
-  const NavigationScreen({super.key});
+  final bool withObstacleDetection;
+  final Future<void> Function()? onBeforeNavigationStart;
+
+  const NavigationScreen({
+    super.key,
+    this.withObstacleDetection = true,
+    this.onBeforeNavigationStart,
+  });
 
   @override
-  State<NavigationScreen> createState() => _NavigationScreenState();
+  NavigationScreenState createState() => NavigationScreenState();
 }
 
-class _NavigationScreenState extends State<NavigationScreen> {
+class NavigationScreenState extends State<NavigationScreen>
+    with WidgetsBindingObserver {
   bool _isSelecting = false;
   final TextEditingController destinationController = TextEditingController();
   final stt.SpeechToText speech = stt.SpeechToText();
@@ -32,63 +45,209 @@ class _NavigationScreenState extends State<NavigationScreen> {
 
   /// 위치 변수
   String currentLocation = "현재 위치 불러오는 중...";
+  bool _locationFailed = false;
   String selectedLocation = "목적지를 선택해 주세요.";
+  double? _selectedLat;
+  double? _selectedLng;
+  String _selectedName = '';
   List<Map<String, dynamic>> searchResults = [];
+  bool _showSearchOverlay = false;
+  bool _hasNext = false;
+  int _currentPage = 1;
+  bool _isLoadingMore = false;
   Timer? _debounce;
+  Timer? _reverseGeocodeRetry;
+  StreamSubscription<Position>? _positionStream;
   Position? _currentPosition;
   bool isLoading = false;
+  List<SavedPlace> _savedPlaces = [];
+  List<Map<String, dynamic>> _recentPlaces = [];
+
+  bool _locationInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    speech.initialize();
+    WidgetsBinding.instance.addObserver(this);
+    _loadSavedPlaces();
+    _loadRecentPlaces();
     destinationController.addListener(() {
       setState(() {});
 
       if (_debounce?.isActive ?? false) _debounce!.cancel();
 
       _debounce = Timer(const Duration(milliseconds: 300), () {
-        // 🔥 선택 직후에는 검색 다시 안 하도록 방지
         if (_isSelecting) return;
         searchPlaces();
       });
     });
-
-    initCurrentPosition();
-    loadLocation();
   }
 
-  Future<void> initCurrentPosition() async {
-    try {
-      _currentPosition = await getCurrentLocation();
-    } catch (e) {
-      debugPrint('🔴 위치 초기화 실패: $e');
+  /// 최초 1회만 실행하며, 앱 재개 시 retry는 didChangeAppLifecycleState가 담당.
+  void initLocationIfNeeded() {
+    if (_locationInitialized || !mounted) return;
+    _locationInitialized = true;
+    _initLocation();
+  }
+
+  /// 다른 NavigationScreen 인스턴스가 길찾기 시작 전 호출해 스트림 충돌 방지.
+  Future<void> cancelPositionStream() async {
+    await _positionStream?.cancel();
+    _positionStream = null;
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 앱 복귀 시 위치 미초기화 상태이면 재시도 (설정에서 권한 허용 후 복귀 대응)
+    // _locationInitialized가 true일 때만 — 한 번도 방문하지 않은 탭은 재시도 불필요
+    if (state == AppLifecycleState.resumed &&
+        _locationInitialized &&
+        _currentPosition == null &&
+        mounted) {
+      _initLocation();
     }
   }
 
-  /// destinationController의 listener 해제
+  Future<void> _loadRecentPlaces() async {
+    try {
+      final result = await PlaceService.getRecentPlaces();
+      setState(() {
+        _recentPlaces = List<Map<String, dynamic>>.from(result['items']);
+      });
+    } catch (e) {
+      debugPrint('🔴 [Navigation] 최근 장소 로드 에러: $e');
+    }
+  }
+
+  Future<void> _loadSavedPlaces() async {
+    try {
+      final result = await PlaceService.getFavorites();
+      final items = (result['items'] as List<Map<String, dynamic>>)
+          .map((item) => SavedPlace.fromJSON(item))
+          .toList();
+      setState(() => _savedPlaces = items);
+    } catch (e) {
+      debugPrint('🔴 [Navigation] 저장된 장소 로드 에러: $e');
+    }
+  }
+
+  Future<void> _initLocation() async {
+    final permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (mounted) setState(() => currentLocation = '위치 권한이 필요합니다');
+      return; // 안내 시작 버튼에서 requestForFeature가 처리
+    }
+
+    try {
+      final position = await getCurrentLocation().timeout(
+        const Duration(seconds: 30),
+      );
+      if (!mounted) return;
+      _currentPosition = position;
+      await _fetchAddress(position);
+
+      // 초기 위치 획득 후 20m 이상 이동 시 위치·주소 갱신
+      _positionStream?.cancel();
+      _positionStream =
+          Geolocator.getPositionStream(
+            locationSettings: AndroidSettings(
+              accuracy: LocationAccuracy.best,
+              distanceFilter: 20,
+            ),
+          ).listen((pos) {
+            if (!mounted) return;
+            _currentPosition = pos;
+            _fetchAddress(pos);
+          });
+    } catch (e) {
+      debugPrint('🔴 위치 초기화 실패: $e');
+      if (mounted)
+        setState(() {
+          currentLocation = '현재 위치를 가져올 수 없습니다';
+          _locationFailed = true;
+        });
+    }
+  }
+
+  Future<void> _fetchAddress(Position position) async {
+    _reverseGeocodeRetry?.cancel();
+
+    final result = await PlaceService.reverseGeocode(
+      lat: position.latitude,
+      lng: position.longitude,
+    );
+    if (!mounted) return;
+
+    if (_applyGeocodeResult(result)) return;
+
+    // exactAddress 미획득 → 5초마다 재시도
+    _reverseGeocodeRetry = Timer.periodic(const Duration(seconds: 5), (
+      _,
+    ) async {
+      final retryResult = await PlaceService.reverseGeocode(
+        lat: _currentPosition?.latitude ?? position.latitude,
+        lng: _currentPosition?.longitude ?? position.longitude,
+      );
+      if (!mounted) {
+        _reverseGeocodeRetry?.cancel();
+        return;
+      }
+      if (_applyGeocodeResult(retryResult)) {
+        _reverseGeocodeRetry?.cancel();
+      }
+    });
+  }
+
+  /// 결과 적용 후 retry 종료 여부 반환
+  bool _applyGeocodeResult(ReverseGeocodeResult? result) {
+    if (result == null) return false;
+
+    if (result.source == ReverseGeocodeSource.exactAddress) {
+      setState(() => currentLocation = result.address);
+      return true;
+    }
+
+    if (result.source == ReverseGeocodeSource.nearestPlace) {
+      setState(() => currentLocation = result.address);
+    }
+
+    // nearestPlace는 표시하되 exactAddress를 받을 때까지 retry 유지
+    // regionAddress → 표시 안 하고 계속 retry
+    return false;
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     destinationController.dispose();
     _debounce?.cancel();
+    _reverseGeocodeRetry?.cancel();
+    _positionStream?.cancel();
     super.dispose();
   }
 
   /// 음성 텍스트 입력 함수
   void startSpeechInput() async {
-    // 음성 인식 중복 실행 방지 - 다시 한 번 더 누르면 중지
     if (speech.isListening) {
       await speech.stop();
       return;
     }
 
+    if (!await PermissionOnboardingSheet.requestForFeature(
+      context,
+      needsMicrophone: true,
+      featureName: '음성 검색',
+    ))
+      return;
+
     bool available = await speech.initialize(
-      onStatus: (status) => print('status: $status'),
-      onError: (error) => print('error: $error'),
+      onStatus: (status) => debugPrint('status: $status'),
+      onError: (error) => debugPrint('error: $error'),
     );
 
     if (!available) {
-      print("STT 사용 불가");
+      debugPrint("STT 사용 불가");
       return;
     }
 
@@ -112,74 +271,122 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   /// 길찾기 시작 함수
-  void startNavigation() {
-    // 키보드 먼저 닫기
-    FocusManager.instance.primaryFocus?.unfocus();
+  void startNavigation() async {
+    // 권한 확인 — 목적지 선택 여부와 무관하게 항상 먼저 확인
+    if (!await PermissionOnboardingSheet.requestForFeature(
+      context,
+      needsCamera: widget.withObstacleDetection,
+      needsLocation: true,
+      featureName: widget.withObstacleDetection ? '통합 모드' : '길찾기',
+    ))
+      return;
 
-    Navigator.pushNamed(context, AppRouter.navigationing).then((_) {
-      // 돌아왔을 때 입력값 초기화
+    if (!mounted) return;
+    if (_selectedLat == null || _selectedLng == null) return;
+
+    // 권한이 방금 허용된 경우 위치를 재취득
+    if (_currentPosition == null) {
+      try {
+        _currentPosition = await getCurrentLocation();
+        await _fetchAddress(_currentPosition!);
+      } catch (_) {
+        return;
+      }
+    }
+    if (_currentPosition == null) return;
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    SoundEffectService().play(SoundEffect.actionStart);
+    VibrationService().vibrate(VibrationEffect.actionStart);
+
+    setState(() => isLoading = true);
+
+    try {
+      final result = await NavigationService.getRoute(
+        startX: _currentPosition!.longitude,
+        startY: _currentPosition!.latitude,
+        endX: _selectedLng!,
+        endY: _selectedLat!,
+        startName: currentLocation,
+        endName: _selectedName,
+      );
+
+      if (!mounted) return;
+
+      // 자신의 스트림 취소 후, 다른 NavigationScreen 스트림도 취소
+      // (geolocator는 동시 스트림을 지원하지 않아 navigation_ing_screen 스트림이 이벤트를 못 받음)
+      await _positionStream?.cancel();
+      _positionStream = null;
+      await widget.onBeforeNavigationStart?.call();
+
+      if (!mounted) return;
+
+      await Navigator.pushNamed(
+        context,
+        AppRouter.navigationing,
+        arguments: {
+          'route': result,
+          'endX': _selectedLng!,
+          'endY': _selectedLat!,
+          'endName': _selectedName,
+          'withObstacleDetection': widget.withObstacleDetection,
+        },
+      );
+
+      // 돌아왔을 때 입력값 초기화 및 위치 갱신
       destinationController.clear();
       FocusManager.instance.primaryFocus?.unfocus();
-      selectedLocation = "목적지를 선택해 주세요.";
-    });
+      setState(() {
+        selectedLocation = "목적지를 선택해 주세요.";
+        _selectedLat = null;
+        _selectedLng = null;
+        _selectedName = '';
+        currentLocation = "현재 위치 불러오는 중...";
+      });
+      _locationInitialized = false;
+      _initLocation();
+    } catch (e) {
+      debugPrint('🔴 [Navigation] 길찾기 오류: $e');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 
   /// 현재 위치 위도,경도 가져오기
+  ///
+  /// getPositionStream()을 쓰지 않는 이유: firstWhere()가 완료돼도 스트림이 즉시
+  /// 해제되지 않아 navigation_ing_screen의 GPS 스트림과 충돌함. 일회성 호출만 사용.
   Future<Position> getCurrentLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) throw Exception('위치 서비스가 꺼져 있습니다.');
 
-    // 위치 서비스 활성화 확인
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      throw Exception('위치 서비스가 꺼져 있습니다.');
-    }
-
-    // 권한 확인
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-    }
-
-    if (permission == LocationPermission.denied) {
+    final permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
       throw Exception('위치 권한이 거부되었습니다.');
     }
 
-    if (permission == LocationPermission.deniedForever) {
-      throw Exception('위치 권한이 영구적으로 거부되었습니다.');
-    }
-
-    // 현재 위치 가져오기
-    return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-  }
-
-  /// 현재 위치 주소 가져오기
-  void loadLocation() async {
+    // 캐시된 위치가 있으면 먼저 반환 (정확도 50m 이내)
     try {
-      final position = await getCurrentLocation();
-
-      final address = await PlaceService.reverseGeocode(
-        lat: position.latitude,
-        lng: position.longitude,
+      final last = await Geolocator.getLastKnownPosition().timeout(
+        const Duration(seconds: 3),
       );
+      if (last != null && last.accuracy <= 50) return last;
+    } catch (_) {}
 
-      setState(() {
-        currentLocation = address ?? "현재 위치 로딩 실패";
-      });
-    } catch (e) {
-      setState(() {
-        currentLocation = "현재 위치 불러오기 실패";
-      });
-    }
+    return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.best,
+    ).timeout(const Duration(seconds: 15));
   }
 
-  /// 장소 검색 함수
+  /// 장소 검색 함수 (새 쿼리 입력 시 초기화)
   void searchPlaces() async {
     if (destinationController.text.trim().isEmpty) {
       setState(() {
         searchResults.clear();
+        _showSearchOverlay = false;
+        _hasNext = false;
+        _currentPage = 1;
       });
       return;
     }
@@ -189,16 +396,22 @@ class _NavigationScreenState extends State<NavigationScreen> {
         _currentPosition = await getCurrentLocation();
       }
 
-      setState(() => isLoading = true);
+      setState(() {
+        isLoading = true;
+        _showSearchOverlay = true;
+        _currentPage = 1;
+      });
 
-      final results = await PlaceService.searchPlaces(
+      final result = await PlaceService.searchPlaces(
         query: destinationController.text,
         lat: _currentPosition!.latitude,
         lng: _currentPosition!.longitude,
+        page: 1,
       );
 
       setState(() {
-        searchResults = results;
+        searchResults = List<Map<String, dynamic>>.from(result['items']);
+        _hasNext = result['hasNext'] as bool;
         isLoading = false;
       });
     } catch (e) {
@@ -209,10 +422,39 @@ class _NavigationScreenState extends State<NavigationScreen> {
     }
   }
 
+  /// 추가 페이지 로드 (무한 스크롤)
+  Future<void> _loadMorePlaces() async {
+    if (!_hasNext || _isLoadingMore) return;
+
+    try {
+      setState(() => _isLoadingMore = true);
+
+      final nextPage = _currentPage + 1;
+      final result = await PlaceService.searchPlaces(
+        query: destinationController.text,
+        lat: _currentPosition!.latitude,
+        lng: _currentPosition!.longitude,
+        page: nextPage,
+      );
+
+      setState(() {
+        searchResults.addAll(List<Map<String, dynamic>>.from(result['items']));
+        _hasNext = result['hasNext'] as bool;
+        _currentPage = nextPage;
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      debugPrint('🔴 [Place] 추가 장소 로드 에러: $e');
+      setState(() => _isLoadingMore = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: CustomTitleBar(title: '길찾기'),
+      appBar: CustomTitleBar(
+        title: widget.withObstacleDetection ? '통합모드' : '길찾기',
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
@@ -227,15 +469,17 @@ class _NavigationScreenState extends State<NavigationScreen> {
                       controller: destinationController,
                       onClear: () {
                         FocusManager.instance.primaryFocus?.unfocus();
-
-                        // 검색 중 상태 초기화
                         _isSelecting = false;
+                        _debounce?.cancel();
 
                         setState(() {
                           destinationController.clear();
                           selectedLocation = "목적지를 선택해 주세요.";
                           searchResults.clear();
+                          _showSearchOverlay = false;
                           isLoading = false;
+                          _hasNext = false;
+                          _currentPage = 1;
                         });
                       },
                       hintText: '목적지를 입력하세요.',
@@ -245,9 +489,27 @@ class _NavigationScreenState extends State<NavigationScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-                    CurrentPlaceWidget(
-                      label: '현재 위치',
-                      location: currentLocation,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: CurrentPlaceWidget(
+                            label: '현재 위치',
+                            location: currentLocation,
+                          ),
+                        ),
+                        if (_locationFailed)
+                          IconButton(
+                            icon: const Icon(Icons.refresh),
+                            tooltip: '위치 재시도',
+                            onPressed: () {
+                              setState(() {
+                                currentLocation = '현재 위치 불러오는 중...';
+                                _locationFailed = false;
+                              });
+                              _initLocation();
+                            },
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     CurrentPlaceWidget(
@@ -268,11 +530,14 @@ class _NavigationScreenState extends State<NavigationScreen> {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          '저장된 장소',
-                          style: AppTextStyles.title2.copyWith(
-                            color: ColorCollection.point,
-                            fontSize: 20,
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            '저장된 장소',
+                            style: AppTextStyles.title2.copyWith(
+                              color: ColorCollection.point,
+                              fontSize: 20,
+                            ),
                           ),
                         ),
                         MoreButton(
@@ -282,65 +547,138 @@ class _NavigationScreenState extends State<NavigationScreen> {
                               AppRouter.savedplace,
                             );
 
+                            _loadSavedPlaces();
                             if (place != null) {
                               FocusManager.instance.primaryFocus?.unfocus();
+                              _isSelecting = true;
+                              final p = place as SavedPlace;
                               setState(() {
-                                destinationController.text =
-                                    (place as dynamic).label;
-                                selectedLocation = (place as dynamic).location;
+                                destinationController.text = p.label;
+                                selectedLocation = p.location;
+                                _selectedName = p.label;
+                                _selectedLat = p.lat;
+                                _selectedLng = p.lng;
+                                _showSearchOverlay = false;
                               });
+                              _debounce?.cancel();
+                              _isSelecting = false;
                             }
                           },
                         ),
                       ],
                     ),
                     const SizedBox(height: 25),
-                    ...savedPlaces.take(2).map((place) {
-                      return Padding(
+                    if (_savedPlaces.isEmpty)
+                      Padding(
                         padding: const EdgeInsets.only(bottom: 25),
-                        child: SavedPlaceWidget(
-                          label: place.label,
-                          location: place.location,
-                          category: place.category,
-                          onTap: () {
-                            FocusManager.instance.primaryFocus?.unfocus();
-                            setState(() {
-                              destinationController.text = place.label;
-                              selectedLocation = place.location;
-                            });
-                          },
+                        child: Center(
+                          child: Text(
+                            '저장된 장소가 없습니다',
+                            style: AppTextStyles.labelRegular.copyWith(
+                              color: ColorCollection.point,
+                            ),
+                          ),
                         ),
-                      );
-                    }).toList(),
+                      )
+                    else
+                      ..._savedPlaces.take(2).map((place) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 25),
+                          child: SavedPlaceWidget(
+                            label: place.label,
+                            location: place.location,
+                            category: place.category,
+                            onTap: () {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              _isSelecting = true;
+                              setState(() {
+                                destinationController.text = place.label;
+                                selectedLocation = place.location;
+                                _selectedName = place.label;
+                                _selectedLat = place.lat;
+                                _selectedLng = place.lng;
+                                _showSearchOverlay = false;
+                              });
+                              _debounce?.cancel();
+                              _isSelecting = false;
+                            },
+                          ),
+                        );
+                      }),
 
                     /// 최근 장소 섹션
-                    Text(
-                      '최근 장소',
-                      style: AppTextStyles.title2.copyWith(
-                        color: ColorCollection.point,
-                        fontSize: 20,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            '최근 장소',
+                            style: AppTextStyles.title2.copyWith(
+                              color: ColorCollection.point,
+                              fontSize: 20,
+                            ),
+                          ),
+                        ),
+                        if (_recentPlaces.isNotEmpty)
+                          _ClearButton(
+                            onTap: () async {
+                              final success =
+                                  await PlaceService.deleteAllRecentPlaces();
+                              if (success) {
+                                setState(() => _recentPlaces.clear());
+                              }
+                            },
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 25),
-                    SavedPlaceWidget(
-                      label: '회사',
-                      location: '서울특별시 성북구 솔샘로98길',
-                      onTap: () {
-                        FocusManager.instance.primaryFocus?.unfocus();
-                        setState(() {
-                          destinationController.text = '회사';
-                          selectedLocation = '서울특별시 성북구 솔샘로98길';
-                        });
-                      },
-                    ),
-
-                    const SizedBox(height: 25),
+                    if (_recentPlaces.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 25),
+                        child: Center(
+                          child: Text(
+                            '최근 검색한 장소가 없습니다',
+                            style: AppTextStyles.labelRegular.copyWith(
+                              color: ColorCollection.point,
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      ..._recentPlaces.take(4).map((place) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 25),
+                          child: SavedPlaceWidget(
+                            label: place['name'] as String,
+                            location: place['address'] as String,
+                            onTap: () {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              _isSelecting = true;
+                              setState(() {
+                                destinationController.text =
+                                    place['name'] as String;
+                                selectedLocation = place['address'] as String;
+                                _selectedName = place['name'] as String;
+                                _selectedLat = (place['lat'] as num?)
+                                    ?.toDouble();
+                                _selectedLng = (place['lng'] as num?)
+                                    ?.toDouble();
+                                _showSearchOverlay = false;
+                              });
+                              _debounce?.cancel();
+                              _isSelecting = false;
+                            },
+                          ),
+                        );
+                      }),
                   ],
                 ),
               ),
 
               /// 검색 결과 overlay
-              if (destinationController.text.trim().isNotEmpty && !_isSelecting)
+              if (_showSearchOverlay && !_isSelecting)
                 Positioned(
                   top: 60,
                   left: 0,
@@ -356,34 +694,43 @@ class _NavigationScreenState extends State<NavigationScreen> {
                     child: Container(color: Colors.transparent),
                   ),
                 ),
-              if (destinationController.text.trim().isNotEmpty && !_isSelecting)
+              if (_showSearchOverlay && !_isSelecting)
                 Positioned(
                   top: 50,
                   left: 0,
                   right: 0,
                   child: isLoading
-                      ? const Center(child: CircularProgressIndicator())
+                      ? Center(
+                          child: Semantics(
+                            label: '검색 중',
+                            child: const CircularProgressIndicator(),
+                          ),
+                        )
                       : searchResults.isNotEmpty
                       ? ResultList(
                           results: searchResults,
+                          isLoadingMore: _isLoadingMore,
+                          onLoadMore: _loadMorePlaces,
                           onTap: (item) {
                             FocusManager.instance.primaryFocus?.unfocus();
-
                             _isSelecting = true;
 
                             setState(() {
                               destinationController.text = item['name'];
                               selectedLocation = item['roadAddress'];
+                              _selectedName = item['name'] as String;
+                              _selectedLat = item['latitude'] as double?;
+                              _selectedLng = item['longitude'] as double?;
                               searchResults.clear();
+                              _showSearchOverlay = false;
                             });
 
-                            // 잠깐 후 다시 검색 가능하도록
-                            Future.delayed(
-                              const Duration(milliseconds: 300),
-                              () {
-                                _isSelecting = false;
-                              },
-                            );
+                            _debounce?.cancel();
+                            _isSelecting = false;
+
+                            PlaceService.getPlaceDetail(
+                              placeId: item['id'],
+                            ).then((_) => _loadRecentPlaces());
                           },
                         )
                       : Container(
@@ -408,6 +755,56 @@ class _NavigationScreenState extends State<NavigationScreen> {
                         ),
                 ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ClearButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ClearButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '최근 장소 전체 삭제',
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () {
+            SoundEffectService().play(SoundEffect.buttonTap);
+            VibrationService().vibrate(VibrationEffect.buttonTap);
+            onTap();
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: ColorCollection.point.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: ColorCollection.point, width: 1),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.delete_outline_rounded,
+                  size: 18,
+                  color: ColorCollection.point,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '전체 삭제',
+                  style: AppTextStyles.labelRegular.copyWith(
+                    color: ColorCollection.point,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

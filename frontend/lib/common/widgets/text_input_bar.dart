@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class TextInputBar extends StatelessWidget {
   final TextEditingController controller; // 텍스트 컨트롤러
+  final FocusNode? focusNode;
   final String? hintText; // 힌트 텍스트
   final bool showSearchIcon; // 검색 아이콘 표시 여부 (default : true)
   final VoidCallback? micTap; // 음성 텍스트 입력 아이콘
@@ -13,6 +16,7 @@ class TextInputBar extends StatelessWidget {
   const TextInputBar({
     super.key,
     required this.controller,
+    this.focusNode,
     this.hintText,
     this.showSearchIcon = true,
     this.micTap,
@@ -28,6 +32,7 @@ class TextInputBar extends StatelessWidget {
         Expanded(
           child: TextField(
             controller: controller,
+            focusNode: focusNode,
             style: AppTextStyles.labelRegular.copyWith(
               color: ColorCollection.point,
             ),
@@ -44,13 +49,15 @@ class TextInputBar extends StatelessWidget {
                     return const SizedBox.shrink();
                   }
                   return IconButton(
+                    tooltip: '입력 지우기',
                     icon: const Icon(Icons.close, color: ColorCollection.main),
                     onPressed: () {
-                      // 부모에서 상태 + controller 모두 관리하도록 위임
+                      SoundEffectService().play(SoundEffect.buttonTap);
+              VibrationService().vibrate(VibrationEffect.buttonTap);
                       if (onClear != null) {
                         onClear!();
                       } else {
-                        controller.clear(); // fallback
+                        controller.clear();
                       }
                     },
                   );
@@ -79,24 +86,37 @@ class TextInputBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 14),
-        Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          child: InkWell(
+        Semantics(
+          button: true,
+          label: '음성 입력',
+          enabled: micTap != null,
+          onTap: micTap,
+          excludeSemantics: true,
+          child: Material(
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(10),
-            onTap: micTap,
-            child: Container(
-              width: 55,
-              height: 55,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: ColorCollection.main,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.mic,
-                color: ColorCollection.point,
-                size: 40,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: micTap == null
+                  ? null
+                  : () {
+                      SoundEffectService().play(SoundEffect.buttonTap);
+                      VibrationService().vibrate(VibrationEffect.buttonTap);
+                      micTap!();
+                    },
+              child: Container(
+                width: 55,
+                height: 55,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: ColorCollection.main,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.mic,
+                  color: ColorCollection.point,
+                  size: 40,
+                ),
               ),
             ),
           ),

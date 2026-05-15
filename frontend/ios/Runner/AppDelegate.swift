@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import KakaoSDKAuth
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -9,5 +10,16 @@ import UIKit
   ) -> Bool {
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  override func application(
+    _ app: UIApplication,
+    open url: URL,
+    options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+  ) -> Bool {
+    if AuthApi.isKakaoTalkLoginUrl(url) {
+      return AuthController.handleOpenUrl(url: url)
+    }
+    return false
   }
 }

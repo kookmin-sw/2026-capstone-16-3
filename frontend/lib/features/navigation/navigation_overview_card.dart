@@ -5,15 +5,17 @@ import 'package:safepath/common/theme/text_styles.dart';
 enum RouteStatus { safe, warning, danger }
 
 class NavigationOverviewCard extends StatelessWidget {
-  final int distance; // 남은 거리
-  final int time; // 남은 소요 시간
+  final int distance;
+  final int time;
   final RouteStatus status;
+  final bool showStatus;
 
   const NavigationOverviewCard({
     super.key,
     required this.distance,
     required this.time,
     required this.status,
+    this.showStatus = true,
   });
 
   String _getStatusText(RouteStatus status) {
@@ -60,7 +62,13 @@ class NavigationOverviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final semanticLabel = showStatus
+        ? '총 거리 ${_formatDistance(distance)}, 총 소요시간 ${_formatTime(time)}, 경로 상태 ${_getStatusText(status)}'
+        : '총 거리 ${_formatDistance(distance)}, 총 소요시간 ${_formatTime(time)}';
+    return Semantics(
+      label: semanticLabel,
+      excludeSemantics: true,
+      child: Container(
       decoration: BoxDecoration(
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(10),
@@ -70,6 +78,7 @@ class NavigationOverviewCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               _formatDistance(distance),
@@ -80,58 +89,88 @@ class NavigationOverviewCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '남은 거리',
+              '총 거리',
               style: AppTextStyles.labelBold.copyWith(
                 color: ColorCollection.point,
               ),
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 8),
             Divider(color: ColorCollection.point, thickness: 2),
-            const SizedBox(height: 15),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                Column(
-                  children: [
-                    Text(
-                      _formatTime(time),
-                      style: AppTextStyles.title2.copyWith(
-                        color: ColorCollection.point,
-                        fontSize: 20,
-                      ),
+            const SizedBox(height: 8),
+            if (showStatus)
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _formatTime(time),
+                          style: AppTextStyles.title2.copyWith(
+                            color: ColorCollection.point,
+                            fontSize: 20,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '총 소요 시간',
+                          style: AppTextStyles.labelBold.copyWith(
+                            color: ColorCollection.point,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '남은 시간',
-                      style: AppTextStyles.labelBold.copyWith(
-                        color: ColorCollection.point,
-                      ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _getStatusText(status),
+                          style: AppTextStyles.title2.copyWith(
+                            color: _getStatusColor(status),
+                            fontSize: 20,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '경로 상태',
+                          style: AppTextStyles.labelBold.copyWith(
+                            color: ColorCollection.point,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-                Column(
-                  children: [
-                    Text(
-                      _getStatusText(status),
-                      style: AppTextStyles.title2.copyWith(
-                        color: _getStatusColor(status),
-                        fontSize: 20,
-                      ),
+                  ),
+                ],
+              )
+            else
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _formatTime(time),
+                    style: AppTextStyles.title2.copyWith(
+                      color: ColorCollection.point,
+                      fontSize: 20,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '경로 상태',
-                      style: AppTextStyles.labelBold.copyWith(
-                        color: ColorCollection.point,
-                      ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '총 소요 시간',
+                    style: AppTextStyles.labelBold.copyWith(
+                      color: ColorCollection.point,
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
+    ),
     );
   }
 }

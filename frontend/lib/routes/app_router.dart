@@ -40,7 +40,7 @@ import 'package:safepath/layout/layout.dart';
 ///
 /// ========================================================================
 class AppRouter {
-  static const String signin = '/';
+  static const String signin = '/signin';
   static const String home = '/home';
   static const String settings = '/settings';
   static const String userinfo = '/settings/userinfo';
@@ -71,7 +71,10 @@ class AppRouter {
       case savedplace:
         return MaterialPageRoute(builder: (_) => const SavedPlaceScreen());
       case navigationing:
-        return MaterialPageRoute(builder: (_) => const NavigationIngScreen());
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const NavigationIngScreen(),
+        );
       case addplace:
         return MaterialPageRoute(builder: (_) => const AddPlaceScreen());
       case appinfo:

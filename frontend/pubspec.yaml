@@ -44,6 +44,11 @@ dependencies:
   http_parser: ^4.0.0
   camera: ^0.11.0
   stomp_dart_client: ^2.0.0
+  flutter_tts: ^4.2.0
+  audioplayers: ^6.0.0
+  permission_handler: ^11.0.0
+  vibration: ^2.0.0
+  shared_preferences: ^2.3.3
 
 dev_dependencies:
   flutter_test:
@@ -76,6 +81,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
+    - assets/sounds/
 #    - assets/svgs/
 
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -32,21 +32,34 @@ class AuthService {
       final kakaoTalkInstalled = await isKakaoTalkInstalled();
       debugPrint('🟡 [Auth] 카카오톡 설치 여부: $kakaoTalkInstalled');
 
-      if (kakaoTalkInstalled) {
-        final token = await UserApi.instance.loginWithKakaoTalk();
-        kakaoAccessToken = token.accessToken;
-        debugPrint('🟡 [Auth] 카카오톡 앱으로 로그인 성공');
-      } else {
-        final token = await UserApi.instance.loginWithKakaoAccount();
-        kakaoAccessToken = token.accessToken;
-        debugPrint('🟡 [Auth] 카카오 계정(웹)으로 로그인 성공');
+      try {
+        if (kakaoTalkInstalled) {
+          kakaoAccessToken =
+              (await UserApi.instance.loginWithKakaoTalk()).accessToken;
+          debugPrint('🟡 [Auth] 카카오톡 앱으로 로그인 성공');
+        } else {
+          kakaoAccessToken =
+              (await UserApi.instance.loginWithKakaoAccount()).accessToken;
+          debugPrint('🟡 [Auth] 카카오 계정(웹)으로 로그인 성공');
+        }
+      } catch (e) {
+        debugPrint('🔴 [Auth] 카카오 로그인 실패: $e');
+        if (_isKakaoCancellation(e)) throw const AuthCancelledException();
+        throw const AuthException('카카오 로그인 중 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.');
       }
+    } on AuthException {
+      rethrow;
     } catch (e) {
-      debugPrint('🔴 [Auth] 카카오 로그인 실패: $e');
-      throw AuthException('카카오 로그인 실패: $e');
+      debugPrint('🔴 [Auth] 예상치 못한 오류: $e');
+      throw const AuthException('카카오 로그인 중 오류가 발생했습니다.\n잠시 후 다시 시도해주세요.');
     }
 
     return await _fetchTokenFromServer(kakaoAccessToken);
+  }
+
+  bool _isKakaoCancellation(Object e) {
+    final msg = e.toString().toLowerCase();
+    return msg.contains('cancelled') || msg.contains('canceled');
   }
 
   Future<AuthResult> _fetchTokenFromServer(String kakaoAccessToken) async {
@@ -72,7 +85,8 @@ class AuthService {
       return AuthResult(isNewUser: isNewUser);
     }
 
-    throw AuthException('서버 인증 실패: ${response.statusCode}');
+    debugPrint('🔴 [Auth] 서버 인증 실패: ${response.statusCode} / ${response.body}');
+    throw const AuthException('서버 연결에 실패했습니다.\n잠시 후 다시 시도해주세요.');
   }
 
   // ─── 토큰 재발급 ──────────────────────────────────────────────────────────
@@ -104,21 +118,43 @@ class AuthService {
   // ─── 로그아웃 ─────────────────────────────────────────────────────────────
 
   Future<void> signOut() async {
-    final refreshToken = await TokenStorage().refreshToken;
+    final accessToken = await TokenStorage().accessToken;
 
-    if (refreshToken != null) {
-      final uri = Uri.parse('$_baseUrl/api/auth/logout');
-      await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'refreshToken': refreshToken}),
-      );
+    if (accessToken != null) {
+      try {
+        final uri = Uri.parse('$_baseUrl/api/auth/logout');
+        debugPrint('🟡 [Auth] BE 요청: POST $uri');
+        final response = await http.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
+        );
+        debugPrint('🟡 [Auth] 로그아웃 응답: ${response.statusCode}');
+      } catch (e) {
+        debugPrint('🔴 [Auth] 로그아웃 API 실패 (로컬 토큰은 삭제): $e');
+      }
     }
 
     await TokenStorage().clear();
     try {
       await UserApi.instance.logout();
     } catch (_) {}
+  }
+
+  // ─── 로컬 세션 정리 ──────────────────────────────────────
+
+  /// 회원탈퇴 후 호출. logout API 없이 로컬 토큰 삭제 + Kakao 앱 연결 해제(unlink)
+  Future<void> clearLocalSession() async {
+    await TokenStorage().clear();
+    try {
+      await UserApi.instance.unlink();
+      debugPrint('🟡 [Auth] Kakao 연결 해제(unlink) 완료');
+    } catch (e) {
+      debugPrint('🔴 [Auth] Kakao unlink 실패: $e');
+    }
+    debugPrint('🟡 [Auth] 로컬 세션 정리 완료');
   }
 }
 
@@ -135,4 +171,10 @@ class AuthException implements Exception {
 
   @override
   String toString() => 'AuthException: $message';
+}
+
+/// 사용자가 카카오 인증을 취소했을 때 던져지는 예외.
+/// 오류 다이얼로그 없이 조용히 로딩을 해제하는 데 사용된다.
+class AuthCancelledException extends AuthException {
+  const AuthCancelledException() : super('');
 }

@@ -18,7 +18,10 @@ import 'package:safepath/service/camera_service.dart';
 ///     ],
 ///   )
 class CameraDebugOverlay extends StatefulWidget {
-  const CameraDebugOverlay({super.key});
+  /// true이면 좌상단 고정 (navigation용) — 기본값 false는 우상단 (detection용)
+  final bool anchorLeft;
+
+  const CameraDebugOverlay({super.key, this.anchorLeft = false});
 
   @override
   State<CameraDebugOverlay> createState() => _CameraDebugOverlayState();
@@ -50,7 +53,8 @@ class _CameraDebugOverlayState extends State<CameraDebugOverlay> {
 
     if (!_visible) {
       return Positioned(
-        right: 8,
+        right: widget.anchorLeft ? null : 8,
+        left: widget.anchorLeft ? 8 : null,
         top: 8,
         child: GestureDetector(
           onTap: () => setState(() => _visible = true),
@@ -70,10 +74,13 @@ class _CameraDebugOverlayState extends State<CameraDebugOverlay> {
     final isReady = controller != null && controller.value.isInitialized;
 
     return Positioned(
-      right: 8,
+      right: widget.anchorLeft ? null : 8,
+      left: widget.anchorLeft ? 8 : null,
       top: 8,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: widget.anchorLeft
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.end,
         children: [
           // 닫기 버튼
           GestureDetector(

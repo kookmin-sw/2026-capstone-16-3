@@ -2,12 +2,17 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:safepath/common/widgets/permission_onboarding_sheet.dart';
 import 'package:safepath/common/widgets/title_bar_widget.dart';
 import 'package:safepath/features/detection/detection_active_view.dart';
 import 'package:safepath/features/detection/detection_idle_view.dart';
 import 'package:safepath/model/detection_event.dart';
 import 'package:safepath/service/camera_service.dart';
 import 'package:safepath/service/detection_ws_service.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/tts_service.dart';
+import 'package:safepath/service/user_settings_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class DetectionScreen extends StatefulWidget {
   final ValueChanged<bool>? onDetectingChanged;
@@ -21,20 +26,35 @@ class DetectionScreen extends StatefulWidget {
 class _DetectionScreenState extends State<DetectionScreen> {
   bool _isDetecting = false;
 
-  /// WS로 수신한 최신 탐지 결과 목록 (최근 3개까지 유지)
+  /// WS로 수신한 최신 탐지 결과 목록
   final List<DetectionEvent> _obstacles = [];
 
-  /// 탐지 시작 후 수신된 이벤트 총 횟수
-  int _detectedCount = 0;
+  /// primaryObjectId별 마지막 수신 시각 — stale 판별에 사용
+  final Map<String, DateTime> _lastSeen = {};
 
   /// WS STOMP 연결 완료 여부
   bool _wsConnected = false;
 
   StreamSubscription<DetectionEvent>? _wsSub;
+  Timer? _sweepTimer;
+
+  /// N초 이상 갱신 없는 카드를 stale로 판단
+  static const Duration _staleThreshold = Duration(seconds: 8);
+  static const Duration _sweepInterval = Duration(seconds: 1);
 
   // ─── 탐지 시작 ───────────────────────────────────────────────────────────
 
   Future<void> _startDetection() async {
+    if (!await PermissionOnboardingSheet.requestForFeature(
+      context,
+      needsCamera: true,
+      featureName: '장애물 탐지',
+    )) {
+      return;
+    }
+
+    SoundEffectService().play(SoundEffect.actionStart);
+    VibrationService().vibrate(VibrationEffect.actionStart);
     await CameraService().start(CameraMode.detection);
     await DetectionWsService().connect(
       onConnected: () {
@@ -46,6 +66,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
     );
 
     _wsSub = DetectionWsService().eventStream?.listen(_onDetectionEvent);
+    _sweepTimer = Timer.periodic(_sweepInterval, (_) => _sweepStaleObstacles());
 
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
@@ -56,18 +77,36 @@ class _DetectionScreenState extends State<DetectionScreen> {
       _isDetecting = true;
       _wsConnected = false;
       _obstacles.clear();
-      _detectedCount = 0;
     });
 
+    TtsService().speak(
+      switch (UserSettingsService().sentenceLength) {
+        MessageLength.short => '탐지 시작',
+        MessageLength.medium || MessageLength.long => '실외 장애물 탐지를 시작합니다.',
+      },
+      interrupt: true,
+    );
     widget.onDetectingChanged?.call(true);
   }
 
   // ─── 탐지 중지 ───────────────────────────────────────────────────────────
 
   Future<void> _stopDetection() async {
+    SoundEffectService().play(SoundEffect.actionStop);
+    VibrationService().vibrate(VibrationEffect.actionStop);
+    _sweepTimer?.cancel();
+    _sweepTimer = null;
     await _wsSub?.cancel();
     _wsSub = null;
 
+    await TtsService().stop();
+    TtsService().speak(
+      switch (UserSettingsService().sentenceLength) {
+        MessageLength.short => '탐지 종료',
+        MessageLength.medium || MessageLength.long => '실외 장애물 탐지를 종료합니다.',
+      },
+      interrupt: true,
+    );
     await CameraService().stop();
     await DetectionWsService().disconnect();
 
@@ -85,15 +124,48 @@ class _DetectionScreenState extends State<DetectionScreen> {
   // ─── WS 이벤트 수신 ──────────────────────────────────────────────────────
 
   void _onDetectionEvent(DetectionEvent event) {
+    // 전송 실패 이벤트는 무시 — lastSeen 갱신 없이 stale 타이머가 자연히 제거
+    if (!event.isActive) return;
+
+    _lastSeen[event.primaryObjectId] = DateTime.now();
+
     setState(() {
-      _detectedCount++;
-      _obstacles.insert(0, event); // 최신 이벤트를 목록 맨 앞에
-      if (_obstacles.length > 3) _obstacles.removeLast(); // 최근 3개 유지
+      final idx = _obstacles.indexWhere((e) => e.primaryObjectId == event.primaryObjectId);
+      if (idx != -1) {
+        _obstacles[idx] = event;
+      } else {
+        _obstacles.insert(0, event);
+      }
+    });
+
+    VibrationService().vibrate(switch (event.alertLevel) {
+      'high' => VibrationEffect.obstacleLevel3,
+      'medium' => VibrationEffect.obstacleLevel2,
+      _ => VibrationEffect.obstacleLevel1,
+    });
+
+    if (event.guideText.isNotEmpty) {
+      TtsService().speak(
+        event.guideText,
+        interrupt: event.alertLevel == 'high',
+      );
+    }
+  }
+
+  /// 마지막 수신으로부터 [_staleThreshold] 초과한 카드를 제거한다.
+  void _sweepStaleObstacles() {
+    if (_obstacles.isEmpty) return;
+    final now = DateTime.now();
+    setState(() {
+      _obstacles.removeWhere((e) =>
+        now.difference(_lastSeen[e.primaryObjectId] ?? DateTime(0)) > _staleThreshold,
+      );
     });
   }
 
   @override
   void dispose() {
+    _sweepTimer?.cancel();
     _wsSub?.cancel();
     super.dispose();
   }
@@ -111,7 +183,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
           child: _isDetecting
               ? DetectionActiveView(
                   onStop: _stopDetection,
-                  detectedCount: _detectedCount,
+                  detectedCount: _obstacles.length,
                   obstacles: _obstacles,
                   wsConnected: _wsConnected,
                 )

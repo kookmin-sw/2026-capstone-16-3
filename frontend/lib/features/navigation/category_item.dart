@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:safepath/common/enum/place_category.dart';
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 class CategoryItem extends StatelessWidget {
   final PlaceCategory category;
@@ -17,44 +19,57 @@ class CategoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(2, 5, 2, 5),
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? ColorCollection.point : Colors.transparent,
-            width: 3,
+    return Semantics(
+      button: true,
+      label: category.label,
+      selected: isSelected,
+      hint: isSelected ? '선택됨' : null,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap == null
+            ? null
+            : () {
+                SoundEffectService().play(SoundEffect.buttonTap);
+                VibrationService().vibrate(VibrationEffect.buttonTap);
+                onTap!();
+              },
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(2, 5, 2, 5),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? ColorCollection.point : Colors.transparent,
+              width: 3,
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: ColorCollection.main,
-                borderRadius: BorderRadius.circular(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: ColorCollection.main,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  category.icon,
+                  color: ColorCollection.point,
+                  size: 35,
+                ),
               ),
-              child: Icon(
-                category.icon,
-                color: ColorCollection.point,
-                size: 35,
+              const SizedBox(height: 10),
+              Text(
+                category.label,
+                textAlign: TextAlign.center,
+                style: AppTextStyles.labelBold.copyWith(
+                  color: ColorCollection.point,
+                  fontSize: 16,
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              category.label,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.labelBold.copyWith(
-                color: ColorCollection.point,
-                fontSize: 16,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

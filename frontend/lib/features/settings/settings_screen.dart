@@ -8,26 +8,69 @@ import 'package:safepath/features/settings/settings_notification_widget.dart';
 import 'package:safepath/features/settings/settings_profile_widget.dart';
 import 'package:safepath/features/settings/settings_style_widget.dart';
 import 'package:safepath/routes/app_router.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/tts_service.dart';
+import 'package:safepath/service/user_service.dart';
+import 'package:safepath/service/user_settings_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   final ScrollController? scrollController;
 
   const SettingsScreen({super.key, this.scrollController});
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  UserSettings? _settings;
+  String _nickname = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final results = await Future.wait([
+      UserSettingsService().fetch(),
+      UserService().getProfile(),
+    ]);
+    if (!mounted) return;
+    final s = results[0] as UserSettings;
+    final profile = results[1] as UserProfile?;
+    setState(() {
+      _settings = s;
+      _nickname = profile?.nickname ?? '';
+    });
+    TtsService().setVoiceGuidanceEnabled(s.voiceGuidanceEnabled);
+    SoundEffectService().setEnabled(s.soundEffectEnabled);
+    VibrationService().setStrength(s.vibrationStrength);
+  }
+
+  Future<void> _patch(UserSettings updated) async {
+    setState(() => _settings = updated);
+    UserSettingsService().patch(updated);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final s = _settings;
+
     return Scaffold(
       appBar: const CustomTitleBar(title: '설정'),
       body: SafeArea(
         child: SingleChildScrollView(
-          controller: scrollController,
+          controller: widget.scrollController,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 유저 프로필
               SettingsProfileWidget(
-                name: '홍길동',
+                name: _nickname.isEmpty ? '불러오는 중...' : _nickname,
                 onTap: () => Navigator.pushNamed(context, AppRouter.userinfo),
               ),
               const SizedBox(height: 32),
@@ -35,13 +78,43 @@ class SettingsScreen extends StatelessWidget {
               // 안내 스타일 개인화
               _SectionTitle(title: '안내 스타일 개인화'),
               const SizedBox(height: 12),
-              const SettingsStyleWidget(),
+              if (s != null)
+                SettingsStyleWidget(
+                  initialSettings: s,
+                  onSentenceLengthChanged: (v) =>
+                      _patch(s.copyWith(sentenceLength: v)),
+                  onVibrationChanged: (v) {
+                    VibrationService().setStrength(v);
+                    _patch(s.copyWith(vibrationStrength: v));
+                  },
+                  onGuidanceSpeedChanged: (v) =>
+                      _patch(s.copyWith(guidanceSpeed: v)),
+                )
+              else
+                const _SettingsLoadingPlaceholder(height: 220),
               const SizedBox(height: 32),
 
               // 알림 및 소리
               _SectionTitle(title: '알림 및 소리'),
               const SizedBox(height: 12),
-              const SettingsNotificationWidget(),
+              if (s != null)
+                SettingsNotificationWidget(
+                  initialPushNotificationEnabled: s.pushNotificationEnabled,
+                  initialVoiceGuidanceEnabled: s.voiceGuidanceEnabled,
+                  initialSoundEffectEnabled: s.soundEffectEnabled,
+                  onPushNotificationChanged: (v) =>
+                      _patch(s.copyWith(pushNotificationEnabled: v)),
+                  onVoiceGuidanceChanged: (v) {
+                    TtsService().setVoiceGuidanceEnabled(v);
+                    _patch(s.copyWith(voiceGuidanceEnabled: v));
+                  },
+                  onSoundEffectChanged: (v) {
+                    SoundEffectService().setEnabled(v);
+                    _patch(s.copyWith(soundEffectEnabled: v));
+                  },
+                )
+              else
+                const _SettingsLoadingPlaceholder(height: 160),
               const SizedBox(height: 32),
 
               // 앱 정보
@@ -91,6 +164,24 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: AppTextStyles.title2.copyWith(color: ColorCollection.point),
+    );
+  }
+}
+
+class _SettingsLoadingPlaceholder extends StatelessWidget {
+  final double height;
+  const _SettingsLoadingPlaceholder({required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      child: Center(
+        child: CircularProgressIndicator(
+          color: ColorCollection.point,
+          strokeWidth: 2,
+        ),
+      ),
     );
   }
 }

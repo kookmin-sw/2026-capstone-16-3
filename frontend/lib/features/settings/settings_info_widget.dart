@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:safepath/common/theme/color_collection.dart';
 import 'package:safepath/common/theme/text_styles.dart';
+import 'package:safepath/service/sound_effect_service.dart';
+import 'package:safepath/service/vibration_service.dart';
 
 /// 앱 정보 섹션 (페이지 연결 행 목록)
 class SettingsInfoWidget extends StatelessWidget {
@@ -41,10 +43,16 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: item.label,
+      label: '${item.label}, 화면으로 이동',
       excludeSemantics: true,
       child: InkWell(
-        onTap: item.onTap,
+        onTap: item.onTap == null
+            ? null
+            : () {
+                SoundEffectService().play(SoundEffect.buttonTap);
+                VibrationService().vibrate(VibrationEffect.buttonTap);
+                item.onTap!();
+              },
         borderRadius: BorderRadius.circular(10),
         child: Container(
           width: double.infinity,

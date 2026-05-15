@@ -10,7 +10,10 @@ class NavigationVoiceGuideCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DottedBorder(
+    return Semantics(
+      label: '주의, $voiceGuide',
+      excludeSemantics: true,
+      child: DottedBorder(
       borderType: BorderType.RRect,
       radius: const Radius.circular(10),
       dashPattern: const [4, 4], // 점 길이, 간격
@@ -54,6 +57,7 @@ class NavigationVoiceGuideCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
