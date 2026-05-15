@@ -26,6 +26,9 @@ public record GuideEventRequest(
         String distance,
 
         @JsonProperty("alert_level")
-        String alertLevel
+        String alertLevel,
+
+        @JsonProperty("primary_object_id")
+        String primaryObjectId
 ) {
 }

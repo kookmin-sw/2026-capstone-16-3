@@ -22,8 +22,9 @@ public class UserSetting extends BaseEntity {
     private User user;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     @Column(name = "sentence_length", nullable = false)
-    private Integer sentenceLength = 50;
+    private SentenceLength sentenceLength = SentenceLength.MEDIUM;
 
     @Builder.Default
     @Column(name = "vibration_strength", nullable = false)
@@ -33,10 +34,15 @@ public class UserSetting extends BaseEntity {
     @Column(name = "voice_guidance_enabled", nullable = false)
     private Boolean voiceGuidanceEnabled = true;
 
+    @Builder.Default
+    @Column(name = "guidance_speed", nullable = false)
+    private Double guidanceSpeed = 1.0;
+
     public void update(
-            Integer sentenceLength,
+            SentenceLength sentenceLength,
             Integer vibrationStrength,
-            Boolean voiceGuidanceEnabled
+            Boolean voiceGuidanceEnabled,
+            Double guidanceSpeed
     ) {
         if (sentenceLength != null) {
             this.sentenceLength = sentenceLength;
@@ -46,6 +52,9 @@ public class UserSetting extends BaseEntity {
         }
         if (voiceGuidanceEnabled != null) {
             this.voiceGuidanceEnabled = voiceGuidanceEnabled;
+        }
+        if (guidanceSpeed != null) {
+            this.guidanceSpeed = guidanceSpeed;
         }
     }
 }

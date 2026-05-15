@@ -1,6 +1,7 @@
 package com.example.capstone.domain.user.controller;
 
 import com.example.capstone.domain.user.dto.request.UpdateUserSettingRequest;
+import com.example.capstone.domain.user.dto.response.DeleteUserResponse;
 import com.example.capstone.domain.user.dto.response.ProfileResponse;
 import com.example.capstone.domain.user.dto.response.UserSettingResponse;
 import com.example.capstone.domain.user.service.UserService;
@@ -34,5 +35,10 @@ public class UserController {
             @RequestBody UpdateUserSettingRequest request
             ) {
         return ApiResponse.ok(userSettingService.updateUserSetting(userId, request));
+    }
+
+    @DeleteMapping("/profile")
+    public ApiResponse<DeleteUserResponse> deleteMyProfile(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.ok(userService.deleteMyProfile(userId));
     }
 }

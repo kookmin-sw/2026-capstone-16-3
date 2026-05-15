@@ -3,6 +3,7 @@ package com.example.capstone.domain.place.service;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoAddressSearchResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCategorySearchResponse;
 import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToAddressResponse;
+import com.example.capstone.domain.place.dto.response.kakao.KakaoCoordToRegionCodeResponse;
 import com.example.capstone.domain.place.exception.PlaceErrorCode;
 import com.example.capstone.domain.place.exception.PlaceException;
 import lombok.extern.slf4j.Slf4j;
@@ -32,9 +33,7 @@ public class KakaoLocalClient {
 
     private final WebClient webClient;
 
-    public KakaoLocalClient(@Qualifier("kakaoLocalWebClient") WebClient webClient) {
-        this.webClient = webClient;
-    }
+    public KakaoLocalClient(@Qualifier("kakaoWebClient") WebClient kakaoWebClient) { this.webClient = kakaoWebClient; }
 
     public Mono<KakaoCategorySearchResponse> searchCategory(
             String categoryCode,
@@ -59,7 +58,7 @@ public class KakaoLocalClient {
         );
     }
 
-    public Mono<KakaoCategorySearchResponse> searchKeyword(
+    public Mono<KakaoCategorySearchResponse> searchKeywordByAccuracy(
             String query,
             double lat,
             double lng,
@@ -79,6 +78,29 @@ public class KakaoLocalClient {
                         .build(),
                 KakaoCategorySearchResponse.class,
                 "KAKAO KEYWORD"
+        );
+    }
+
+    public Mono<KakaoCategorySearchResponse> searchKeywordByDistance(
+            String query,
+            double lat,
+            double lng,
+            int radiusM,
+            int size,
+            int page
+    ) {
+        return request(
+                uriBuilder -> uriBuilder.path("/v2/local/search/keyword.json")
+                        .queryParam("query", query)
+                        .queryParam("x", lng)
+                        .queryParam("y", lat)
+                        .queryParam("radius", clamp(radiusM, 0, MAX_RADIUS))
+                        .queryParam("page", clamp(page, 1, MAX_PAGE))
+                        .queryParam("size", clamp(size, 1, MAX_SIZE))
+                        .queryParam("sort", SORT_DISTANCE)
+                        .build(),
+                KakaoCategorySearchResponse.class,
+                "KAKAO KEYWORD DISTANCE"
         );
     }
 
@@ -102,6 +124,18 @@ public class KakaoLocalClient {
                         .build(),
                 KakaoCoordToAddressResponse.class,
                 "KAKAO COORD2ADDR"
+        );
+    }
+
+    public Mono<KakaoCoordToRegionCodeResponse> coordToRegionCode(double lat, double lng) {
+        return request(
+                uriBuilder -> uriBuilder.path("/v2/local/geo/coord2regioncode.json")
+                        .queryParam("x", lng)
+                        .queryParam("y", lat)
+                        .queryParam("input_coord", "WGS84")
+                        .build(),
+                KakaoCoordToRegionCodeResponse.class,
+                "KAKAO COORD2REGION"
         );
     }
 

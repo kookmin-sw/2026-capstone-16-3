@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
@@ -81,16 +82,65 @@ public class WebClientConfig {
                 .build();
     }
   
-    @Bean(name = "kakaoLocalWebClient")
-    public WebClient kakaoLocalWebClient(
-            WebClient.Builder builder,
+    @Bean
+    @Qualifier("kakaoWebClient")
+    public WebClient kakaoWebClient(
             @Value("${kakao.local.base-url:https://dapi.kakao.com}") String baseUrl,
             @Value("${kakao.local.rest-api-key}") String restApiKey
     ) {
-        return builder
+        return WebClient.builder()
                 .baseUrl(baseUrl)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK " + restApiKey) // ✅ 공백 포함
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "KakaoAK " + restApiKey)
                 .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+    }
+
+    @Bean
+    @Qualifier("naverWebClient")
+    public WebClient naverWebClient(
+            @Value("${naver.map.base-url}") String baseUrl,
+            @Value("${naver.map.connect-timeout-millis}") int connectTimeoutMillis,
+            @Value("${naver.map.read-timeout-seconds}") int readTimeoutSeconds
+    ) {
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis)
+                .responseTimeout(Duration.ofSeconds(readTimeoutSeconds))
+                .doOnConnected(conn ->
+                        conn.addHandlerLast(new ReadTimeoutHandler(readTimeoutSeconds, TimeUnit.SECONDS)));
+
+        return WebClient.builder()
+                .baseUrl(baseUrl)
+                .defaultHeader(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .build();
+    }
+
+    @Bean(name="opendataWebClient")
+    public WebClient opendataWebClient(
+            @Value("${webclient.opendata.connect-timeout-millis:5000}") int connectTimeoutMillis,
+            @Value("${webclient.opendata.read-timeout-seconds:20}") int readTimeoutSeconds,
+            @Value("${webclient.opendata.max-in-memory-size:4194304}") int maxInMemorySize
+    ) {
+        HttpClient httpClient = HttpClient.newConnection()
+                .keepAlive(false)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMillis)
+                .responseTimeout(Duration.ofSeconds(readTimeoutSeconds))
+                .headers(headers -> {
+                    headers.add(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE);
+                    headers.add(HttpHeaders.USER_AGENT, "Mozilla/5.0");
+                    headers.add(HttpHeaders.CONNECTION, "close");
+                })
+                .doOnConnected(conn ->
+                        conn.addHandlerLast(new ReadTimeoutHandler(readTimeoutSeconds, TimeUnit.SECONDS)));
+
+        ExchangeStrategies exchangeStrategies = ExchangeStrategies.builder()
+                .codecs(configurer ->
+                        configurer.defaultCodecs().maxInMemorySize(maxInMemorySize))
+                .build();
+
+        return WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .exchangeStrategies(exchangeStrategies)
                 .build();
     }
 }

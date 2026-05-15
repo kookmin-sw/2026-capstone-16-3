@@ -1,8 +1,11 @@
 package com.example.capstone.domain.user.dto.response;
 
+import com.example.capstone.domain.user.entity.SentenceLength;
+
 public record UserSettingResponse(
-        Integer sentenceLength,
+        SentenceLength sentenceLength,
         Integer vibrationStrength,
-        Boolean voiceGuidanceEnabled
+        Boolean voiceGuidanceEnabled,
+        Double guidanceSpeed
 ) {
 }
