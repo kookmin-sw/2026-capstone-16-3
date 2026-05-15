@@ -1,146 +1,37 @@
-/* html */
-html,
-body {
-  font-family: "Pretendard", -apple-system, BlinkMacSystemFont,
-    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+/* =========================================================
+   Base
+========================================================= */
+:root {
+  --color-primary: #f97316;
+  --color-text: #1f2937;
+  --color-muted: #4b5563;
+  --color-subtle: #64748b;
+  --color-border: #e5e7eb;
+  --color-border-light: #e2e8f0;
+  --color-bg: #ffffff;
+  --color-bg-soft: #f8fafc;
+  --color-dark: #111827;
+
+  --shadow-card: 0 8px 24px rgba(15, 23, 42, 0.06);
+  --shadow-card-hover: 0 18px 40px rgba(15, 23, 42, 0.12);
+  --shadow-image: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  --radius-sm: 0.8rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.2rem;
+  --radius-xl: 1.4rem;
 }
 
 html {
   scroll-behavior: smooth;
 }
 
-/* navbar */
-.masthead {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(16px);
-
-  border-bottom: 1px solid rgba(229, 231, 235, 0.7);
+html,
+body {
+  font-family: "Pretendard", -apple-system, BlinkMacSystemFont,
+    "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 
-.greedy-nav {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.greedy-nav .visible-links a {
-  position: relative;
-  padding: 0.8rem 1rem;
-  font-weight: 700;
-  transition: color 0.2s ease;
-}
-
-.greedy-nav .visible-links a:hover,
-.greedy-nav .visible-links a.active {
-  color: #f97316 !important;
-}
-
-.greedy-nav .visible-links a.active::after {
-  content: "";
-
-  position: absolute;
-  left: 0;
-  bottom: -6px;
-
-  width: 100%;
-  height: 3px;
-
-  border-radius: 999px;
-  background: #f97316;
-}
-
-/* section */
-.gilbut-section {
-  margin: 7rem 0;
-  animation: sectionFadeUp 0.7s ease both;
-}
-
-.gilbut-section h2 {
-  margin-bottom: 2rem;
-  font-size: 2.6rem;
-}
-
-.gilbut-section h3 {
-  margin-bottom: 1rem;
-}
-
-@keyframes sectionFadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* gilbut-card */
-.gilbut-card {
-  padding: 1.8rem;
-  border-radius: 1.4rem;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-  transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease,
-    border-color 0.22s ease;
-}
-
-.gilbut-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
-  border-color: #f97316;
-}
-
-.gilbut-card h3 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  font-size: 1.25rem;
-  letter-spacing: -0.03em;
-}
-
-.gilbut-card p {
-  margin: 0;
-  color: #4b5563;
-  line-height: 1.75;
-}
-
-.gilbut-card ul {
-  margin: 0;
-  padding-left: 1.1rem;
-}
-
-.gilbut-card li {
-  margin-bottom: 0.55rem;
-  line-height: 1.65;
-  color: #4b5563;
-}
-
-.gilbut-card img,
-.guide-card img,
-.team-card img {
-  border-radius: 1.2rem;
-}
-
-.guide-card img {
-  width: 100%;
-  margin-bottom: 1rem;
-}
-
-.team-card img {
-  width: 220px;
-  height: 220px;
-  object-fit: cover;
-  margin-bottom: 1.2rem;
-}
-
-/* Hero Section */
 .page__title,
 .page__hero-title,
 h1,
@@ -159,6 +50,165 @@ h3 {
   font-weight: 700;
 }
 
+
+/* =========================================================
+   Navbar
+========================================================= */
+.masthead {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.7);
+}
+
+.greedy-nav {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.greedy-nav .visible-links a {
+  position: relative;
+  padding: 0.8rem 1rem;
+  font-weight: 700;
+  transition: color 0.2s ease;
+}
+
+.greedy-nav .visible-links a:hover,
+.greedy-nav .visible-links a.active {
+  color: var(--color-primary) !important;
+}
+
+.greedy-nav .visible-links a.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -6px;
+
+  width: 100%;
+  height: 3px;
+
+  border-radius: 999px;
+  background: var(--color-primary);
+}
+
+
+/* =========================================================
+   Section
+========================================================= */
+.gilbut-section {
+  margin: 4rem 0;
+  animation: sectionFadeUp 0.7s ease both;
+}
+
+.gilbut-section h2 {
+  margin-bottom: 2rem;
+  font-size: 2.6rem;
+}
+
+.gilbut-section h3 {
+  margin-bottom: 1rem;
+}
+
+.section-eyebrow {
+  margin-bottom: 0.8rem;
+  color: var(--color-primary);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.section-lead {
+  max-width: 100%;
+  margin: 0 0 2.5rem;
+  color: var(--color-muted);
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+
+/* =========================================================
+   Common Card
+========================================================= */
+.gilbut-card {
+  padding: 1.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
+
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
+}
+
+.gilbut-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.gilbut-card h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  letter-spacing: -0.03em;
+}
+
+.gilbut-card p {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.75;
+}
+
+.gilbut-card ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.gilbut-card li {
+  margin-bottom: 0.55rem;
+  color: var(--color-muted);
+  line-height: 1.65;
+}
+
+
+/* =========================================================
+   Images
+========================================================= */
+.gilbut-card img,
+.guide-card img,
+.team-card img {
+  border-radius: var(--radius-lg);
+}
+
+.guide-card img {
+  width: 100%;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-image);
+}
+
+.team-card img {
+  width: 220px;
+  height: 220px;
+  margin-bottom: 1.2rem;
+  object-fit: cover;
+  border-radius: 24px;
+}
+
+.architecture-image {
+  width: 100%;
+  margin-bottom: 3rem;
+  border-radius: var(--radius-md);
+}
+
+
+/* =========================================================
+   Hero
+========================================================= */
 .page__hero--overlay {
   min-height: 72vh;
   display: flex;
@@ -178,17 +228,16 @@ h3 {
 }
 
 .page__hero--overlay .page__title {
+  margin-bottom: 1.2rem;
   font-size: clamp(3rem, 7vw, 6.5rem);
   font-weight: 900;
   letter-spacing: -0.06em;
-  margin-bottom: 1.2rem;
 }
 
 .page__hero--overlay .page__lead {
   font-size: clamp(1.25rem, 2vw, 2rem);
-  line-height: 1.6;
   font-weight: 600;
-  animation-delay: 0.15s;
+  line-height: 1.6;
 }
 
 .page__hero--overlay .btn {
@@ -200,16 +249,12 @@ h3 {
   animation-delay: 0.3s;
 }
 
-@keyframes heroFadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
+.page__hero--overlay .page__lead {
+  animation-delay: 0.15s;
+}
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.page__hero-caption {
+  display: none;
 }
 
 .btn--light-outline {
@@ -222,30 +267,14 @@ h3 {
   background: rgba(255, 255, 255, 0.18);
 }
 
-.page__hero-caption {
-  display: none;
-}
 
-@media (max-width: 900px) {
-  .page__hero--overlay .page__lead {
-    max-width: 100%;
-    white-space: normal;
-  }
-}
-
-/* Intro Section */
+/* =========================================================
+   Intro
+========================================================= */
 .intro-section {
   max-width: 980px;
   margin: 0 auto 6rem;
   text-align: center;
-}
-
-.section-eyebrow {
-  margin-bottom: 0.8rem;
-  color: #f97316;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .intro-section h2 {
@@ -258,73 +287,82 @@ h3 {
 .intro-section p:last-child {
   max-width: 760px;
   margin: 0 auto;
-  color: #4b5563;
+  color: var(--color-muted);
   font-size: 1.1rem;
   line-height: 1.9;
 }
 
-/* team */
-.team-grid {
+
+/* =========================================================
+   Grid Layouts
+========================================================= */
+.team-grid,
+.guide-grid,
+.feature-grid-4,
+.folder-structure,
+.reference-grid {
   display: grid;
+}
+
+.team-grid {
   grid-template-columns: repeat(3, 1fr);
-  gap: 3rem 2rem;
+  gap: 1.5rem 2rem;
   margin-top: 3rem;
 }
 
+.guide-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem 2rem;
+  margin-top: 3rem;
+}
+
+.feature-grid-4 {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin: 2.5rem 0;
+}
+
+.folder-structure {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.reference-grid {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+
+/* =========================================================
+   Team
+========================================================= */
 .team-card {
   text-align: center;
 }
 
-.team-card img {
-  width: 220px;
-  height: 220px;
-  object-fit: cover;
-  border-radius: 24px;
-  margin-bottom: 1.2rem;
-}
-
 .team-card h3 {
   margin: 0 0 0.8rem;
+  color: var(--color-text);
   font-size: 1.4rem;
-  color: #1f2937;
 }
 
 .team-card h3 span {
-  font-size: 1rem;
   color: #6b7280;
+  font-size: 1rem;
 }
 
 .team-card p {
   margin: 0;
-  line-height: 1.8;
+  color: var(--color-muted);
   font-size: 0.95rem;
-  color: #4b5563;
+  line-height: 1.8;
 }
 
-@media (max-width: 1000px) {
-  .team-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
 
-@media (max-width: 700px) {
-  .team-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .team-card img {
-    width: 200px;
-    height: 200px;
-  }
-}
-
-/* architecture */
-.architecture-image {
-  width: 100%;
-  border-radius: 1rem;
-  margin-bottom: 3rem;
-}
-
+/* =========================================================
+   Tech Stack
+========================================================= */
 .tech-stack-section h3 {
   margin-top: 2.5rem;
   margin-bottom: 1rem;
@@ -341,23 +379,12 @@ h3 {
   margin: 0;
 }
 
-/* guide */
-.guide-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-  margin-top: 3rem;
-}
 
+/* =========================================================
+   Guide
+========================================================= */
 .guide-card {
   text-align: center;
-}
-
-.guide-card img {
-  width: 100%;
-  border-radius: 1.2rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .guide-card h3 {
@@ -367,36 +394,20 @@ h3 {
 
 .guide-card p {
   margin: 0;
-  line-height: 1.7;
+  color: var(--color-muted);
   font-size: 0.95rem;
-  color: #4b5563;
+  line-height: 1.7;
 }
 
-@media (max-width: 1000px) {
-  .guide-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
 
-@media (max-width: 700px) {
-  .guide-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* feature */
-.feature-grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
-  margin: 2.5rem 0;
-}
-
+/* =========================================================
+   Feature
+========================================================= */
 .feature-card {
   padding: 1.5rem;
-  border-radius: 1.2rem;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-soft);
 }
 
 .feature-card h3 {
@@ -411,35 +422,19 @@ h3 {
 
 .feature-card li {
   margin-bottom: 0.6rem;
-  line-height: 1.6;
   font-size: 0.92rem;
+  line-height: 1.6;
 }
 
-@media (max-width: 1200px) {
-  .feature-grid-4 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
 
-@media (max-width: 700px) {
-  .feature-grid-4 {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* folder-structure */
-.folder-structure {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2rem;
-  margin-top: 3rem;
-}
-
+/* =========================================================
+   Folder Structure
+========================================================= */
 .folder-card {
   padding: 1.8rem;
-  border-radius: 1.2rem;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-soft);
 }
 
 .folder-card h3 {
@@ -450,8 +445,8 @@ h3 {
 .folder-card pre {
   padding: 1rem;
   overflow-x: auto;
-  border-radius: 0.8rem;
-  background: #111827;
+  border-radius: var(--radius-sm);
+  background: var(--color-dark);
   color: #f9fafb;
   font-size: 0.88rem;
 }
@@ -459,23 +454,14 @@ h3 {
 .folder-card p {
   margin-top: 1rem;
   margin-bottom: 0;
+  color: var(--color-muted);
   line-height: 1.7;
-  color: #4b5563;
 }
 
-@media (max-width: 900px) {
-  .folder-structure {
-    grid-template-columns: 1fr;
-  }
-}
 
-/* reference */
-.reference-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.25rem;
-}
-
+/* =========================================================
+   Reference
+========================================================= */
 .reference-card h3 {
   margin-bottom: 1rem;
   font-size: 1.15rem;
@@ -489,7 +475,7 @@ h3 {
 
 .reference-list li {
   padding: 0.85rem 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .reference-list li:last-child {
@@ -510,27 +496,85 @@ h3 {
 .reference-list span {
   display: block;
   margin-top: 0.25rem;
+  color: var(--color-subtle);
   font-size: 0.9rem;
   line-height: 1.5;
-  color: #64748b;
+}
+
+
+/* =========================================================
+   Animation
+========================================================= */
+@keyframes sectionFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* =========================================================
+   Responsive
+========================================================= */
+@media (max-width: 1200px) {
+  .feature-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 1000px) {
+  .team-grid,
+  .guide-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 900px) {
+  .page__hero--overlay .page__lead {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .folder-structure,
   .reference-grid {
     grid-template-columns: 1fr;
   }
 }
 
-/* section lead */
-.section-lead {
-  max-width: 100%;
-  margin: 0 0 2.5rem;
-  color: #4b5563;
-  font-size: 1.05rem;
-  line-height: 1.8;
+@media (max-width: 700px) {
+  .team-grid,
+  .guide-grid,
+  .feature-grid-4 {
+    grid-template-columns: 1fr;
+  }
+
+  .team-card img {
+    width: 200px;
+    height: 200px;
+  }
 }
 
-/* mobile */
+
+/* =========================================================
+   Accessibility
+========================================================= */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -539,4 +583,456 @@ h3 {
     transition: none !important;
     transform: none !important;
   }
+}
+
+/* =========================================================
+   Compact Section Scale
+   - section 전체 크기 축소
+   - 한 화면에 더 많은 내용이 들어오도록 조정
+========================================================= */
+
+.gilbut-section {
+  max-width: 1080px;
+  margin: 2.2rem auto;
+  padding: 0 1rem;
+}
+
+.gilbut-section h2 {
+  margin-bottom: 1.1rem;
+  font-size: clamp(1.8rem, 3vw, 2.2rem);
+  line-height: 1.2;
+}
+
+.gilbut-section h3 {
+  margin-bottom: 0.6rem;
+}
+
+.section-eyebrow {
+  margin-bottom: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.section-lead {
+  margin-bottom: 1.3rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.gilbut-card {
+  padding: 1.15rem;
+  border-radius: 1rem;
+}
+
+.gilbut-card h3 {
+  margin-bottom: 0.65rem;
+  font-size: 1.05rem;
+}
+
+.gilbut-card p {
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.gilbut-card li {
+  margin-bottom: 0.35rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+
+/* Grid 간격 축소 */
+.intro-grid,
+.team-grid,
+.guide-grid,
+.feature-grid-4,
+.folder-structure,
+.reference-grid {
+  gap: 1rem;
+  margin-top: 1.4rem;
+}
+
+.feature-grid-4 {
+  margin: 1.4rem 0;
+}
+
+.folder-structure {
+  margin-top: 1.4rem;
+}
+
+
+/* 이미지가 section 높이를 과하게 차지하지 않도록 제한 */
+.architecture-image {
+  max-height: 520px;
+  object-fit: contain;
+  margin-bottom: 1.4rem;
+}
+
+.guide-card img {
+  object-fit: cover;
+  margin-bottom: 0.7rem;
+}
+
+.team-card img {
+  width: 160px;
+  height: 160px;
+  margin-bottom: 0.8rem;
+}
+
+
+/* 기능 카드가 한눈에 들어오도록 더 압축 */
+.feature-card {
+  padding: 1rem;
+}
+
+.feature-card h3 {
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.feature-card ul {
+  padding-left: 1rem;
+}
+
+.feature-card li {
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+
+/* 코드/참고자료 카드도 높이 축소 */
+.folder-card {
+  padding: 1.1rem;
+}
+
+.folder-card pre {
+  padding: 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.folder-card p {
+  margin-top: 0.7rem;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.reference-list li {
+  padding: 0.55rem 0;
+}
+
+.reference-list a {
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.reference-list span {
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+
+/* 데스크톱에서 4개 기능 카드 유지 */
+@media (min-width: 1201px) {
+  .feature-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+
+/* 태블릿 이하에서는 너무 작아지지 않게 조정 */
+@media (max-width: 900px) {
+  .gilbut-section {
+    max-width: 100%;
+    margin: 2rem auto;
+  }
+
+  .section-lead {
+    font-size: 0.9rem;
+  }
+}
+
+/* =========================================================
+   Extra Compact Section Scale
+   - section 전체를 더 작게 압축
+   - 67% 축소 화면에 가깝게 보이도록 조정
+========================================================= */
+
+.gilbut-section {
+  max-width: 980px;
+  margin: 1.4rem auto;
+  padding: 0 0.8rem;
+}
+
+.gilbut-section h2 {
+  margin-bottom: 0.7rem;
+  font-size: clamp(1.45rem, 2.4vw, 1.85rem);
+  line-height: 1.15;
+}
+
+.gilbut-section h3 {
+  margin-bottom: 0.45rem;
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+
+.section-eyebrow {
+  margin-bottom: 0.25rem;
+  font-size: 0.7rem;
+}
+
+.section-lead {
+  margin-bottom: 0.85rem;
+  font-size: 0.78rem;
+  line-height: 1.42;
+}
+
+.gilbut-card {
+  padding: 0.8rem;
+  border-radius: 0.8rem;
+}
+
+.gilbut-card h3 {
+  margin-bottom: 0.45rem;
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.gilbut-card p {
+  margin-bottom: 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.38;
+}
+
+.gilbut-card ul {
+  margin-top: 0.4rem;
+  margin-bottom: 0;
+  padding-left: 0.95rem;
+}
+
+.gilbut-card li {
+  margin-bottom: 0.22rem;
+  font-size: 0.76rem;
+  line-height: 1.32;
+}
+
+
+/* Grid 여백 더 축소 */
+.intro-grid,
+.team-grid,
+.guide-grid,
+.feature-grid-4,
+.folder-structure,
+.reference-grid {
+  gap: 0.7rem;
+  margin-top: 0.9rem;
+}
+
+.feature-grid-4 {
+  margin: 0.9rem 0;
+}
+
+
+/* 이미지 높이 더 제한 */
+.architecture-image {
+  max-height: 430px;
+  object-fit: contain;
+  margin-bottom: 0.9rem;
+}
+
+.guide-card img {
+  // max-height: 145px;
+  object-fit: cover;
+  margin-bottom: 0.5rem;
+}
+
+.team-card img {
+  width: 125px;
+  height: 125px;
+  margin-bottom: 0.55rem;
+}
+
+
+/* 기능 카드 추가 압축 */
+.feature-card {
+  padding: 0.75rem;
+}
+
+.feature-card h3 {
+  font-size: 0.86rem;
+  line-height: 1.25;
+}
+
+.feature-card p {
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.feature-card ul {
+  padding-left: 0.9rem;
+}
+
+.feature-card li {
+  font-size: 0.72rem;
+  line-height: 1.28;
+}
+
+
+/* 폴더 구조 / 참고자료 압축 */
+.folder-card {
+  padding: 0.85rem;
+}
+
+.folder-card pre {
+  padding: 0.55rem;
+  font-size: 0.68rem;
+  line-height: 1.28;
+}
+
+.folder-card p {
+  margin-top: 0.45rem;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.reference-list li {
+  padding: 0.38rem 0;
+}
+
+.reference-list a {
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.reference-list span {
+  font-size: 0.7rem;
+  line-height: 1.25;
+}
+
+
+/* 모바일에서는 너무 작아지지 않도록 약간 복구 */
+@media (max-width: 768px) {
+  .gilbut-section {
+    margin: 1.8rem auto;
+    padding: 0 1rem;
+  }
+
+  .gilbut-section h2 {
+    font-size: 1.55rem;
+  }
+
+  .section-lead,
+  .gilbut-card p,
+  .gilbut-card li {
+    font-size: 0.84rem;
+  }
+
+  .gilbut-card {
+    padding: 1rem;
+  }
+}
+
+/* tech-stack-section 내부 제목 margin 제거 */
+.tech-stack-section h1,
+.tech-stack-section h2,
+.tech-stack-section h3,
+.tech-stack-section h4,
+.tech-stack-section h5,
+.tech-stack-section h6 {
+  margin: 0;
+}
+
+/* folder-structure 내부 텍스트 overflow 방지 */
+.folder-structure {
+  min-width: 0;
+}
+
+.folder-structure .folder-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.folder-structure .folder-card pre {
+  max-width: 100%;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+
+  font-size: 0.58rem;
+  line-height: 1.25;
+}
+
+.folder-structure .folder-card code {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+
+  font-size: 0.58rem;
+  line-height: 1.25;
+}
+
+/* =========================================================
+   Folder Structure - Force Compact Code Block
+   - folder structure 내부 코드 글씨 강제 축소
+   - 긴 경로/파일명 때문에 가로 스크롤 생기는 문제 방지
+========================================================= */
+
+.folder-structure {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0.6rem !important;
+  min-width: 0 !important;
+}
+
+.folder-structure .folder-card {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  padding: 0.65rem !important;
+}
+
+/* 코드 블록 전체 강제 축소 */
+.folder-structure .folder-card pre,
+.folder-structure .folder-card code,
+.folder-structure .folder-card pre *,
+.folder-structure .folder-card code * {
+  font-size: 9px !important;
+  line-height: 1.25 !important;
+  font-family: Consolas, Monaco, "Courier New", monospace !important;
+}
+
+/* pre가 width를 밀어내지 않도록 처리 */
+.folder-structure .folder-card pre {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0.45rem !important;
+
+  overflow-x: hidden !important;
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* code 내부 줄바꿈 강제 */
+.folder-structure .folder-card code {
+  display: block !important;
+  max-width: 100% !important;
+
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* 설명 텍스트도 같이 축소 */
+.folder-structure .folder-card h3 {
+  margin-bottom: 0.45rem !important;
+  font-size: 0.82rem !important;
+  line-height: 1.25 !important;
+}
+
+.folder-structure .folder-card p {
+  margin-top: 0.45rem !important;
+  font-size: 0.68rem !important;
+  line-height: 1.35 !important;
 }
