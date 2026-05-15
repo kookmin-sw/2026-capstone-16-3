@@ -185,7 +185,6 @@ h3 {
 }
 
 .page__hero--overlay .page__lead {
-  max-width: 760px;
   font-size: clamp(1.25rem, 2vw, 2rem);
   line-height: 1.6;
   font-weight: 600;
@@ -225,6 +224,13 @@ h3 {
 
 .page__hero-caption {
   display: none;
+}
+
+@media (max-width: 900px) {
+  .page__hero--overlay .page__lead {
+    max-width: 100%;
+    white-space: normal;
+  }
 }
 
 /* Intro Section */
@@ -517,7 +523,7 @@ h3 {
 
 /* section lead */
 .section-lead {
-  max-width: 860px;
+  max-width: 100%;
   margin: 0 0 2.5rem;
   color: #4b5563;
   font-size: 1.05rem;
