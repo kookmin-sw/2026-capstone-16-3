@@ -72,6 +72,8 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   Map<int, CrosswalkInfo?> _crosswalkCache = {};
   int _prefetchGeneration = 0;
 
+  bool _userInitiatedStop = false;
+
   // 장애물 탐지 (카메라 + WS)
   StreamSubscription<DetectionEvent>? _wsSub;
   Timer? _sweepTimer;
@@ -121,6 +123,22 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     await DetectionWsService().connect();
     _wsSub = DetectionWsService().eventStream?.listen(_onObstacleEvent);
     _sweepTimer = Timer.periodic(_sweepInterval, (_) => _sweepStaleObstacles());
+    TtsService().speak('통합 모드를 시작합니다.', interrupt: true);
+  }
+
+  Future<void> _handleStop() async {
+    _userInitiatedStop = true;
+    SoundEffectService().play(SoundEffect.actionStop);
+    VibrationService().vibrate(VibrationEffect.actionStop);
+    await TtsService().stop();
+    if (_withObstacleDetection) {
+      TtsService().speak('통합 모드를 종료합니다.', interrupt: true);
+    }
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    if (mounted) Navigator.pop(context);
   }
 
   void _onObstacleEvent(DetectionEvent event) {
@@ -534,7 +552,9 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       CameraService().stop();
       DetectionWsService().disconnect();
     }
-    TtsService().stop();
+    if (!_userInitiatedStop) {
+      TtsService().stop();
+    }
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -599,15 +619,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                             label: '안내 중지',
                             icon: Icons.stop_circle_outlined,
                             backgroundColor: ColorCollection.red,
-                            onTap: () {
-                              SoundEffectService().play(SoundEffect.actionStop);
-                              VibrationService().vibrate(VibrationEffect.actionStop);
-                              SystemChrome.setPreferredOrientations([
-                                DeviceOrientation.portraitUp,
-                                DeviceOrientation.portraitDown,
-                              ]);
-                              Navigator.pop(context);
-                            },
+                            onTap: _handleStop,
                           ),
                         ),
                       ],
