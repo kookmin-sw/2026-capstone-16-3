@@ -247,6 +247,15 @@
 
 ---
 
+## 📂 발표 자료
+
+| 구분 | 자료 |
+| --- | --- |
+| 중간발표 | [중간발표 자료 보기](docs/assets/중간발표.pdf) |
+| 최종발표 | [최종발표 자료 보기](docs/assets/최종발표.pdf) |
+
+---
+
 ## 📚 참고 자료
 ### 접근성 및 사용자 경험
 - [Web Content Accessibility Guidelines (WCAG) 2.1](https://www.w3.org/TR/WCAG21/)
