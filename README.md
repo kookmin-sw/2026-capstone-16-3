@@ -57,7 +57,7 @@
 ### 서울시립노원시각장애인복지관 방문 및 기능 검증
 
 <div align="center">
-  <img src="docs/assets/images/서울시립노원시각장애인복지관.png" alt="서울시립노원시각장애인복지관 방문" width="100%">
+  <img src="docs/assets/images/서울시립노원시각장애인복지관.png" alt="서울시립노원시각장애인복지관 방문" width="90%">
 </div>
 
 - 저시력 시각장애인 사용자 및 복지관 직원 대상 앱 시연
