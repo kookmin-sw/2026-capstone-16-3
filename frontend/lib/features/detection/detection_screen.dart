@@ -48,7 +48,9 @@ class _DetectionScreenState extends State<DetectionScreen> {
       context,
       needsCamera: true,
       featureName: '장애물 탐지',
-    )) return;
+    )) {
+      return;
+    }
 
     SoundEffectService().play(SoundEffect.actionStart);
     VibrationService().vibrate(VibrationEffect.actionStart);
@@ -76,6 +78,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
       _obstacles.clear();
     });
 
+    TtsService().speak('실외 장애물 탐지를 시작합니다.', interrupt: true);
     widget.onDetectingChanged?.call(true);
   }
 
@@ -90,6 +93,7 @@ class _DetectionScreenState extends State<DetectionScreen> {
     _wsSub = null;
 
     await TtsService().stop();
+    TtsService().speak('실외 장애물 탐지를 종료합니다.', interrupt: true);
     await CameraService().stop();
     await DetectionWsService().disconnect();
 
