@@ -64,9 +64,13 @@
 - 장애물 탐지·길찾기 사용성 검증 및 개선사항 피드백 수집
 
 ### 서울시립노원시각장애인복지관 방문 및 기능 검증
-
 <div align="center">
-  <img src="docs/assets/images/서울시립노원시각장애인복지관.png" alt="서울시립노원시각장애인복지관 방문" width="90%">
+  <table>
+    <tr>
+      <td width="50%"><img src="docs/assets/images/서울시립노원시각장애인복지관.png" alt="서울시립노원시각장애인복지관" width="100%"></td>
+      <td width="50%"><img src="docs/assets/images/서울시립노원시각장애인복지관2.png" alt="서울시립노원시각장애인복지관 방문2" width="72%"></td>
+    </tr>
+  </table>
 </div>
 
 - 저시력 시각장애인 사용자 및 복지관 직원 대상 앱 시연
