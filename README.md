@@ -215,11 +215,30 @@
 ---
 
 ## 📚 참고 자료
+### 접근성 및 사용자 경험
+- [Web Content Accessibility Guidelines (WCAG) 2.1](https://www.w3.org/TR/WCAG21/)
+- [Accessible Typography Guidelines for Inclusive Mobile App Design](https://moldstud.com/articles/p-inclusive-mobile-app-typography-guidelines-crafting-accessible-designs-for-all-users)
+- [The design of auditory user interfaces for blind users](https://dl.acm.org/doi/10.1145/572020.572038)
 
+### 지도·위치·외부 API
 - [TMAP 보행자 API 공식 문서](https://tmapapi.tmapmobility.com/)
-- [Ultralytics YOLOv11 문서](https://docs.ultralytics.com/)
-- [공공데이터포털 — 음향신호기 데이터](https://www.data.go.kr/)
-- 추가 참고 자료는 업데이트 예정입니다.
+- [SK Open API 보행자 경로 안내](https://openapi.sk.com/products/detail?linkMenuSeq=45)
+- [Kakao Developers Local API 문서](https://developers.kakao.com/docs/ko/local/dev-guide)
+- [Naver Maps Geocoding API 문서](https://api.ncloud-docs.com/docs/ai-naver-mapsgeocoding-geocode)
+
+### AI 모델 및 연구 논문
+- [Ultralytics YOLO 문서](https://docs.ultralytics.com/)
+- [VisionGPT: LLM-Assisted Real-Time Anomaly Detection for Visual Navigation](https://arxiv.org/abs/2403.12415)
+- [SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers](https://arxiv.org/abs/2105.15203)
+- [Hugging Face SegFormer 문서](https://huggingface.co/docs/transformers/en/model_doc/segformer)
+- [Depth Anything V2 GitHub](https://github.com/DepthAnything/Depth-Anything-V2)
+- [Depth Anything V2](https://arxiv.org/abs/2406.09414)
+
+### 데이터 및 공공 자료
+- [공공데이터포털](https://www.data.go.kr/)
+- [서울 열린데이터광장](https://data.seoul.go.kr/)
+- [AIHub 인도 보행 영상 데이터셋](https://aihub.or.kr/aidata/136)
+- [Roboflow Public Datasets](https://public.roboflow.com/)
 
 ---
 
