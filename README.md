@@ -11,11 +11,11 @@
 
 ## 🌐 프로젝트 소개 사이트
 
-[https://kookmin-sw.github.io/2026-capstone-16/](https://kookmin-sw.github.io/2026-capstone-16/)
+["길벗" 프로젝트 소개 사이트"](https://kookmin-sw.github.io/2026-capstone-16/)
 
 ## 🎬프로젝트 소개 영상
 
-추후 프로젝트 소개 영상 링크 추가 예정
+["길벗" 프로젝트 소개 영상](https://www.youtube.com/watch?v=9PLm9LIociU)
 
 ## 📌 목차
 
