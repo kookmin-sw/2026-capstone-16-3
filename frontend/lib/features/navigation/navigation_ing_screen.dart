@@ -21,6 +21,7 @@ import 'package:safepath/service/navigation_service.dart';
 import 'package:safepath/service/navigation_tts_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/tts_service.dart';
+import 'package:safepath/service/user_settings_service.dart';
 import 'package:safepath/service/vibration_service.dart';
 import 'dart:ui' show DisplayFeatureType;
 import 'package:flutter/services.dart';
@@ -113,7 +114,14 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
         if (_withObstacleDetection) {
           _startObstacleDetection();
         } else {
-          TtsService().speak('길찾기를 시작합니다.', interrupt: true, channel: TtsChannel.navigation);
+          TtsService().speak(
+            switch (UserSettingsService().sentenceLength) {
+              MessageLength.short => '길찾기 시작',
+              MessageLength.medium || MessageLength.long => '길찾기를 시작합니다.',
+            },
+            interrupt: true,
+            channel: TtsChannel.navigation,
+          );
         }
         _routeLoaded = true;
       }
@@ -127,7 +135,13 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     await DetectionWsService().connect();
     _wsSub = DetectionWsService().eventStream?.listen(_onObstacleEvent);
     _sweepTimer = Timer.periodic(_sweepInterval, (_) => _sweepStaleObstacles());
-    TtsService().speak('통합 모드를 시작합니다.', interrupt: true);
+    TtsService().speak(
+      switch (UserSettingsService().sentenceLength) {
+        MessageLength.short => '통합 모드 시작',
+        MessageLength.medium || MessageLength.long => '통합 모드를 시작합니다.',
+      },
+      interrupt: true,
+    );
   }
 
   Future<void> _handleStop() async {
@@ -136,9 +150,21 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     VibrationService().vibrate(VibrationEffect.actionStop);
     await TtsService().stop();
     if (_withObstacleDetection) {
-      TtsService().speak('통합 모드를 종료합니다.', interrupt: true);
+      TtsService().speak(
+        switch (UserSettingsService().sentenceLength) {
+          MessageLength.short => '통합 모드 종료',
+          MessageLength.medium || MessageLength.long => '통합 모드를 종료합니다.',
+        },
+        interrupt: true,
+      );
     } else {
-      TtsService().speak('길찾기를 종료합니다.', interrupt: true);
+      TtsService().speak(
+        switch (UserSettingsService().sentenceLength) {
+          MessageLength.short => '길찾기 종료',
+          MessageLength.medium || MessageLength.long => '길찾기를 종료합니다.',
+        },
+        interrupt: true,
+      );
     }
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,

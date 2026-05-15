@@ -120,6 +120,9 @@ class UserSettingsService {
 
   static const String _baseUrl = String.fromEnvironment('BASE_URL');
 
+  MessageLength _cachedSentenceLength = MessageLength.medium;
+  MessageLength get sentenceLength => _cachedSentenceLength;
+
   // 로컬 전용 설정 키 (서버 비관여)
   static const String _kPushNotif = 'push_notification_enabled';
   static const String _kSoundEffect = 'sound_effect_enabled';
@@ -153,6 +156,7 @@ class UserSettingsService {
       soundEffectEnabled: localSound,
     );
 
+    _cachedSentenceLength = settings.sentenceLength;
     debugPrint(
       '✅ [Settings] 로드 완료 → '
       'sentenceLength=${settings.sentenceLength.backendValue}, '
@@ -170,6 +174,8 @@ class UserSettingsService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kPushNotif, settings.pushNotificationEnabled);
     await prefs.setBool(_kSoundEffect, settings.soundEffectEnabled);
+
+    _cachedSentenceLength = settings.sentenceLength;
 
     // 서버에는 서버 관리 필드만 전송
     final uri = Uri.parse('$_baseUrl/api/users/me/settings');

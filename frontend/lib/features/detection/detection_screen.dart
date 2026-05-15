@@ -11,6 +11,7 @@ import 'package:safepath/service/camera_service.dart';
 import 'package:safepath/service/detection_ws_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/tts_service.dart';
+import 'package:safepath/service/user_settings_service.dart';
 import 'package:safepath/service/vibration_service.dart';
 
 class DetectionScreen extends StatefulWidget {
@@ -78,7 +79,13 @@ class _DetectionScreenState extends State<DetectionScreen> {
       _obstacles.clear();
     });
 
-    TtsService().speak('실외 장애물 탐지를 시작합니다.', interrupt: true);
+    TtsService().speak(
+      switch (UserSettingsService().sentenceLength) {
+        MessageLength.short => '탐지 시작',
+        MessageLength.medium || MessageLength.long => '실외 장애물 탐지를 시작합니다.',
+      },
+      interrupt: true,
+    );
     widget.onDetectingChanged?.call(true);
   }
 
@@ -93,7 +100,13 @@ class _DetectionScreenState extends State<DetectionScreen> {
     _wsSub = null;
 
     await TtsService().stop();
-    TtsService().speak('실외 장애물 탐지를 종료합니다.', interrupt: true);
+    TtsService().speak(
+      switch (UserSettingsService().sentenceLength) {
+        MessageLength.short => '탐지 종료',
+        MessageLength.medium || MessageLength.long => '실외 장애물 탐지를 종료합니다.',
+      },
+      interrupt: true,
+    );
     await CameraService().stop();
     await DetectionWsService().disconnect();
 
