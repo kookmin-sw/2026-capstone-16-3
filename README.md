@@ -24,6 +24,7 @@
 - [시스템 구조도](#️-시스템-구조도)
 - [기술 스택](#️-기술-스택)
 - [사용법](#-사용법)
+- [실행하기](#-실행하기)
 - [폴더 구조](#-폴더-구조)
 - [기대 효과](#-기대-효과)
 - [팀원 소개](#-팀16-리트리버-소개)
@@ -185,6 +186,43 @@
 4. **저장된 장소 관리** — 자주 가는 장소를 저장하고, 카테고리 아이콘으로 구분하여 빠르게 선택합니다.
 5. **길찾기 중 / 설정 화면** — 남은 거리·소요 시간·위험 요소를 안내하고, 안내 문구 길이와 진동 강도를 조절합니다.
 6. **설정 / 계정 화면** — 알림·소리 설정, 앱 정보 확인, 로그아웃 및 회원 탈퇴를 할 수 있습니다.
+
+## 🚀 실행하기
+
+실행 전 각 모듈의 환경변수(API 키, 서버 주소 등)를 설정해야 합니다.
+
+### 사전 요구사항
+
+| 모듈 | 필요 환경 |
+| --- | --- |
+| Frontend | Flutter SDK 3.x, Dart 3.x |
+| Backend | Java 17+, Docker & Docker Compose |
+| AI | Python 3.10+, CUDA 지원 GPU (권장) |
+
+### Frontend 실행
+
+```bash
+cd frontend
+flutter pub get
+flutter run --dart-define=BASE_URL=<서버_주소>
+```
+
+### Backend 실행
+
+```bash
+cd server
+./gradlew bootRun
+```
+
+> API 문서: [Swagger UI](https://gilbeot.p-e.kr/swagger-ui/index.html)
+
+### AI 서버 실행
+
+```bash
+cd ai
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
 
 ## 📁 폴더 구조
 
