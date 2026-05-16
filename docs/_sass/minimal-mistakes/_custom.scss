@@ -1,5 +1,5 @@
 /* =========================================================
-   Base
+   Base Tokens
 ========================================================= */
 :root {
   --color-primary: #f97316;
@@ -10,13 +10,11 @@
   --color-border-light: #e2e8f0;
   --color-bg: #ffffff;
   --color-bg-soft: #f8fafc;
-  --color-dark: #111827;
 
   --shadow-card: 0 8px 24px rgba(15, 23, 42, 0.06);
   --shadow-card-hover: 0 18px 40px rgba(15, 23, 42, 0.12);
   --shadow-image: 0 4px 12px rgba(0, 0, 0, 0.08);
 
-  --radius-sm: 0.8rem;
   --radius-md: 1rem;
   --radius-lg: 1.2rem;
   --radius-xl: 1.4rem;
@@ -58,7 +56,6 @@ h3 {
   position: sticky;
   top: 0;
   z-index: 1000;
-
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(229, 231, 235, 0.7);
@@ -86,123 +83,10 @@ h3 {
   position: absolute;
   left: 0;
   bottom: -6px;
-
   width: 100%;
   height: 3px;
-
   border-radius: 999px;
   background: var(--color-primary);
-}
-
-
-/* =========================================================
-   Section
-========================================================= */
-.gilbut-section {
-  margin: 4rem 0;
-  animation: sectionFadeUp 0.7s ease both;
-}
-
-.gilbut-section h2 {
-  margin-bottom: 2rem;
-  font-size: 2.6rem;
-}
-
-.gilbut-section h3 {
-  margin-bottom: 1rem;
-}
-
-.section-eyebrow {
-  margin-bottom: 0.8rem;
-  color: var(--color-primary);
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.section-lead {
-  max-width: 100%;
-  margin: 0 0 2.5rem;
-  color: var(--color-muted);
-  font-size: 1.05rem;
-  line-height: 1.8;
-}
-
-
-/* =========================================================
-   Common Card
-========================================================= */
-.gilbut-card {
-  padding: 1.8rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  background: var(--color-bg);
-  box-shadow: var(--shadow-card);
-
-  transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease,
-    border-color 0.22s ease;
-}
-
-.gilbut-card:hover {
-  transform: translateY(-6px);
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-card-hover);
-}
-
-.gilbut-card h3 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-  font-size: 1.25rem;
-  letter-spacing: -0.03em;
-}
-
-.gilbut-card p {
-  margin: 0;
-  color: var(--color-muted);
-  line-height: 1.75;
-}
-
-.gilbut-card ul {
-  margin: 0;
-  padding-left: 1.1rem;
-}
-
-.gilbut-card li {
-  margin-bottom: 0.55rem;
-  color: var(--color-muted);
-  line-height: 1.65;
-}
-
-
-/* =========================================================
-   Images
-========================================================= */
-.gilbut-card img,
-.guide-card img,
-.team-card img {
-  border-radius: var(--radius-lg);
-}
-
-.guide-card img {
-  width: 100%;
-  margin-bottom: 1rem;
-  box-shadow: var(--shadow-image);
-}
-
-.team-card img {
-  width: 220px;
-  height: 220px;
-  margin-bottom: 1.2rem;
-  object-fit: cover;
-  border-radius: 24px;
-}
-
-.architecture-image {
-  width: 100%;
-  margin-bottom: 3rem;
-  border-radius: var(--radius-md);
 }
 
 
@@ -238,6 +122,7 @@ h3 {
   font-size: clamp(1.25rem, 2vw, 2rem);
   font-weight: 600;
   line-height: 1.6;
+  animation-delay: 0.15s;
 }
 
 .page__hero--overlay .btn {
@@ -247,10 +132,6 @@ h3 {
   border-radius: 999px;
   font-weight: 800;
   animation-delay: 0.3s;
-}
-
-.page__hero--overlay .page__lead {
-  animation-delay: 0.15s;
 }
 
 .page__hero-caption {
@@ -265,6 +146,46 @@ h3 {
 
 .btn--light-outline:hover {
   background: rgba(255, 255, 255, 0.18);
+}
+
+
+/* =========================================================
+   Section
+========================================================= */
+.gilbut-section {
+  max-width: 980px;
+  margin: 1.4rem auto;
+  padding: 0 0.8rem;
+  animation: sectionFadeUp 0.7s ease both;
+}
+
+.gilbut-section h2 {
+  margin-bottom: 0.7rem;
+  font-size: clamp(1.45rem, 2.4vw, 1.85rem);
+  line-height: 1.15;
+}
+
+.gilbut-section h3 {
+  margin-bottom: 0.45rem;
+  font-size: 0.98rem;
+  line-height: 1.25;
+}
+
+.section-eyebrow {
+  margin-bottom: 0.25rem;
+  color: var(--color-primary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.section-lead {
+  max-width: 100%;
+  margin: 0 0 0.85rem;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  line-height: 1.42;
 }
 
 
@@ -294,6 +215,55 @@ h3 {
 
 
 /* =========================================================
+   Cards
+========================================================= */
+.gilbut-card {
+  padding: 0.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.8rem;
+  background: var(--color-bg);
+  box-shadow: var(--shadow-card);
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease;
+}
+
+.gilbut-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.gilbut-card h3 {
+  margin-top: 0;
+  margin-bottom: 0.45rem;
+  font-size: 0.9rem;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+}
+
+.gilbut-card p {
+  margin: 0 0 0.45rem;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  line-height: 1.38;
+}
+
+.gilbut-card ul {
+  margin: 0.4rem 0 0;
+  padding-left: 0.95rem;
+}
+
+.gilbut-card li {
+  margin-bottom: 0.22rem;
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  line-height: 1.32;
+}
+
+
+/* =========================================================
    Grid Layouts
 ========================================================= */
 .team-grid,
@@ -303,27 +273,60 @@ h3 {
   display: grid;
 }
 
-.team-grid {
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem 2rem;
-  margin-top: 3rem;
+.intro-grid,
+.team-grid,
+.guide-grid,
+.feature-grid-4,
+.reference-grid {
+  gap: 0.7rem;
+  margin-top: 0.9rem;
 }
 
+.team-grid,
 .guide-grid {
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem 2rem;
-  margin-top: 3rem;
 }
 
 .feature-grid-4 {
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
-  margin: 2.5rem 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0.9rem 0;
 }
 
 .reference-grid {
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.25rem;
+}
+
+
+/* =========================================================
+   Images
+========================================================= */
+.gilbut-card img,
+.guide-card img,
+.team-card img {
+  border-radius: var(--radius-lg);
+}
+
+.architecture-image {
+  width: 100%;
+  max-height: 430px;
+  object-fit: contain;
+  margin-bottom: 0.9rem;
+  border-radius: var(--radius-md);
+}
+
+.guide-card img {
+  width: 100%;
+  object-fit: cover;
+  margin-bottom: 0.5rem;
+  box-shadow: var(--shadow-image);
+}
+
+.team-card img {
+  width: 125px;
+  height: 125px;
+  margin-bottom: 0.55rem;
+  object-fit: cover;
+  border-radius: 24px;
 }
 
 
@@ -342,7 +345,7 @@ h3 {
 
 .team-card h3 span {
   color: #6b7280;
-  font-size: 1rem;
+  font-size: 0.7rem;
 }
 
 .team-card p {
@@ -350,26 +353,6 @@ h3 {
   color: var(--color-muted);
   font-size: 0.95rem;
   line-height: 1.8;
-}
-
-
-/* =========================================================
-   Tech Stack
-========================================================= */
-.tech-stack-section h3 {
-  margin-top: 2.5rem;
-  margin-bottom: 1rem;
-}
-
-.badge-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.7rem;
-  margin-bottom: 1.5rem;
-}
-
-.badge-group img {
-  margin: 0;
 }
 
 
@@ -397,7 +380,7 @@ h3 {
    Feature
 ========================================================= */
 .feature-card {
-  padding: 1.5rem;
+  padding: 0.75rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-bg-soft);
@@ -405,22 +388,53 @@ h3 {
 
 .feature-card h3 {
   margin-top: 0;
-  font-size: 1.15rem;
+  font-size: 0.86rem;
+  line-height: 1.25;
+}
+
+.feature-card p {
+  font-size: 0.76rem;
+  line-height: 1.35;
 }
 
 .feature-card ul {
   margin: 0;
-  padding-left: 1.1rem;
+  padding-left: 0.9rem;
 }
 
 .feature-card li {
   margin-bottom: 0.6rem;
-  font-size: 0.92rem;
-  line-height: 1.6;
+  font-size: 0.72rem;
+  line-height: 1.28;
 }
 
+
 /* =========================================================
-   Reference
+   Tech Stack
+========================================================= */
+.tech-stack-section h1,
+.tech-stack-section h2,
+.tech-stack-section h3,
+.tech-stack-section h4,
+.tech-stack-section h5,
+.tech-stack-section h6 {
+  margin: 0;
+}
+
+.badge-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-bottom: 1.5rem;
+}
+
+.badge-group img {
+  margin: 0;
+}
+
+
+/* =========================================================
+   References
 ========================================================= */
 .reference-card h3 {
   margin-bottom: 1rem;
@@ -434,7 +448,7 @@ h3 {
 }
 
 .reference-list li {
-  padding: 0.85rem 0;
+  padding: 0.38rem 0;
   border-bottom: 1px solid var(--color-border-light);
 }
 
@@ -444,8 +458,9 @@ h3 {
 
 .reference-list a {
   display: block;
+  font-size: 0.78rem;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.25;
   text-decoration: none;
 }
 
@@ -457,8 +472,8 @@ h3 {
   display: block;
   margin-top: 0.25rem;
   color: var(--color-subtle);
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.7rem;
+  line-height: 1.25;
 }
 
 
@@ -493,12 +508,6 @@ h3 {
 /* =========================================================
    Responsive
 ========================================================= */
-@media (max-width: 1200px) {
-  .feature-grid-4 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
 @media (max-width: 1000px) {
   .team-grid,
   .guide-grid {
@@ -511,215 +520,7 @@ h3 {
     max-width: 100%;
     white-space: normal;
   }
-}
 
-@media (max-width: 700px) {
-  .team-grid,
-  .guide-grid,
-  .feature-grid-4 {
-    grid-template-columns: 1fr;
-  }
-
-  .team-card img {
-    width: 200px;
-    height: 200px;
-  }
-}
-
-
-/* =========================================================
-   Accessibility
-========================================================= */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition: none !important;
-    transform: none !important;
-  }
-}
-
-/* =========================================================
-   Compact Layout Override
-   - 전체 섹션 크기 압축
-   - 카드, 이미지, 코드 블록 크기 정리
-   - 중복 선언 및 !important 최소화
-========================================================= */
-
-.gilbut-section {
-  max-width: 980px;
-  margin: 1.4rem auto;
-  padding: 0 0.8rem;
-}
-
-.gilbut-section h2 {
-  margin-bottom: 0.7rem;
-  font-size: clamp(1.45rem, 2.4vw, 1.85rem);
-  line-height: 1.15;
-}
-
-.gilbut-section h3 {
-  margin-bottom: 0.45rem;
-  font-size: 0.98rem;
-  line-height: 1.25;
-}
-
-.section-eyebrow {
-  margin-bottom: 0.25rem;
-  font-size: 0.7rem;
-}
-
-.section-lead {
-  max-width: 100%;
-  margin-bottom: 0.85rem;
-  font-size: 0.78rem;
-  line-height: 1.42;
-}
-
-.gilbut-card {
-  padding: 0.8rem;
-  border-radius: 0.8rem;
-}
-
-.gilbut-card h3 {
-  margin-bottom: 0.45rem;
-  font-size: 0.9rem;
-  line-height: 1.25;
-}
-
-.gilbut-card p {
-  margin-bottom: 0.45rem;
-  font-size: 0.78rem;
-  line-height: 1.38;
-}
-
-.gilbut-card ul {
-  margin-top: 0.4rem;
-  margin-bottom: 0;
-  padding-left: 0.95rem;
-}
-
-.gilbut-card li {
-  margin-bottom: 0.22rem;
-  font-size: 0.76rem;
-  line-height: 1.32;
-}
-
-
-/* =========================================================
-   Compact Grid
-========================================================= */
-
-.intro-grid,
-.team-grid,
-.guide-grid,
-.feature-grid-4,
-.reference-grid {
-  gap: 0.7rem;
-  margin-top: 0.9rem;
-}
-
-.feature-grid-4 {
-  margin: 0.9rem 0;
-}
-
-@media (min-width: 1201px) {
-  .feature-grid-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-
-/* =========================================================
-   Compact Images
-========================================================= */
-
-.architecture-image {
-  max-height: 430px;
-  object-fit: contain;
-  margin-bottom: 0.9rem;
-}
-
-.guide-card img {
-  max-height: 145px;
-  object-fit: cover;
-  margin-bottom: 0.5rem;
-}
-
-.team-card img {
-  width: 125px;
-  height: 125px;
-  margin-bottom: 0.55rem;
-}
-
-
-/* =========================================================
-   Compact Feature Card
-========================================================= */
-
-.feature-card {
-  padding: 0.75rem;
-}
-
-.feature-card h3 {
-  font-size: 0.86rem;
-  line-height: 1.25;
-}
-
-.feature-card p {
-  font-size: 0.76rem;
-  line-height: 1.35;
-}
-
-.feature-card ul {
-  padding-left: 0.9rem;
-}
-
-.feature-card li {
-  font-size: 0.72rem;
-  line-height: 1.28;
-}
-
-
-/* =========================================================
-   Tech Stack
-========================================================= */
-
-.tech-stack-section h1,
-.tech-stack-section h2,
-.tech-stack-section h3,
-.tech-stack-section h4,
-.tech-stack-section h5,
-.tech-stack-section h6 {
-  margin: 0;
-}
-
-
-/* =========================================================
-   Compact References
-========================================================= */
-
-.reference-list li {
-  padding: 0.38rem 0;
-}
-
-.reference-list a {
-  font-size: 0.78rem;
-  line-height: 1.25;
-}
-
-.reference-list span {
-  font-size: 0.7rem;
-  line-height: 1.25;
-}
-
-
-/* =========================================================
-   Responsive Restore
-========================================================= */
-
-@media (max-width: 900px) {
   .gilbut-section {
     max-width: 100%;
     margin: 1.8rem auto;
@@ -748,5 +549,27 @@ h3 {
 
   .guide-card img {
     max-height: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .team-grid,
+  .guide-grid,
+  .feature-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================================================
+   Accessibility
+========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
   }
 }
