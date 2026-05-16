@@ -299,7 +299,6 @@ h3 {
 .team-grid,
 .guide-grid,
 .feature-grid-4,
-.folder-structure,
 .reference-grid {
   display: grid;
 }
@@ -320,12 +319,6 @@ h3 {
   grid-template-columns: repeat(4, 1fr);
   gap: 1.5rem;
   margin: 2.5rem 0;
-}
-
-.folder-structure {
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2rem;
-  margin-top: 3rem;
 }
 
 .reference-grid {
@@ -426,39 +419,6 @@ h3 {
   line-height: 1.6;
 }
 
-
-/* =========================================================
-   Folder Structure
-========================================================= */
-.folder-card {
-  padding: 1.8rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-soft);
-}
-
-.folder-card h3 {
-  margin-top: 0;
-  margin-bottom: 1rem;
-}
-
-.folder-card pre {
-  padding: 1rem;
-  overflow-x: auto;
-  border-radius: var(--radius-sm);
-  background: var(--color-dark);
-  color: #f9fafb;
-  font-size: 0.88rem;
-}
-
-.folder-card p {
-  margin-top: 1rem;
-  margin-bottom: 0;
-  color: var(--color-muted);
-  line-height: 1.7;
-}
-
-
 /* =========================================================
    Reference
 ========================================================= */
@@ -551,11 +511,6 @@ h3 {
     max-width: 100%;
     white-space: normal;
   }
-
-  .folder-structure,
-  .reference-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 700px) {
@@ -586,175 +541,10 @@ h3 {
 }
 
 /* =========================================================
-   Compact Section Scale
-   - section 전체 크기 축소
-   - 한 화면에 더 많은 내용이 들어오도록 조정
-========================================================= */
-
-.gilbut-section {
-  max-width: 1080px;
-  margin: 2.2rem auto;
-  padding: 0 1rem;
-}
-
-.gilbut-section h2 {
-  margin-bottom: 1.1rem;
-  font-size: clamp(1.8rem, 3vw, 2.2rem);
-  line-height: 1.2;
-}
-
-.gilbut-section h3 {
-  margin-bottom: 0.6rem;
-}
-
-.section-eyebrow {
-  margin-bottom: 0.4rem;
-  font-size: 0.8rem;
-}
-
-.section-lead {
-  margin-bottom: 1.3rem;
-  font-size: 0.92rem;
-  line-height: 1.55;
-}
-
-.gilbut-card {
-  padding: 1.15rem;
-  border-radius: 1rem;
-}
-
-.gilbut-card h3 {
-  margin-bottom: 0.65rem;
-  font-size: 1.05rem;
-}
-
-.gilbut-card p {
-  font-size: 0.9rem;
-  line-height: 1.55;
-}
-
-.gilbut-card li {
-  margin-bottom: 0.35rem;
-  font-size: 0.86rem;
-  line-height: 1.45;
-}
-
-
-/* Grid 간격 축소 */
-.intro-grid,
-.team-grid,
-.guide-grid,
-.feature-grid-4,
-.folder-structure,
-.reference-grid {
-  gap: 1rem;
-  margin-top: 1.4rem;
-}
-
-.feature-grid-4 {
-  margin: 1.4rem 0;
-}
-
-.folder-structure {
-  margin-top: 1.4rem;
-}
-
-
-/* 이미지가 section 높이를 과하게 차지하지 않도록 제한 */
-.architecture-image {
-  max-height: 520px;
-  object-fit: contain;
-  margin-bottom: 1.4rem;
-}
-
-.guide-card img {
-  object-fit: cover;
-  margin-bottom: 0.7rem;
-}
-
-.team-card img {
-  width: 160px;
-  height: 160px;
-  margin-bottom: 0.8rem;
-}
-
-
-/* 기능 카드가 한눈에 들어오도록 더 압축 */
-.feature-card {
-  padding: 1rem;
-}
-
-.feature-card h3 {
-  font-size: 1rem;
-  line-height: 1.35;
-}
-
-.feature-card ul {
-  padding-left: 1rem;
-}
-
-.feature-card li {
-  font-size: 0.82rem;
-  line-height: 1.4;
-}
-
-
-/* 코드/참고자료 카드도 높이 축소 */
-.folder-card {
-  padding: 1.1rem;
-}
-
-.folder-card pre {
-  padding: 0.75rem;
-  font-size: 0.78rem;
-  line-height: 1.4;
-}
-
-.folder-card p {
-  margin-top: 0.7rem;
-  font-size: 0.86rem;
-  line-height: 1.5;
-}
-
-.reference-list li {
-  padding: 0.55rem 0;
-}
-
-.reference-list a {
-  font-size: 0.9rem;
-  line-height: 1.35;
-}
-
-.reference-list span {
-  font-size: 0.8rem;
-  line-height: 1.35;
-}
-
-
-/* 데스크톱에서 4개 기능 카드 유지 */
-@media (min-width: 1201px) {
-  .feature-grid-4 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-
-/* 태블릿 이하에서는 너무 작아지지 않게 조정 */
-@media (max-width: 900px) {
-  .gilbut-section {
-    max-width: 100%;
-    margin: 2rem auto;
-  }
-
-  .section-lead {
-    font-size: 0.9rem;
-  }
-}
-
-/* =========================================================
-   Extra Compact Section Scale
-   - section 전체를 더 작게 압축
-   - 67% 축소 화면에 가깝게 보이도록 조정
+   Compact Layout Override
+   - 전체 섹션 크기 압축
+   - 카드, 이미지, 코드 블록 크기 정리
+   - 중복 선언 및 !important 최소화
 ========================================================= */
 
 .gilbut-section {
@@ -781,6 +571,7 @@ h3 {
 }
 
 .section-lead {
+  max-width: 100%;
   margin-bottom: 0.85rem;
   font-size: 0.78rem;
   line-height: 1.42;
@@ -816,12 +607,14 @@ h3 {
 }
 
 
-/* Grid 여백 더 축소 */
+/* =========================================================
+   Compact Grid
+========================================================= */
+
 .intro-grid,
 .team-grid,
 .guide-grid,
 .feature-grid-4,
-.folder-structure,
 .reference-grid {
   gap: 0.7rem;
   margin-top: 0.9rem;
@@ -831,8 +624,17 @@ h3 {
   margin: 0.9rem 0;
 }
 
+@media (min-width: 1201px) {
+  .feature-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
 
-/* 이미지 높이 더 제한 */
+
+/* =========================================================
+   Compact Images
+========================================================= */
+
 .architecture-image {
   max-height: 430px;
   object-fit: contain;
@@ -840,7 +642,7 @@ h3 {
 }
 
 .guide-card img {
-  // max-height: 145px;
+  max-height: 145px;
   object-fit: cover;
   margin-bottom: 0.5rem;
 }
@@ -852,7 +654,10 @@ h3 {
 }
 
 
-/* 기능 카드 추가 압축 */
+/* =========================================================
+   Compact Feature Card
+========================================================= */
+
 .feature-card {
   padding: 0.75rem;
 }
@@ -877,22 +682,23 @@ h3 {
 }
 
 
-/* 폴더 구조 / 참고자료 압축 */
-.folder-card {
-  padding: 0.85rem;
+/* =========================================================
+   Tech Stack
+========================================================= */
+
+.tech-stack-section h1,
+.tech-stack-section h2,
+.tech-stack-section h3,
+.tech-stack-section h4,
+.tech-stack-section h5,
+.tech-stack-section h6 {
+  margin: 0;
 }
 
-.folder-card pre {
-  padding: 0.55rem;
-  font-size: 0.68rem;
-  line-height: 1.28;
-}
 
-.folder-card p {
-  margin-top: 0.45rem;
-  font-size: 0.74rem;
-  line-height: 1.35;
-}
+/* =========================================================
+   Compact References
+========================================================= */
 
 .reference-list li {
   padding: 0.38rem 0;
@@ -909,13 +715,23 @@ h3 {
 }
 
 
-/* 모바일에서는 너무 작아지지 않도록 약간 복구 */
-@media (max-width: 768px) {
+/* =========================================================
+   Responsive Restore
+========================================================= */
+
+@media (max-width: 900px) {
   .gilbut-section {
+    max-width: 100%;
     margin: 1.8rem auto;
     padding: 0 1rem;
   }
 
+  .reference-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
   .gilbut-section h2 {
     font-size: 1.55rem;
   }
@@ -929,110 +745,8 @@ h3 {
   .gilbut-card {
     padding: 1rem;
   }
-}
 
-/* tech-stack-section 내부 제목 margin 제거 */
-.tech-stack-section h1,
-.tech-stack-section h2,
-.tech-stack-section h3,
-.tech-stack-section h4,
-.tech-stack-section h5,
-.tech-stack-section h6 {
-  margin: 0;
-}
-
-/* folder-structure 내부 텍스트 overflow 방지 */
-.folder-structure {
-  min-width: 0;
-}
-
-.folder-structure .folder-card {
-  min-width: 0;
-  overflow: hidden;
-}
-
-.folder-structure .folder-card pre {
-  max-width: 100%;
-  overflow-x: hidden;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-
-  font-size: 0.58rem;
-  line-height: 1.25;
-}
-
-.folder-structure .folder-card code {
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-
-  font-size: 0.58rem;
-  line-height: 1.25;
-}
-
-/* =========================================================
-   Folder Structure - Force Compact Code Block
-   - folder structure 내부 코드 글씨 강제 축소
-   - 긴 경로/파일명 때문에 가로 스크롤 생기는 문제 방지
-========================================================= */
-
-.folder-structure {
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 0.6rem !important;
-  min-width: 0 !important;
-}
-
-.folder-structure .folder-card {
-  min-width: 0 !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
-  padding: 0.65rem !important;
-}
-
-/* 코드 블록 전체 강제 축소 */
-.folder-structure .folder-card pre,
-.folder-structure .folder-card code,
-.folder-structure .folder-card pre *,
-.folder-structure .folder-card code * {
-  font-size: 9px !important;
-  line-height: 1.25 !important;
-  font-family: Consolas, Monaco, "Courier New", monospace !important;
-}
-
-/* pre가 width를 밀어내지 않도록 처리 */
-.folder-structure .folder-card pre {
-  box-sizing: border-box !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 !important;
-  padding: 0.45rem !important;
-
-  overflow-x: hidden !important;
-  white-space: pre-wrap !important;
-  word-break: break-all !important;
-  overflow-wrap: anywhere !important;
-}
-
-/* code 내부 줄바꿈 강제 */
-.folder-structure .folder-card code {
-  display: block !important;
-  max-width: 100% !important;
-
-  white-space: pre-wrap !important;
-  word-break: break-all !important;
-  overflow-wrap: anywhere !important;
-}
-
-/* 설명 텍스트도 같이 축소 */
-.folder-structure .folder-card h3 {
-  margin-bottom: 0.45rem !important;
-  font-size: 0.82rem !important;
-  line-height: 1.25 !important;
-}
-
-.folder-structure .folder-card p {
-  margin-top: 0.45rem !important;
-  font-size: 0.68rem !important;
-  line-height: 1.35 !important;
+  .guide-card img {
+    max-height: none;
+  }
 }
