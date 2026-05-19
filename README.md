@@ -15,7 +15,7 @@
 
 ## 🎬프로젝트 소개 영상
 
-["길벗" 프로젝트 소개 영상](https://youtu.be/1lZzJNDqJFc)
+["길벗" 프로젝트 소개 영상](https://youtu.be/Z8eKX4Aa4Dc)
 
 ## 📌 목차
 
