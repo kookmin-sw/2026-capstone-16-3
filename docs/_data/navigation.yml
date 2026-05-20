@@ -15,9 +15,6 @@ main:
   - title: "사용법"
     url: "#guide"
 
-  - title: "폴더 구조"
-    url: "#folder-structure"
-
   - title: "팀원 소개"
     url: "#team"
 
