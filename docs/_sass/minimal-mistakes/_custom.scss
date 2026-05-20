@@ -1,40 +1,55 @@
 /* =========================================================
-   Base Tokens
+   Gilbeot Landing Custom Styles
 ========================================================= */
+
+/* =========================================================
+   Design Tokens
+========================================================= */
+
 :root {
-  --color-primary: #f97316;
-  --color-text: #1f2937;
-  --color-muted: #4b5563;
-  --color-subtle: #64748b;
-  --color-border: #e5e7eb;
-  --color-border-light: #e2e8f0;
-  --color-bg: #ffffff;
-  --color-bg-soft: #f8fafc;
+  --gilbeot-navy: #0f172a;
+  --gilbeot-navy-2: #1e293b;
+  --gilbeot-orange: #f97316;
+  --gilbeot-orange-dark: #ea580c;
+  --gilbeot-ivory: #fef3c7;
 
-  --shadow-card: 0 8px 24px rgba(15, 23, 42, 0.06);
-  --shadow-card-hover: 0 18px 40px rgba(15, 23, 42, 0.12);
-  --shadow-image: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --gilbeot-text: #0f172a;
+  --gilbeot-muted: #475569;
+  --gilbeot-card: rgba(255, 255, 255, 0.96);
+  --gilbeot-border: rgba(226, 232, 240, 0.9);
 
-  --radius-md: 1rem;
-  --radius-lg: 1.2rem;
-  --radius-xl: 1.4rem;
+  --gilbeot-shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+  --gilbeot-shadow-hover: 0 24px 70px rgba(15, 23, 42, 0.18);
+  --gilbeot-dark-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
+
+  --gilbeot-radius: 1.5rem;
+  --gilbeot-radius-lg: 2rem;
+
+  --gilbeot-nav-height: 72px;
+  --gilbeot-nav-height-mobile: 68px;
+
+  --gilbeot-container-width: 1180px;
 }
+
+/* =========================================================
+   Base
+========================================================= */
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--gilbeot-nav-height) + 16px);
 }
 
-html,
 body {
   font-family: "Pretendard", -apple-system, BlinkMacSystemFont,
     "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
 }
 
-.page__title,
-.page__hero-title,
 h1,
 h2,
-h3 {
+h3,
+.page__title,
+.page__hero-title {
   font-family: "Pretendard", sans-serif;
   letter-spacing: -0.04em;
 }
@@ -48,34 +63,78 @@ h3 {
   font-weight: 700;
 }
 
+/* =========================================================
+   Minimal Mistakes Layout Overrides
+========================================================= */
+
+body.layout--splash {
+  background: #ffffff;
+}
+
+.layout--splash .initial-content,
+.layout--splash .page,
+.layout--splash .page__inner-wrap,
+.layout--splash .page__content {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.layout--splash .page__content > p:empty {
+  display: none;
+}
 
 /* =========================================================
-   Navbar
+   Navigation
 ========================================================= */
+
 .masthead {
   position: sticky;
   top: 0;
   z-index: 1000;
+  min-height: 64px;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.7);
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(229, 231, 235, 0.7);
+}
+
+.masthead__inner-wrap {
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
 }
 
 .greedy-nav {
+  min-height: 64px;
   background: transparent !important;
   box-shadow: none !important;
 }
 
+.greedy-nav .site-logo img {
+  max-height: 32px;
+}
+
+.greedy-nav .site-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.greedy-nav .visible-links a,
+.greedy-nav .hidden-links a {
+  font-size: 0.95rem;
+}
+
 .greedy-nav .visible-links a {
   position: relative;
-  padding: 0.8rem 1rem;
+  padding: 0.45rem 0.8rem;
   font-weight: 700;
   transition: color 0.2s ease;
 }
 
 .greedy-nav .visible-links a:hover,
 .greedy-nav .visible-links a.active {
-  color: var(--color-primary) !important;
+  color: var(--gilbeot-orange) !important;
 }
 
 .greedy-nav .visible-links a.active::after {
@@ -86,359 +145,589 @@ h3 {
   width: 100%;
   height: 3px;
   border-radius: 999px;
-  background: var(--color-primary);
+  background: var(--gilbeot-orange);
 }
 
+/* =========================================================
+   Landing Layout
+========================================================= */
+
+.gilbeot-landing {
+  width: 100%;
+  overflow: hidden;
+  color: var(--gilbeot-text);
+}
+
+.gilbeot-section {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - var(--gilbeot-nav-height));
+  padding: clamp(4rem, 7vw, 6rem) 1.5rem;
+  scroll-margin-top: var(--gilbeot-nav-height);
+  scroll-snap-align: start;
+}
+
+@supports (scroll-snap-type: y mandatory) {
+  body.layout--splash {
+    scroll-snap-type: y proximity;
+  }
+}
+
+.gilbeot-container {
+  position: relative;
+  z-index: 1;
+  width: min(var(--gilbeot-container-width), 100%);
+  margin: 0 auto;
+}
+
+.gilbeot-section-head {
+  max-width: 780px;
+  margin: 0 auto clamp(2rem, 5vw, 4rem);
+  text-align: center;
+}
+
+.gilbeot-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+  gap: clamp(2rem, 6vw, 5rem);
+  align-items: center;
+}
+
+/* =========================================================
+   Background Variants
+========================================================= */
+
+.gilbeot-bg-navy {
+  color: #ffffff;
+  background:
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.22), transparent 34rem),
+    linear-gradient(135deg, var(--gilbeot-navy) 0%, var(--gilbeot-navy-2) 100%);
+}
+
+.gilbeot-bg-white {
+  color: var(--gilbeot-text);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.gilbeot-bg-beige {
+  color: var(--gilbeot-text);
+  background: linear-gradient(135deg, #fef3e2 0%, #fff7ed 100%);
+}
+
+.gilbeot-bg-ivory {
+  color: var(--gilbeot-text);
+  background: linear-gradient(135deg, var(--gilbeot-ivory) 0%, #fef9c3 100%);
+}
+
+/* =========================================================
+   Typography
+========================================================= */
+
+.gilbeot-eyebrow {
+  margin: 0 0 0.9rem;
+  color: var(--gilbeot-orange);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.gilbeot-title {
+  margin: 0;
+  font-size: clamp(2.35rem, 5vw, 4.8rem);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.065em;
+}
+
+.gilbeot-title span {
+  color: var(--gilbeot-orange);
+}
+
+.gilbeot-description {
+  margin: 1.35rem 0 0;
+  color: var(--gilbeot-muted);
+  font-size: clamp(1rem, 1.5vw, 1.22rem);
+  line-height: 1.85;
+  word-break: keep-all;
+}
+
+.gilbeot-bg-navy .gilbeot-description {
+  color: rgba(255, 255, 255, 0.86);
+}
 
 /* =========================================================
    Hero
 ========================================================= */
-.page__hero--overlay {
-  min-height: 72vh;
+
+#service.gilbeot-hero-section {
+  position: relative;
+  overflow: hidden;
+  color: #ffffff;
+  background:
+    linear-gradient(
+      to right,
+      rgba(15, 23, 42, 0.98) 0%,
+      rgba(15, 23, 42, 0.94) 28%,
+      rgba(15, 23, 42, 0.76) 48%,
+      rgba(15, 23, 42, 0.42) 68%,
+      rgba(15, 23, 42, 0.30) 100%
+    ),
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.24), transparent 34rem),
+    var(--gilbeot-hero-image);
+  background-repeat: no-repeat;
+  background-position: center right;
+  background-size: cover;
+}
+
+.gilbeot-hero-grid {
+  position: relative;
   display: flex;
   align-items: center;
-  margin-bottom: 5rem;
-  background-position: center;
+  min-height: calc(100vh - var(--gilbeot-nav-height));
+  isolation: isolate;
 }
 
-.page__hero--overlay .wrapper {
-  max-width: 1180px;
+.gilbeot-hero-copy {
+  position: relative;
+  z-index: 2;
+  max-width: 620px;
 }
 
-.page__hero--overlay .page__title,
-.page__hero--overlay .page__lead,
-.page__hero--overlay .btn {
-  animation: heroFadeUp 0.8s ease both;
+.gilbeot-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 2rem;
 }
 
-.page__hero--overlay .page__title {
-  margin-bottom: 1.2rem;
-  font-size: clamp(3rem, 7vw, 6.5rem);
-  font-weight: 900;
-  letter-spacing: -0.06em;
-}
-
-.page__hero--overlay .page__lead {
-  font-size: clamp(1.25rem, 2vw, 2rem);
-  font-weight: 600;
-  line-height: 1.6;
-  animation-delay: 0.15s;
-}
-
-.page__hero--overlay .btn {
-  margin-top: 1.6rem;
-  margin-right: 0.8rem;
-  padding: 0.9rem 1.35rem;
+.gilbeot-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.25rem;
+  padding: 0.95rem 1.55rem;
   border-radius: 999px;
-  font-weight: 800;
-  animation-delay: 0.3s;
+  font-weight: 850;
+  text-decoration: none !important;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
 }
 
-.page__hero-caption {
-  display: none;
+.gilbeot-button:hover {
+  transform: translateY(-2px);
 }
 
-.btn--light-outline {
-  color: #fff !important;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.08);
+.gilbeot-button-primary {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, var(--gilbeot-orange), var(--gilbeot-orange-dark));
+  box-shadow: 0 10px 30px rgba(249, 115, 22, 0.36);
 }
 
-.btn--light-outline:hover {
-  background: rgba(255, 255, 255, 0.18);
+.gilbeot-button-secondary {
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
 }
-
-
-/* =========================================================
-   Section
-========================================================= */
-.gilbut-section {
-  max-width: 980px;
-  margin: 1.4rem auto;
-  padding: 0 0.8rem;
-  animation: sectionFadeUp 0.7s ease both;
-}
-
-.gilbut-section h2 {
-  margin-bottom: 0.7rem;
-  font-size: clamp(1.45rem, 2.4vw, 1.85rem);
-  line-height: 1.15;
-}
-
-.gilbut-section h3 {
-  margin-bottom: 0.45rem;
-  font-size: 0.98rem;
-  line-height: 1.25;
-}
-
-.section-eyebrow {
-  margin-bottom: 0.25rem;
-  color: var(--color-primary);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.section-lead {
-  max-width: 100%;
-  margin: 0 0 0.85rem;
-  color: var(--color-muted);
-  font-size: 0.78rem;
-  line-height: 1.42;
-}
-
-
-/* =========================================================
-   Intro
-========================================================= */
-.intro-section {
-  max-width: 980px;
-  margin: 0 auto 6rem;
-  text-align: center;
-}
-
-.intro-section h2 {
-  margin: 0 0 1.4rem;
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  line-height: 1.25;
-  letter-spacing: -0.04em;
-}
-
-.intro-section p:last-child {
-  max-width: 760px;
-  margin: 0 auto;
-  color: var(--color-muted);
-  font-size: 1.1rem;
-  line-height: 1.9;
-}
-
 
 /* =========================================================
    Cards
 ========================================================= */
-.gilbut-card {
-  padding: 0.8rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.8rem;
-  background: var(--color-bg);
-  box-shadow: var(--shadow-card);
+
+.gilbeot-card,
+.gilbeot-guide-card {
+  border: 1px solid var(--gilbeot-border);
+  border-radius: var(--gilbeot-radius);
+  background: var(--gilbeot-card);
+  box-shadow: var(--gilbeot-shadow);
   transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease,
-    border-color 0.22s ease;
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
 }
 
-.gilbut-card:hover {
+.gilbeot-card {
+  padding: clamp(1.35rem, 2.5vw, 2rem);
+}
+
+.gilbeot-card:hover,
+.gilbeot-guide-card:hover {
   transform: translateY(-6px);
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-card-hover);
+  border-color: rgba(249, 115, 22, 0.52);
+  box-shadow: var(--gilbeot-shadow-hover);
 }
 
-.gilbut-card h3 {
-  margin-top: 0;
-  margin-bottom: 0.45rem;
-  font-size: 0.9rem;
-  line-height: 1.25;
-  letter-spacing: -0.03em;
+.gilbeot-card h3,
+.gilbeot-flow-card strong,
+.gilbeot-pipeline-card h3,
+.gilbeot-tech-card h3,
+.gilbeot-step-card h3 {
+  margin: 0 0 0.75rem;
+  color: inherit;
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-weight: 850;
+  line-height: 1.3;
+  letter-spacing: -0.04em;
 }
 
-.gilbut-card p {
-  margin: 0 0 0.45rem;
-  color: var(--color-muted);
-  font-size: 0.78rem;
-  line-height: 1.38;
+.gilbeot-card p,
+.gilbeot-flow-card p,
+.gilbeot-pipeline-card p,
+.gilbeot-tech-card li,
+.gilbeot-step-card p {
+  margin: 0;
+  color: var(--gilbeot-muted);
+  font-size: 0.98rem;
+  line-height: 1.7;
+  word-break: keep-all;
 }
 
-.gilbut-card ul {
-  margin: 0.4rem 0 0;
-  padding-left: 0.95rem;
+.gilbeot-bg-navy .gilbeot-card p,
+.gilbeot-bg-navy .gilbeot-flow-card p,
+.gilbeot-bg-navy .gilbeot-pipeline-card p,
+.gilbeot-bg-navy .gilbeot-tech-card li {
+  color: rgba(255, 255, 255, 0.78);
 }
 
-.gilbut-card li {
-  margin-bottom: 0.22rem;
-  color: var(--color-muted);
-  font-size: 0.76rem;
-  line-height: 1.32;
+.gilbeot-icon-circle {
+  display: grid;
+  place-items: center;
+  width: 4.2rem;
+  height: 4.2rem;
+  margin-bottom: 1.2rem;
+  border-radius: 50%;
+  background: rgba(249, 115, 22, 0.13);
+  font-size: 2rem;
 }
-
 
 /* =========================================================
-   Grid Layouts
+   Grids
 ========================================================= */
+
+.gilbeot-problem-grid,
+.gilbeot-feature-grid,
+.gilbeot-step-grid,
+.gilbeot-tech-grid,
+.gilbeot-impact-grid,
+.gilbeot-guide-grid,
 .team-grid,
-.guide-grid,
-.feature-grid-4,
 .reference-grid {
   display: grid;
+  gap: 1.2rem;
 }
 
-.intro-grid,
-.team-grid,
-.guide-grid,
-.feature-grid-4,
+.gilbeot-problem-grid,
+.gilbeot-impact-grid,
+.gilbeot-guide-grid,
+.team-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gilbeot-feature-grid,
+.gilbeot-step-grid,
+.gilbeot-tech-grid,
 .reference-grid {
-  gap: 0.7rem;
-  margin-top: 0.9rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
-
-.team-grid,
-.guide-grid {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.feature-grid-4 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin: 0.9rem 0;
-}
-
-.reference-grid {
-  grid-template-columns: repeat(2, 1fr);
-}
-
 
 /* =========================================================
-   Images
+   Flow / Pipeline / Tech
 ========================================================= */
-.gilbut-card img,
-.guide-card img,
-.team-card img {
-  border-radius: var(--radius-lg);
+
+.gilbeot-flow-list {
+  display: grid;
+  gap: 1rem;
 }
 
-.architecture-image {
+.gilbeot-flow-card {
+  padding: 1.35rem;
+  border-left: 5px solid var(--gilbeot-orange);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--gilbeot-shadow);
+}
+
+.gilbeot-flow-card span {
+  display: inline-block;
+  margin-bottom: 0.45rem;
+  color: var(--gilbeot-orange);
+  font-weight: 900;
+}
+
+.gilbeot-pipeline {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: 1.15rem;
+  align-items: stretch;
+}
+
+.gilbeot-pipeline-card,
+.gilbeot-tech-card {
+  padding: clamp(1.35rem, 2.5vw, 2rem);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--gilbeot-radius);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: var(--gilbeot-dark-shadow);
+}
+
+.gilbeot-pipeline-card span,
+.gilbeot-tech-card > span {
+  display: inline-grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 1.1rem;
+  border-radius: 1.2rem;
+  background: rgba(249, 115, 22, 0.18);
+  font-size: 2rem;
+}
+
+.gilbeot-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--gilbeot-orange);
+  font-size: 2.2rem;
+  font-weight: 900;
+}
+
+.gilbeot-tech-card ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.gilbeot-tech-card li + li {
+  margin-top: 0.6rem;
+}
+
+/* =========================================================
+   Feature Cards
+========================================================= */
+
+.gilbeot-feature-card {
+  overflow: hidden;
+  padding: 0;
+}
+
+.gilbeot-feature-card img {
+  display: block;
   width: 100%;
-  max-height: 430px;
+  height: 180px;
+  border-radius: var(--gilbeot-radius) var(--gilbeot-radius) 0 0;
+  object-fit: cover;
+}
+
+.gilbeot-feature-card h3,
+.gilbeot-feature-card p {
+  padding-right: 1.3rem;
+  padding-left: 1.3rem;
+}
+
+.gilbeot-feature-card h3 {
+  padding-top: 1.25rem;
+}
+
+.gilbeot-feature-card p {
+  padding-bottom: 1.35rem;
+}
+
+/* =========================================================
+   Step / Guide Cards
+========================================================= */
+
+.gilbeot-step-card,
+.gilbeot-guide-card {
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.gilbeot-step-card {
+  border: 1px solid var(--gilbeot-border);
+  border-radius: var(--gilbeot-radius);
+  box-shadow: var(--gilbeot-shadow);
+}
+
+.gilbeot-step-card img,
+.gilbeot-guide-card img {
+  display: block;
+  width: 100%;
+  border-radius: var(--gilbeot-radius) var(--gilbeot-radius) 0 0;
   object-fit: contain;
-  margin-bottom: 0.9rem;
-  border-radius: var(--radius-md);
 }
 
-.guide-card img {
-  width: 100%;
-  object-fit: cover;
-  margin-bottom: 0.5rem;
-  box-shadow: var(--shadow-image);
+.gilbeot-step-card img {
+  height: 240px;
 }
 
-.team-card img {
-  width: 125px;
-  height: 125px;
-  margin-bottom: 0.55rem;
-  object-fit: cover;
-  border-radius: 24px;
+.gilbeot-guide-card img {
+  height: clamp(320px, 44vh, 460px);
+  padding: 1rem;
+  background: #f8fafc;
 }
 
+.gilbeot-step-card span,
+.gilbeot-step-card h3,
+.gilbeot-step-card p,
+.gilbeot-guide-card span,
+.gilbeot-guide-card h3,
+.gilbeot-guide-card p {
+  display: block;
+  padding-right: 1.25rem;
+  padding-left: 1.25rem;
+}
+
+.gilbeot-step-card span,
+.gilbeot-guide-card span {
+  color: var(--gilbeot-orange);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gilbeot-step-card span {
+  padding-top: 1.25rem;
+  font-size: 0.82rem;
+}
+
+.gilbeot-guide-card span {
+  padding-top: 1rem;
+  font-size: 0.78rem;
+}
+
+.gilbeot-guide-card h3 {
+  margin: 0.35rem 0 0.55rem;
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  font-weight: 850;
+  line-height: 1.3;
+  letter-spacing: -0.04em;
+}
+
+.gilbeot-step-card p {
+  padding-bottom: 1.35rem;
+}
+
+.gilbeot-guide-card p {
+  margin: 0;
+  padding-bottom: 1.15rem;
+  color: var(--gilbeot-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  word-break: keep-all;
+}
 
 /* =========================================================
-   Team
+   Character
 ========================================================= */
-.team-card {
+
+#character .gilbeot-split {
+  align-items: stretch;
+}
+
+.gilbeot-character-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 2rem;
+  border-radius: var(--gilbeot-radius-lg);
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: var(--gilbeot-shadow);
+}
+
+.gilbeot-character-card img {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  border-radius: var(--gilbeot-radius-lg);
+  object-fit: contain;
+}
+
+.gilbeot-bubble-list {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  height: 100%;
+  gap: 0.9rem;
+  margin-top: 0;
+}
+
+#character .gilbeot-bubble {
+  position: relative;
+  margin: 0;
+  padding: 1rem;
+  border-radius: 1.25rem;
+  background: #ffffff;
+  color: var(--gilbeot-muted);
+  line-height: 1.7;
+  box-shadow: var(--gilbeot-shadow);
+}
+
+/* =========================================================
+   Media / Architecture
+========================================================= */
+
+.gilbeot-architecture-image {
+  display: block;
+  width: 100%;
+  max-height: 560px;
+  margin-top: 2rem;
+  padding: 1rem;
+  border-radius: var(--gilbeot-radius-lg);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+  object-fit: contain;
+}
+
+.video-container {
+  width: min(960px, 100%);
+  aspect-ratio: 16 / 9;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: var(--gilbeot-radius);
+  background: #000;
+  box-shadow: var(--gilbeot-shadow);
+}
+
+.video-container iframe {
+  position: static;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border: 0;
+}
+
+/* =========================================================
+   Team / References
+========================================================= */
+
+.team-card,
+.reference-card {
   text-align: center;
 }
 
-.team-card h3 {
-  margin: 0 0 0.8rem;
-  color: var(--color-text);
-  font-size: 1.4rem;
+.team-card img {
+  width: 132px;
+  height: 132px;
+  margin: 0 auto 1rem;
+  border-radius: 1.4rem;
+  object-fit: cover;
 }
 
 .team-card h3 span {
-  color: #6b7280;
-  font-size: 0.7rem;
+  color: var(--gilbeot-muted);
+  font-size: 0.78rem;
 }
 
-.team-card p {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: 0.95rem;
-  line-height: 1.8;
-}
-
-
-/* =========================================================
-   Guide
-========================================================= */
-.guide-card {
-  text-align: center;
-}
-
-.guide-card h3 {
-  margin-bottom: 0.8rem;
-  font-size: 1.15rem;
-}
-
-.guide-card p {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: 0.95rem;
-  line-height: 1.7;
-}
-
-
-/* =========================================================
-   Feature
-========================================================= */
-.feature-card {
-  padding: 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-soft);
-}
-
-.feature-card h3 {
-  margin-top: 0;
-  font-size: 0.86rem;
-  line-height: 1.25;
-}
-
-.feature-card p {
-  font-size: 0.76rem;
-  line-height: 1.35;
-}
-
-.feature-card ul {
-  margin: 0;
-  padding-left: 0.9rem;
-}
-
-.feature-card li {
-  margin-bottom: 0.6rem;
-  font-size: 0.72rem;
-  line-height: 1.28;
-}
-
-
-/* =========================================================
-   Tech Stack
-========================================================= */
-.tech-stack-section h1,
-.tech-stack-section h2,
-.tech-stack-section h3,
-.tech-stack-section h4,
-.tech-stack-section h5,
-.tech-stack-section h6 {
-  margin: 0;
-}
-
-.badge-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.7rem;
-  margin-bottom: 1.5rem;
-}
-
-.badge-group img {
-  margin: 0;
-}
-
-
-/* =========================================================
-   References
-========================================================= */
-.reference-card h3 {
-  margin-bottom: 1rem;
-  font-size: 1.15rem;
+.reference-card {
+  text-align: left;
 }
 
 .reference-list {
@@ -448,8 +737,8 @@ h3 {
 }
 
 .reference-list li {
-  padding: 0.38rem 0;
-  border-bottom: 1px solid var(--color-border-light);
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--gilbeot-border);
 }
 
 .reference-list li:last-child {
@@ -457,10 +746,8 @@ h3 {
 }
 
 .reference-list a {
-  display: block;
-  font-size: 0.78rem;
-  font-weight: 700;
-  line-height: 1.25;
+  font-weight: 850;
+  line-height: 1.45;
   text-decoration: none;
 }
 
@@ -471,99 +758,185 @@ h3 {
 .reference-list span {
   display: block;
   margin-top: 0.25rem;
-  color: var(--color-subtle);
-  font-size: 0.7rem;
-  line-height: 1.25;
+  color: var(--gilbeot-muted);
+  font-size: 0.86rem;
 }
-
 
 /* =========================================================
-   Animation
+   Guide Image Modal
 ========================================================= */
-@keyframes sectionFadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.gilbeot-guide-image {
+  cursor: zoom-in;
 }
 
-@keyframes heroFadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(24px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.gilbeot-image-modal {
+  position: fixed;
+  inset: var(--gilbeot-nav-height) 0 0;
+  z-index: 3000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(8px);
 }
 
+.gilbeot-image-modal.is-open {
+  display: flex;
+}
+
+.gilbeot-image-modal-img {
+  display: block;
+  width: auto;
+  max-width: min(92vw, 960px);
+  max-height: calc(100svh - var(--gilbeot-nav-height) - 3rem);
+  border-radius: 1.25rem;
+  background: #ffffff;
+  object-fit: contain;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
+}
+
+.gilbeot-image-modal-close {
+  position: fixed;
+  top: calc(var(--gilbeot-nav-height) + 1rem);
+  right: 1.5rem;
+  z-index: 3001;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--gilbeot-text);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--gilbeot-shadow);
+}
+
+.gilbeot-image-modal-close:hover {
+  background: #ffffff;
+  color: var(--gilbeot-orange);
+}
+
+body.gilbeot-modal-open {
+  overflow: hidden;
+}
 
 /* =========================================================
    Responsive
 ========================================================= */
-@media (max-width: 1000px) {
-  .team-grid,
-  .guide-grid {
-    grid-template-columns: repeat(2, 1fr);
+
+@media (max-width: 1120px) {
+  .gilbeot-feature-grid,
+  .gilbeot-step-grid,
+  .gilbeot-tech-grid,
+  .gilbeot-guide-grid,
+  .reference-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 900px) {
-  .page__hero--overlay .page__lead {
-    max-width: 100%;
-    white-space: normal;
+@media (max-width: 960px) {
+  #service.gilbeot-hero-section {
+    background:
+      linear-gradient(
+        to bottom,
+        rgba(15, 23, 42, 0.96) 0%,
+        rgba(15, 23, 42, 0.92) 45%,
+        rgba(15, 23, 42, 0.82) 100%
+      ),
+      var(--gilbeot-hero-image);
+    background-repeat: no-repeat;
+    background-position: center right;
+    background-size: cover;
   }
 
-  .gilbut-section {
+  .gilbeot-hero-copy {
     max-width: 100%;
-    margin: 1.8rem auto;
-    padding: 0 1rem;
   }
 
+  .gilbeot-hero-grid,
+  .gilbeot-split {
+    grid-template-columns: 1fr;
+  }
+
+  .gilbeot-pipeline {
+    grid-template-columns: 1fr;
+  }
+
+  .gilbeot-arrow {
+    justify-content: center;
+    transform: rotate(90deg);
+  }
+
+  .gilbeot-problem-grid,
+  .gilbeot-impact-grid,
+  .team-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .gilbeot-character-card,
+  .gilbeot-bubble-list {
+    height: auto;
+  }
+
+  .gilbeot-bubble-list {
+    justify-content: flex-start;
+    margin-top: 1.6rem;
+  }
+}
+
+@media (max-width: 680px) {
+  html {
+    scroll-padding-top: var(--gilbeot-nav-height-mobile);
+  }
+
+  .gilbeot-section {
+    min-height: auto;
+    padding: 4rem 1rem;
+    scroll-margin-top: var(--gilbeot-nav-height-mobile);
+  }
+
+  .gilbeot-feature-grid,
+  .gilbeot-step-grid,
+  .gilbeot-tech-grid,
+  .gilbeot-guide-grid,
   .reference-grid {
     grid-template-columns: 1fr;
   }
-}
 
-@media (max-width: 768px) {
-  .gilbut-section h2 {
-    font-size: 1.55rem;
+  .gilbeot-guide-card img {
+    height: 240px;
   }
 
-  .section-lead,
-  .gilbut-card p,
-  .gilbut-card li {
-    font-size: 0.84rem;
+  .gilbeot-hero-visual img {
+    min-height: 280px;
   }
 
-  .gilbut-card {
+  .gilbeot-image-modal {
+    inset: var(--gilbeot-nav-height-mobile) 0 0;
     padding: 1rem;
   }
 
-  .guide-card img {
-    max-height: none;
+  .gilbeot-image-modal-img {
+    max-width: 94vw;
+    max-height: calc(100svh - var(--gilbeot-nav-height-mobile) - 2rem);
+  }
+
+  .gilbeot-image-modal-close {
+    top: calc(var(--gilbeot-nav-height-mobile) + 0.75rem);
+    right: 1rem;
   }
 }
-
-@media (max-width: 700px) {
-  .team-grid,
-  .guide-grid,
-  .feature-grid-4 {
-    grid-template-columns: 1fr;
-  }
-}
-
 
 /* =========================================================
    Accessibility
 ========================================================= */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

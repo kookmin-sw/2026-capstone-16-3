@@ -2,500 +2,435 @@
 title: "길벗"
 layout: splash
 permalink: /
-
-header:
-  overlay_image: /assets/images/header-image-2.png
-  overlay_filter: linear-gradient(rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.62))
-  actions:
-    - label: "Demo 보기"
-      url: "#demo"
-      class: "btn--primary"
-    - label: "GitHub"
-      url: "https://github.com/kookmin-sw/2026-capstone-16"
-      class: "btn--light-outline"
-
-excerpt: >
-  시각장애인 및 보행약자를 위한<br>
-  AI 기반 안전 보행 보조 플랫폼
-
+classes: wide
 ---
 
 <!-- markdownlint-disable MD025 MD033 -->
 
-<section id="intro" class="gilbut-section">
-  <h2>프로젝트 소개</h2>
-
-  <p class="section-lead">
-    길벗은 시각장애인 및 보행약자가 실외 보행 중 마주치는 위험 요소를
-    스마트폰 카메라와 AI로 인식하고, 음성 안내와 진동 피드백으로 전달하는
-    모바일 기반 안전 보행 보조 플랫폼입니다.
-  </p>
-
-  <div class="intro-grid">
-    <div class="intro-card gilbut-card">
-      <h3>문제 정의</h3>
-      <p>
-        시각장애인과 저시력자는 보행 중 장애물, 횡단보도, 신호등,
-        점자블록 단절과 같은 위험 요소를 즉각적으로 인지하기 어렵습니다.
-        이는 충돌, 낙상, 잘못된 방향 판단으로 이어질 수 있습니다.
-      </p>
+<main class="gilbeot-landing" aria-label="길벗 서비스 소개형 랜딩 페이지">
+  <section
+    id="service"
+    class="gilbeot-section gilbeot-hero-section gilbeot-bg-navy"
+    style="--gilbeot-hero-image: url('{{ '/assets/images/header-image-2.png' | relative_url }}');"
+  >
+    <div class="gilbeot-container gilbeot-hero-grid">
+      <div class="gilbeot-hero-copy">
+        <p class="gilbeot-eyebrow">AI Walking Guide Platform</p>
+        <h1 class="gilbeot-title">
+          보행의 불안을 줄이는<br>
+          <span>디지털 안내견, 길벗</span>
+        </h1>
+        <p class="gilbeot-description">
+          길벗은 시각장애인 및 보행약자가 실외 보행 중 마주치는 장애물, 횡단보도,
+          신호등, 점자블록 정보를 스마트폰 카메라와 AI로 분석하고 음성·진동으로 안내하는
+          모바일 기반 안전 보행 보조 플랫폼입니다.
+        </p>
+        <div class="gilbeot-action-row" aria-label="주요 이동 링크">
+          <a class="gilbeot-button gilbeot-button-primary" href="#features">기능 보기</a>
+          <a class="gilbeot-button gilbeot-button-secondary" href="#how-to-use">사용 흐름 보기</a>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <div class="intro-card gilbut-card">
-      <h3>기존 한계</h3>
-      <p>
-        기존 서비스는 길찾기, 사물 인식, 영상 도움 요청 등 개별 기능에
-        집중되어 있어 실제 보행 중 위험 요소가 사용자 경로 위에 있는지,
-        얼마나 가까운지, 어떻게 피해야 하는지 안내하는 데 한계가 있습니다.
-      </p>
-    </div>
+  <section id="problem" class="gilbeot-section gilbeot-bg-white">
+    <div class="gilbeot-container">
+      <div class="gilbeot-section-head">
+        <p class="gilbeot-eyebrow">Problem</p>
+        <h2 class="gilbeot-title">시각 정보 없이 걷는 길에는<br><span>즉각적인 판단이 필요합니다</span></h2>
+        <p class="gilbeot-description">
+          시각장애인의 보행은 현재 위치를 파악하는 방향정위와 실제 이동이 분리되어 이루어지므로,
+          주변 환경을 알려주는 랜드마크와 단서가 중요합니다. 그러나 실제 보행 환경에서는 이 단서가
+          끊기거나 예측하지 못한 장애물이 갑자기 나타납니다.
+        </p>
+      </div>
 
-    <div class="intro-card gilbut-card">
-      <h3>길벗 목표</h3>
-      <p>
-        길벗은 실시간 장애물 탐지, 보행 가능 영역 분석, 길찾기,
-        횡단보도 정보를 결합하여 사용자가 화면을 보지 않아도
-        안전하게 이동할 수 있도록 음성 및 진동 기반 안내를 제공합니다.
-      </p>
+      <div class="gilbeot-problem-grid">
+        <article class="gilbeot-card gilbeot-problem-card">
+          <div class="gilbeot-icon-circle">🚧</div>
+          <h3>돌발 장애물</h3>
+          <p>킥보드, 볼라드, 공사 바리케이드, 보행자 등은 흰지팡이만으로 충분히 빠르게 인지하기 어렵습니다.</p>
+        </article>
+        <article class="gilbeot-card gilbeot-problem-card">
+          <div class="gilbeot-icon-circle">🚦</div>
+          <h3>횡단보도 판단</h3>
+          <p>신호등 유무, 보행자 신호 상태, 음향신호기 존재 여부를 현장에서 즉시 확인하기 어렵습니다.</p>
+        </article>
+        <article class="gilbeot-card gilbeot-problem-card">
+          <div class="gilbeot-icon-circle">🟨</div>
+          <h3>점자블록 단절</h3>
+          <p>점자블록이 끊기거나 가려지면 다음 기준선을 찾기 어렵고, 방향정위가 흔들릴 수 있습니다.</p>
+        </article>
+      </div>
     </div>
+  </section>
+
+  <section id="situation" class="gilbeot-section gilbeot-bg-beige">
+    <div class="gilbeot-container gilbeot-split">
+      <div>
+        <p class="gilbeot-eyebrow">Walking Context</p>
+        <h2 class="gilbeot-title">보행 보조는 단순 탐지가 아니라<br><span>상황 판단이어야 합니다</span></h2>
+        <p class="gilbeot-description">
+          보행자는 화면 속 모든 객체를 알고 싶은 것이 아니라, 현재 진행 경로에서 실제로 위험한 대상과
+          피해야 할 방향을 알고 싶어합니다. 길벗은 객체의 종류, 위치, 거리, 보행 가능 영역 침범 여부를
+          함께 판단하여 불필요한 안내를 줄입니다.
+        </p>
+      </div>
+
+      <div class="gilbeot-flow-list">
+        <article class="gilbeot-flow-card">
+          <span>01</span>
+          <strong>현재 위치와 방향 이해</strong>
+          <p>GPS, 경로 정보, 카메라 프레임을 함께 사용해 사용자의 보행 맥락을 파악합니다.</p>
+        </article>
+        <article class="gilbeot-flow-card">
+          <span>02</span>
+          <strong>위험 요소 선별</strong>
+          <p>보행 경로 위 객체와 점자블록 위 장애물을 우선적으로 판단합니다.</p>
+        </article>
+        <article class="gilbeot-flow-card">
+          <span>03</span>
+          <strong>짧고 명확한 안내</strong>
+          <p>“12시 방향 볼라드, 오른쪽 우회”처럼 행동으로 이어지는 문장만 제공합니다.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="solution" class="gilbeot-section gilbeot-bg-navy">
+    <div class="gilbeot-container">
+      <div class="gilbeot-section-head">
+        <p class="gilbeot-eyebrow">Solution</p>
+        <h2 class="gilbeot-title">스마트폰 카메라와 AI가<br><span>주변을 대신 인식합니다</span></h2>
+        <p class="gilbeot-description">
+          길벗은 카메라 프레임을 AI 서버로 전송하고, 객체 탐지·보행 영역 분할·거리 추정을 결합해
+          위험도와 회피 방향을 계산합니다. 결과는 WebSocket을 통해 앱으로 전달되어 TTS와 햅틱으로 안내됩니다.
+        </p>
+      </div>
+
+      <div class="gilbeot-pipeline">
+        <article class="gilbeot-pipeline-card">
+          <span>📱</span>
+          <h3>카메라 입력</h3>
+          <p>0.5초 주기로 전방 이미지와 위치 정보를 서버에 전달합니다.</p>
+        </article>
+        <div class="gilbeot-arrow" aria-hidden="true">→</div>
+        <article class="gilbeot-pipeline-card">
+          <span>🧠</span>
+          <h3>AI 분석</h3>
+          <p>YOLOv11s, YOLO26-seg, Depth Anything V2로 위험을 분석합니다.</p>
+        </article>
+        <div class="gilbeot-arrow" aria-hidden="true">→</div>
+        <article class="gilbeot-pipeline-card">
+          <span>🔊</span>
+          <h3>음성·진동 안내</h3>
+          <p>위험 수준에 따라 음성과 햅틱 패턴을 차등 제공합니다.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="gilbeot-section gilbeot-bg-beige">
+    <div class="gilbeot-container">
+      <div class="gilbeot-section-head">
+        <p class="gilbeot-eyebrow">Features</p>
+        <h2 class="gilbeot-title">길벗이 제공하는<br><span>4가지 핵심 기능</span></h2>
+        <p class="gilbeot-description">실외 보행 중 필요한 정보를 화면 확인 없이 인지할 수 있도록 구성했습니다.</p>
+      </div>
+
+      <div class="gilbeot-feature-grid">
+        <article class="gilbeot-card gilbeot-feature-card">
+          <img src="{{ '/assets/images/feature/obstacle.png' | relative_url }}" alt="전방 장애물 안내 화면 예시">
+          <h3>🚧 전방 장애물 안내</h3>
+          <p>킥보드, 볼라드, 사람, 차량 등 보행 중 마주칠 수 있는 위험 요소를 인식합니다.</p>
+        </article>
+        <article class="gilbeot-card gilbeot-feature-card">
+          <img src="{{ '/assets/images/feature/evasion-direction.png' | relative_url }}" alt="회피 방향 안내 화면 예시">
+          <h3>⤴️ 회피 방향 안내</h3>
+          <p>장애물이 어느 방향에 있는지 분석하고, 안전한 우회 방향을 음성으로 안내합니다.</p>
+        </article>
+        <article class="gilbeot-card gilbeot-feature-card">
+          <img src="{{ '/assets/images/feature/bailie-block.png' | relative_url }}" alt="점자블록·보행 가능 영역 인식 화면 예시">
+          <h3>🚶 점자블록·보행 가능 영역 인식</h3>
+          <p>점자블록, 보도, 차도, 횡단보도 영역을 분석하여 보행 경로 판단을 보조합니다.</p>
+        </article>
+        <article class="gilbeot-card gilbeot-feature-card">
+          <img src="{{ '/assets/images/feature/vibration.png' | relative_url }}" alt="음성·진동 피드백 예시">
+          <div>
+            <h3>📳 음성·진동 피드백</h3>
+            <p>화면을 보지 않아도 위험 상황을 알 수 있도록 TTS와 햅틱 피드백을 제공합니다.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="how-to-use" class="gilbeot-section gilbeot-bg-white">
+    <div class="gilbeot-container">
+      <div class="gilbeot-section-head">
+        <p class="gilbeot-eyebrow">Guide</p>
+        <h2 class="gilbeot-title">길벗 사용법</h2>
+        <p class="gilbeot-description">
+          로그인부터 목적지 입력, 장애물 탐지, 길찾기, 저장된 장소 관리, 개인화 설정까지
+          실제 앱 사용 흐름에 따라 확인할 수 있습니다.
+        </p>
+      </div>
+
+      <div class="gilbeot-guide-grid">
+        <article class="gilbeot-guide-card">
+          <img class="gilbeot-guide-image" src="{{ '/assets/images/guide/testguide1.png' | relative_url }}" alt="시작 화면과 홈 화면">
+          <span>Guide 01</span>
+          <h3>시작 화면 / 홈 화면</h3>
+          <p>카카오 로그인 후 장애물 탐지, 길찾기, 설정 기능에 접근합니다.</p>
+        </article>
+
+        <article class="gilbeot-guide-card">
+          <img class="gilbeot-guide-image" src="{{ '/assets/images/guide/testguide2.png' | relative_url }}" alt="장애물 탐지 화면">
+          <span>Guide 02</span>
+          <h3>장애물 탐지 화면</h3>
+          <p>탐지 시작 버튼을 누르면 카메라가 실시간으로 장애물을 감지하고 음성·진동으로 알려줍니다.</p>
+        </article>
+
+        <article class="gilbeot-guide-card">
+          <img class="gilbeot-guide-image" src="{{ '/assets/images/guide/testguide3.png' | relative_url }}" alt="길찾기 화면">
+          <span>Guide 03</span>
+          <h3>길찾기 화면</h3>
+          <p>목적지를 키보드 또는 음성으로 입력하고 보행자 경로 안내를 시작합니다.</p>
+        </article>
+
+        <article class="gilbeot-guide-card">
+          <img class="gilbeot-guide-image" src="{{ '/assets/images/guide/testguide4.png' | relative_url }}" alt="저장된 장소 관리 화면">
+          <span>Guide 04</span>
+          <h3>저장된 장소 관리</h3>
+          <p>자주 가는 장소를 저장하고, 카테고리 아이콘으로 구분하여 빠르게 선택합니다.</p>
+        </article>
+
+        <article class="gilbeot-guide-card">
+          <img class="gilbeot-guide-image" src="{{ '/assets/images/guide/testguide5.png' | relative_url }}" alt="길찾기 중 화면과 설정 화면">
+          <span>Guide 05</span>
+          <h3>길찾기 중 / 설정 화면</h3>
+          <p>남은 거리, 소요 시간, 위험 요소를 안내받고 안내 문구 길이와 진동 강도를 조절합니다.</p>
+        </article>
+
+        <article class="gilbeot-guide-card">
+          <img class="gilbeot-guide-image" src="{{ '/assets/images/guide/testguide6.png' | relative_url }}" alt="설정 및 계정 화면">
+          <span>Guide 06</span>
+          <h3>설정 / 계정 화면</h3>
+          <p>알림, 소리 설정, 앱 정보 확인, 로그아웃 및 회원 탈퇴 기능을 사용할 수 있습니다.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <div class="gilbeot-image-modal" id="guideImageModal" aria-hidden="true">
+    <button class="gilbeot-image-modal-close" type="button" aria-label="이미지 확대 닫기">
+      ×
+    </button>
+
+    <img class="gilbeot-image-modal-img" src="" alt="">
   </div>
-</section>
 
-<section id="features" class="gilbut-section">
-  <h2>주요 기능</h2>
-
-  <!--
-  - 장애물 탐지
-  - 횡단보도 안내
-  - 음성/진동 안내
-  - 길찾기
-  - 보행 가능 영역 분석
-  - 실시간 위험 알림
-  -->
-
-  <div class="feature-grid-4">
-    <div class="feature-card gilbut-card">
-      <h3>🚧 장애물 탐지 및 회피 방향 안내</h3>
-      <ul>
-        <li>스마트폰 카메라 영상 기반 보행 위험 장애물 실시간 탐지</li>
-        <li>YOLOv11s로 사람, 차량, 자전거, 킥보드 등 객체 인식</li>
-        <li>YOLOv26-SEG로 보행 가능 영역 분석</li>
-        <li>Depth Anything V2 모델을 활용한 사용자와 장애물 간 거리 추정</li>
-        <li>장애물 위치·거리·위험도 기반 회피 방향 안내</li>
-      </ul>
+  <section id="character" class="gilbeot-section gilbeot-bg-ivory">
+    <div class="gilbeot-container">
+      <div class="gilbeot-section-head">
+        <p class="gilbeot-eyebrow">Character</p>
+        <h2 class="gilbeot-title">골든 리트리버가 안내하는<br><span>따뜻한 사용자 경험</span></h2>
+      </div>
+      <div class="gilbeot-split">
+        <div class="gilbeot-character-card">
+          <img src="{{ '/assets/images/icon.png' | relative_url }}" alt="길벗 안내견 캐릭터">
+        </div>
+        <div>
+          <div class="gilbeot-bubble-list">
+            <p class="gilbeot-bubble">길 위에는 눈에 보이지 않는 위험이 많아요. 하지만 걱정하지 마세요!</p>
+            <p class="gilbeot-bubble">제가 카메라로 앞을 보고, 음성과 진동으로 알려드릴게요.</p>
+            <p class="gilbeot-bubble">앱을 켜고 목적지만 말씀하시면 안내를 시작할 수 있어요.</p>
+            <p class="gilbeot-bubble">길벗은 더 안전하고 독립적인 이동이 목표에요!</p>
+          </div>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <div class="feature-card gilbut-card">
-      <h3>🗺️ 길찾기</h3>
-      <ul>
-        <li>현재 위치와 목적지 기반 보행 경로 안내</li>
-        <li>TMAP 보행자 경로 API 활용</li>
-        <li>이동 거리, 소요 시간, 회전 지점 정보 제공</li>
-        <li>횡단보도 및 음향신호기 존재 여부 안내</li>
-      </ul>
+  <section id="technology" class="gilbeot-section gilbeot-bg-navy">
+    <div class="gilbeot-container">
+      <div class="gilbeot-section-head">
+        <p class="gilbeot-eyebrow">Technology</p>
+        <h2 class="gilbeot-title"><span>최신 기술</span>로 구현된<br>안전 보행 시스템</h2>
+        <p class="gilbeot-description">Flutter, Spring Boot, FastAPI, YOLO, Depth Estimation을 결합하여 실시간 보행 안내 파이프라인을 구성했습니다.</p>
+      </div>
+
+      <div class="gilbeot-tech-grid">
+        <article class="gilbeot-tech-card">
+          <span>📱</span>
+          <h3>Mobile</h3>
+          <ul>
+            <li><strong>Flutter</strong> — 크로스플랫폼 앱 개발</li>
+            <li><strong>Camera API</strong> — 실시간 영상 처리</li>
+            <li><strong>TTS & Haptic</strong> — 음성 및 진동 피드백</li>
+          </ul>
+        </article>
+        <article class="gilbeot-tech-card">
+          <span>🖥️</span>
+          <h3>Backend</h3>
+          <ul>
+            <li><strong>Spring Boot</strong> — REST API 서버</li>
+            <li><strong>WebSocket STOMP</strong> — 실시간 이벤트 Push</li>
+            <li><strong>MySQL</strong> — 사용자 및 장소 데이터 관리</li>
+          </ul>
+        </article>
+        <article class="gilbeot-tech-card">
+          <span>🧠</span>
+          <h3>AI / ML</h3>
+          <ul>
+            <li><strong>YOLOv11s</strong> — 장애물 객체 탐지</li>
+            <li><strong>YOLO26-seg</strong> — 보행 영역 분할</li>
+            <li><strong>Depth Anything V2</strong> — 거리 추정</li>
+          </ul>
+        </article>
+        <article class="gilbeot-tech-card">
+          <span>☁️</span>
+          <h3>Infrastructure</h3>
+          <ul>
+            <li><strong>FastAPI</strong> — AI 모델 서빙</li>
+            <li><strong>Docker</strong> — 컨테이너 배포</li>
+            <li><strong>NGINX / AWS</strong> — 배포 및 트래픽 처리</li>
+          </ul>
+        </article>
+      </div>
+
+      <img src="{{ '/assets/images/architecture.png' | relative_url }}" alt="길벗 시스템 아키텍처" class="gilbeot-architecture-image">
     </div>
+  </section>
 
-    <div class="feature-card gilbut-card">
-      <h3>🔊 음성 및 햅틱 안내</h3>
-      <ul>
-        <li>음성(TTS)과 진동(햅틱) 기반 안내</li>
-        <li>위험 상황, 방향 안내, 길찾기 정보 전달</li>
-        <li>화면 확인 없이 정보 인지 가능</li>
-        <li>음성 속도·안내 문구 길이 등 사용자 맞춤 설정</li>
-      </ul>
+  <section id="impact" class="gilbeot-section gilbeot-bg-beige">
+    <div class="gilbeot-container">
+      <div class="gilbeot-section-head">
+        <p class="gilbeot-eyebrow">Impact</p>
+        <h2 class="gilbeot-title">길벗이 만드는<br><span>안전한 이동 경험</span></h2>
+      </div>
+      <div class="gilbeot-impact-grid">
+        <article class="gilbeot-card">
+          <h3>독립적인 이동 능력 향상</h3>
+          <p>스마트폰만으로 주변 보행 환경을 실시간 인식하고 안내받아 자율적인 이동을 돕습니다.</p>
+        </article>
+        <article class="gilbeot-card">
+          <h3>충돌 및 낙상 사고 예방</h3>
+          <p>가까운 위험 요소를 우선 안내하고 정지·우회 판단을 제공하여 보행 사고 위험을 낮춥니다.</p>
+        </article>
+        <article class="gilbeot-card">
+          <h3>접근성 높은 보조 기술</h3>
+          <p>고가의 별도 장비가 아닌 스마트폰 기반으로 구현되어 확장성과 접근성이 높습니다.</p>
+        </article>
+      </div>
     </div>
+  </section>
 
-    <div class="feature-card gilbut-card">
-      <h3>♿ 접근성 중심 UI</h3>
-      <ul>
-        <li>시각장애인 사용성을 고려한 모바일 UI</li>
-        <li>큰 버튼 중심의 직관적인 구조</li>
-        <li>최소 조작으로 주요 기능 접근</li>
-        <li>누구나 쉽게 사용할 수 있는 인터페이스 설계</li>
-      </ul>
+  <section id="demo" class="gilbeot-section gilbeot-bg-white">
+    <div class="gilbeot-container">
+      <div class="gilbeot-section-head">
+        <p class="gilbeot-eyebrow">Demo</p>
+        <h2 class="gilbeot-title">소개 영상</h2>
+      </div>
+      <div class="video-container">
+        <iframe
+          src="https://www.youtube.com/embed/Z8eKX4Aa4Dc?si=02chwTL64l1Ghdbz"
+          title="길벗 소개 영상"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen>
+        </iframe>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="demo" class="gilbut-section">
-  <h2>소개 영상</h2>
+  <section id="team" class="gilbeot-section gilbeot-bg-white">
+    <div class="gilbeot-container">
+      <div class="gilbeot-section-head">
+        <p class="gilbeot-eyebrow">Team Retriever</p>
+        <h2 class="gilbeot-title">팀원 소개</h2>
+      </div>
 
-  <div class="video-container">
-    <iframe
-      src="https://www.youtube.com/embed/Z8eKX4Aa4Dc?si=02chwTL64l1Ghdbz"
-      title="YouTube video player"
-      frameborder="0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-      referrerpolicy="strict-origin-when-cross-origin"
-      allowfullscreen>
-    </iframe>
-  </div>
-</section>
-
-<section id="architecture" class="gilbut-section">
-  <h2>시스템 아키텍처</h2>
-
-  <!--
-  - 아키텍처 이미지 -> 프론트 -> 백 -> AI -> 외부 API -> 데이터 흐름
-  - 구조 설명 -> 사용 기술 설명
-  - badge 방식
-  -->
-
-  <img
-    src="{{ '/assets/images/architecture.png' | relative_url }}"
-    alt="Tech Stack"
-    class="architecture-image"
-  />
-
-  <div class="tech-stack-section">
-    <h3>Frontend</h3>
-
-    <div class="badge-group">
-      <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter">
-      <img src="https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white" alt="Dart">
+      <div class="team-grid">
+        <div class="team-card gilbeot-card">
+          <img src="{{ '/assets/images/team/hanyeojin.png' | relative_url }}" alt="한여진">
+          <h3>한여진 <span>(팀장)</span></h3>
+          <p>프론트엔드 개발<br>접근성 중심 모바일 앱 UI 구현<br>길찾기 로직 개발</p>
+        </div>
+        <div class="team-card gilbeot-card">
+          <img src="{{ '/assets/images/team/yangnarae.png' | relative_url }}" alt="양나래">
+          <h3>양나래</h3>
+          <p>백엔드 개발<br>사용자 관리·경로 탐색 기능<br>인증 및 AI 연동 API 개발</p>
+        </div>
+        <div class="team-card gilbeot-card">
+          <img src="{{ '/assets/images/team/leeilhwan.png' | relative_url }}" alt="이일환">
+          <h3>이일환 <span>(부팀장)</span></h3>
+          <p>AI 개발<br>장애물 탐지 모델 개발<br>안내 문장 생성</p>
+        </div>
+        <div class="team-card gilbeot-card">
+          <img src="{{ '/assets/images/team/hwangyeonju.png' | relative_url }}" alt="황연주">
+          <h3>황연주</h3>
+          <p>프론트엔드 개발<br>카메라 기반 이미지 전송 및<br>AI 결과 연동 기능 개발</p>
+        </div>
+        <div class="team-card gilbeot-card">
+          <img src="{{ '/assets/images/team/jeonyechan.png' | relative_url }}" alt="전예찬">
+          <h3>전예찬</h3>
+          <p>백엔드 개발<br>장소 검색·상세 조회·즐겨찾기 등<br>위치 기반 기능 개발</p>
+        </div>
+        <div class="team-card gilbeot-card">
+          <img src="{{ '/assets/images/team/kimyeji.png' | relative_url }}" alt="김예지">
+          <h3>김예지</h3>
+          <p>AI 개발<br>보행 가능 영역 분할<br>Object Tracking</p>
+        </div>
+      </div>
     </div>
+  </section>
 
-    <h3>Backend</h3>
+  <section id="references" class="gilbeot-section gilbeot-bg-white">
+    <div class="gilbeot-container">
+      <div class="gilbeot-section-head">
+        <p class="gilbeot-eyebrow">References</p>
+        <h2 class="gilbeot-title">참고 자료</h2>
+        <p class="gilbeot-description">길벗 프로젝트의 접근성 설계, 보행 경로 안내, AI 모델 개발, 데이터셋 구축에 참고한 주요 문헌 및 공식 문서입니다.</p>
+      </div>
 
-    <div class="badge-group">
-      <img src="https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot">
-      <img src="https://img.shields.io/badge/REST_API-FF6C37?style=for-the-badge&logo=postman&logoColor=white" alt="REST API">
-      <img src="https://img.shields.io/badge/NGINX-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="NGINX">
-      <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+      <div class="reference-grid">
+        <div class="reference-card gilbeot-card">
+          <h3>접근성 및 사용자 경험</h3>
+          <ul class="reference-list">
+            <li><a href="https://www.w3.org/TR/WCAG21/" target="_blank" rel="noopener">Web Content Accessibility Guidelines (WCAG) 2.1</a><span>W3C · 2018</span></li>
+            <li><a href="https://moldstud.com/articles/p-inclusive-mobile-app-typography-guidelines-crafting-accessible-designs-for-all-users" target="_blank" rel="noopener">Accessible Typography Guidelines for Inclusive Mobile App Design</a><span>MoldStud · 2025</span></li>
+            <li><a href="https://dl.acm.org/doi/10.1145/572020.572038" target="_blank" rel="noopener">The design of auditory user interfaces for blind users</a><span>H. Donker, P. Klante, P. Gorny · 2002</span></li>
+          </ul>
+        </div>
+        <div class="reference-card gilbeot-card">
+          <h3>지도·위치·외부 API</h3>
+          <ul class="reference-list">
+            <li><a href="https://openapi.sk.com/products/detail?linkMenuSeq=45" target="_blank" rel="noopener">SK Open API 보행자 경로 안내</a><span>SK Open API</span></li>
+            <li><a href="https://developers.kakao.com/docs/ko/local/dev-guide" target="_blank" rel="noopener">Kakao Developers Local API 문서</a><span>Kakao Developers</span></li>
+            <li><a href="https://api.ncloud-docs.com/docs/ai-naver-mapsgeocoding-geocode" target="_blank" rel="noopener">Naver Maps Geocoding API 문서</a><span>Naver Cloud Platform</span></li>
+          </ul>
+        </div>
+        <div class="reference-card gilbeot-card">
+          <h3>AI 모델 및 연구 논문</h3>
+          <ul class="reference-list">
+            <li><a href="https://docs.ultralytics.com/" target="_blank" rel="noopener">Ultralytics YOLO 문서</a><span>Ultralytics · 2024</span></li>
+            <li><a href="https://arxiv.org/abs/2403.12415" target="_blank" rel="noopener">VisionGPT: LLM-Assisted Real-Time Anomaly Detection for Visual Navigation</a><span>Hao Wang 외 · 2024</span></li>
+            <li><a href="https://arxiv.org/abs/2105.15203" target="_blank" rel="noopener">SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers</a><span>Xie, Wang, Yu 외 · 2021</span></li>
+            <li><a href="https://github.com/DepthAnything/Depth-Anything-V2" target="_blank" rel="noopener">Depth Anything V2 GitHub</a><span>Depth Anything · 2024</span></li>
+          </ul>
+        </div>
+        <div class="reference-card gilbeot-card">
+          <h3>데이터 및 공공 자료</h3>
+          <ul class="reference-list">
+            <li><a href="https://www.data.go.kr/" target="_blank" rel="noopener">공공데이터포털</a><span>전국 횡단보도 데이터 활용</span></li>
+            <li><a href="https://data.seoul.go.kr/" target="_blank" rel="noopener">서울 열린데이터광장</a><span>서울 횡단보도 및 음향신호기 데이터 활용</span></li>
+            <li><a href="https://aihub.or.kr/aidata/136" target="_blank" rel="noopener">AIHub 인도 보행 영상 데이터셋</a><span>객체 탐지 및 보행 환경 분석 데이터</span></li>
+            <li><a href="https://public.roboflow.com/" target="_blank" rel="noopener">Roboflow Public Datasets</a><span>AI 학습 및 데이터 관리 참고</span></li>
+          </ul>
+        </div>
+      </div>
     </div>
-
-    <h3>AI / ML</h3>
-
-    <div class="badge-group">
-      <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI">
-      <img src="https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white" alt="PyTorch">
-      <img src="https://img.shields.io/badge/YOLOv11s-00FFFF?style=for-the-badge&logoColor=black" alt="YOLOv11s">
-      <img src="https://img.shields.io/badge/YOLO--SEG-00CFFF?style=for-the-badge&logoColor=black" alt="YOLO-SEG">
-      <img src="https://img.shields.io/badge/ByteTrack-FF4500?style=for-the-badge&logoColor=white" alt="ByteTrack">
-      <img src="https://img.shields.io/badge/Depth--Anything-8A2BE2?style=for-the-badge&logoColor=white" alt="Depth Anything">
-    </div>
-
-    <h3>External API</h3>
-
-    <div class="badge-group">
-      <img src="https://img.shields.io/badge/TMAP_API-FF6D00?style=for-the-badge&logoColor=white" alt="TMAP">
-      <img src="https://img.shields.io/badge/Kakao_Local_API-FFCD00?style=for-the-badge&logo=kakao&logoColor=black" alt="Kakao Local API">
-      <img src="https://img.shields.io/badge/Naver_API-03C75A?style=for-the-badge&logo=naver&logoColor=white" alt="Naver API">
-      <img src="https://img.shields.io/badge/OpenWeather_API-EB6E4B?style=for-the-badge&logo=openweathermap&logoColor=white" alt="OpenWeather API">
-      <img src="https://img.shields.io/badge/공공데이터_포털-0066CC?style=for-the-badge&logoColor=white" alt="공공데이터 포털">
-      <img src="https://img.shields.io/badge/서울시_횡단보도_API-005BAC?style=for-the-badge&logoColor=white" alt="서울시 횡단보도 API">
-      <img src="https://img.shields.io/badge/서울시_음향신호기_API-007BFF?style=for-the-badge&logoColor=white" alt="서울시 음향신호기 API">
-    </div>
-
-    <h3>Data</h3>
-
-    <div class="badge-group">
-      <img src="https://img.shields.io/badge/Roboflow-7B2FF7?style=for-the-badge&logo=roboflow&logoColor=white" alt="Roboflow">
-      <img src="https://img.shields.io/badge/AIHub_인도보행영상-00A86B?style=for-the-badge&logoColor=white" alt="AIHub">
-    </div>
-
-    <h3>Collaboration</h3>
-
-    <div class="badge-group">
-      <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
-      <img src="https://img.shields.io/badge/Notion-000000?style=for-the-badge&logo=notion&logoColor=white" alt="Notion">
-      <img src="https://img.shields.io/badge/Figma-F24E1E?style=for-the-badge&logo=figma&logoColor=white" alt="Figma">
-    </div>
-  </div>
-</section>
-
-<section id="guide" class="gilbut-section">
-  <h2>사용법</h2>
-
-  <!--
-  - 사용 흐름
-  - 로그인 -> 목적지 입력 -> 보행 시작 -> 장애물 탐지 -> 음성 안내 -> 설정 변경
-  -->
-
-  <div class="guide-grid">
-    <div class="guide-card gilbut-card">
-      <img src="{{ '/assets/images/testguide1.png' | relative_url }}" alt="시작 화면 & 홈 화면">
-
-      <h3>시작 화면 / 홈 화면</h3>
-
-      <p>
-        카카오 로그인 후 장애물 탐지, 길찾기, 설정 기능에 접근합니다.
-      </p>
-    </div>
-
-    <div class="guide-card gilbut-card">
-      <img src="{{ '/assets/images/testguide2.png' | relative_url }}" alt="장애물 탐지 화면">
-
-      <h3>장애물 탐지 화면</h3>
-
-      <p>
-        탐지 시작 버튼을 누르면 카메라가 실시간으로 장애물을 감지하고 진동으로 알려줍니다.
-      </p>
-    </div>
-
-    <div class="guide-card gilbut-card">
-      <img src="{{ '/assets/images/testguide3.png' | relative_url }}" alt="길찾기 화면">
-
-      <h3>길찾기 화면</h3>
-
-      <p>
-        목적지를 키보드 또는 음성으로 입력하고 안내를 시작합니다.
-      </p>
-    </div>
-
-    <div class="guide-card gilbut-card">
-      <img src="{{ '/assets/images/testguide4.png' | relative_url }}" alt="저장된 장소 관리">
-
-      <h3>저장된 장소 관리</h3>
-
-      <p>
-        자주 가는 장소를 저장하고, 카테고리 아이콘으로 구분하여 빠르게 선택합니다.
-      </p>
-    </div>
-
-    <div class="guide-card gilbut-card">
-      <img src="{{ '/assets/images/testguide5.png' | relative_url }}" alt="길찾기 중 & 설정 화면">
-
-      <h3>길찾기 중 / 설정 화면</h3>
-
-      <p>
-        남은 거리·소요 시간·위험 요소를 안내하고, 안내 문구 길이와 진동 강도를 조절합니다.
-      </p>
-    </div>
-
-    <div class="guide-card gilbut-card">
-      <img src="{{ '/assets/images/testguide6.png' | relative_url }}" alt="설정 & 계정 화면">
-
-      <h3>설정 / 계정 화면</h3>
-
-      <p>
-        알림·소리 설정, 앱 정보 확인, 로그아웃 및 회원 탈퇴를 할 수 있습니다.
-      </p>
-    </div>
-  </div>
-</section>
-
-<section id="team" class="gilbut-section">
-  <h2>팀원 소개</h2>
-
-  <div class="team-grid">
-    <div class="team-card gilbut-card">
-      <img src="{{ '/assets/images/team/hanyeojin.png' | relative_url }}" alt="한여진">
-
-      <h3>한여진 <span>(팀장)</span></h3>
-
-      <p>
-        프론트엔드 개발<br>
-        접근성 중심 모바일 앱 UI 구현<br>
-        길찾기 로직 개발
-      </p>
-    </div>
-
-    <div class="team-card gilbut-card">
-      <img src="{{ '/assets/images/team/yangnarae.png' | relative_url }}" alt="양나래">
-
-      <h3>양나래</h3>
-
-      <p>
-        백엔드 개발<br>
-        사용자 관리·경로 탐색 기능<br>
-        인증 및 AI 연동 API 개발
-      </p>
-    </div>
-
-    <div class="team-card gilbut-card">
-      <img src="{{ '/assets/images/team/leeilhwan.png' | relative_url }}" alt="이일환">
-
-      <h3>이일환 <span>(부팀장)</span></h3>
-
-      <p>
-        AI 개발<br>
-        장애물 탐지 모델 개발<br>
-        안내 문장 생성
-      </p>
-    </div>
-
-    <div class="team-card gilbut-card">
-      <img src="{{ '/assets/images/team/hwangyeonju.png' | relative_url }}" alt="황연주">
-
-      <h3>황연주</h3>
-
-      <p>
-        프론트엔드 개발<br>
-        카메라 기반 이미지 전송 및<br>
-        AI 결과 연동 기능 개발
-      </p>
-    </div>
-
-    <div class="team-card gilbut-card">
-      <img src="{{ '/assets/images/team/jeonyechan.png' | relative_url }}" alt="전예찬">
-
-      <h3>전예찬</h3>
-
-      <p>
-        백엔드 개발<br>
-        장소 검색·상세 조회·즐겨찾기 등<br>
-        위치 기반 기능 개발
-      </p>
-    </div>
-
-    <div class="team-card gilbut-card">
-      <img src="{{ '/assets/images/team/kimyeji.png' | relative_url }}" alt="김예지">
-
-      <h3>김예지</h3>
-
-      <p>
-        AI 개발<br>
-        보행 가능 영역 분할<br>
-        Object Tracking
-      </p>
-    </div>
-  </div>
-</section>
-
-<section id="references" class="gilbut-section">
-  <h2>참고 자료</h2>
-
-  <p class="section-lead">
-    길벗 프로젝트의 접근성 설계, 보행 경로 안내, AI 모델 개발, 데이터셋 구축에 참고한
-    주요 문헌 및 공식 문서입니다.
-  </p>
-
-  <div class="reference-grid">
-    <div class="reference-card gilbut-card">
-      <h3>접근성 및 사용자 경험</h3>
-
-      <ul class="reference-list">
-        <li>
-          <a href="https://www.w3.org/TR/WCAG21/" target="_blank" rel="noopener">
-            Web Content Accessibility Guidelines (WCAG) 2.1
-          </a>
-          <span>W3C · 2018</span>
-        </li>
-
-        <li>
-          <a href="https://moldstud.com/articles/p-inclusive-mobile-app-typography-guidelines-crafting-accessible-designs-for-all-users" target="_blank" rel="noopener">
-            Accessible Typography Guidelines for Inclusive Mobile App Design
-          </a>
-          <span>MoldStud · 2025</span>
-        </li>
-
-        <li>
-          <a href="https://dl.acm.org/doi/10.1145/572020.572038" target="_blank" rel="noopener">
-            The design of auditory user interfaces for blind users
-          </a>
-          <span>H. Donker, P. Klante, P. Gorny · 2002</span>
-        </li>
-      </ul>
-    </div>
-
-    <div class="reference-card gilbut-card">
-      <h3>지도·위치·외부 API</h3>
-
-      <ul class="reference-list">
-        <li>
-          <a href="https://openapi.sk.com/products/detail?linkMenuSeq=45" target="_blank" rel="noopener">
-            SK Open API 보행자 경로 안내
-          </a>
-          <span>SK Open API</span>
-        </li>
-
-        <li>
-          <a href="https://developers.kakao.com/docs/ko/local/dev-guide" target="_blank" rel="noopener">
-            Kakao Developers Local API 문서
-          </a>
-          <span>Kakao Developers</span>
-        </li>
-
-        <li>
-          <a href="https://api.ncloud-docs.com/docs/ai-naver-mapsgeocoding-geocode" target="_blank" rel="noopener">
-            Naver Maps Geocoding API 문서
-          </a>
-          <span>Naver Cloud Platform</span>
-        </li>
-      </ul>
-    </div>
-
-    <div class="reference-card gilbut-card">
-      <h3>AI 모델 및 연구 논문</h3>
-
-      <ul class="reference-list">
-        <li>
-          <a href="https://docs.ultralytics.com/" target="_blank" rel="noopener">
-            Ultralytics YOLO 문서
-          </a>
-          <span>Ultralytics · 2024</span>
-        </li>
-
-        <li>
-          <a href="https://arxiv.org/abs/2403.12415" target="_blank" rel="noopener">
-            VisionGPT: LLM-Assisted Real-Time Anomaly Detection for Visual Navigation
-          </a>
-          <span>Hao Wang 외 · 2024</span>
-        </li>
-
-        <li>
-          <a href="https://arxiv.org/abs/2105.15203" target="_blank" rel="noopener">
-            SegFormer: Simple and Efficient Design for Semantic Segmentation with Transformers
-          </a>
-          <span>Xie, Wang, Yu 외 · 2021</span>
-        </li>
-
-        <li>
-          <a href="https://huggingface.co/docs/transformers/en/model_doc/segformer" target="_blank" rel="noopener">
-            Hugging Face SegFormer 문서
-          </a>
-          <span>Hugging Face · 2021</span>
-        </li>
-
-        <li>
-          <a href="https://github.com/DepthAnything/Depth-Anything-V2" target="_blank" rel="noopener">
-            Depth Anything V2 GitHub
-          </a>
-          <span>Depth Anything · 2024</span>
-        </li>
-
-        <li>
-          <a href="https://arxiv.org/abs/2406.09414" target="_blank" rel="noopener">
-            Depth Anything V2
-          </a>
-          <span>Lihe Yang 외 · 2024</span>
-        </li>
-      </ul>
-    </div>
-
-    <div class="reference-card gilbut-card">
-      <h3>데이터 및 공공 자료</h3>
-
-      <ul class="reference-list">
-        <li>
-          <a href="https://www.data.go.kr/" target="_blank" rel="noopener">
-            공공데이터포털
-          </a>
-          <span>전국 횡단보도 데이터 활용</span>
-        </li>
-
-        <li>
-          <a href="https://data.seoul.go.kr/" target="_blank" rel="noopener">
-            서울 열린데이터광장
-          </a>
-          <span>서울 횡단보도 및 음향신호기 데이터 활용</span>
-        </li>
-
-        <li>
-          <a href="https://aihub.or.kr/aidata/136" target="_blank" rel="noopener">
-            AIHub 인도 보행 영상 데이터셋
-          </a>
-          <span>객체 탐지 및 보행 환경 분석 데이터</span>
-        </li>
-
-        <li>
-          <a href="https://public.roboflow.com/" target="_blank" rel="noopener">
-            Roboflow Public Datasets
-          </a>
-          <span>AI 학습 및 데이터 관리 참고</span>
-        </li>
-      </ul>
-    </div>
-  </div>
-</section>
+  </section>
+</main>
