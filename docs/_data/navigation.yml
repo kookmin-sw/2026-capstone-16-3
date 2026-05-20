@@ -1,21 +1,27 @@
 # main links
 main:
-  - title: "소개"
-    url: "#intro"
+  - title: "서비스 소개"
+    url: "#service"
+
+  - title: "문제 정의"
+    url: "#problem"
+
+  - title: "해결 방식"
+    url: "#solution"
 
   - title: "주요 기능"
     url: "#features"
 
-  - title: "소개 영상"
-    url: "#demo"
+  - title: "사용 흐름"
+    url: "#how-to-use"
 
-  - title: "시스템 아키텍처"
-    url: "#architecture"
+  - title: "기술 구조"
+    url: "#technology"
 
-  - title: "사용법"
-    url: "#guide"
+  - title: "기대효과"
+    url: "#impact"
 
-  - title: "팀원 소개"
+  - title: "팀원"
     url: "#team"
 
   - title: "참고 자료"
