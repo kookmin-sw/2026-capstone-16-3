@@ -68,6 +68,16 @@ KO_LABEL = {
     "bench": "벤치",
     "barricade": "바리케이드",
     "crosswalk": "횡단보도",
+    "backpack": "책가방",
+    "백팩": "책가방",
+    "handbag": "핸드백",
+    "bottle": "병",
+    "chair": "의자",
+    "dining table": "탁자",
+    "tv": "티비",
+    "모니터": "티비",
+    "labtop": "노트북"
+
 }
 
 SEG_CLASS_MAP = {
