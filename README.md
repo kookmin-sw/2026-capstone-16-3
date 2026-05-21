@@ -75,7 +75,7 @@
 </div>
 
 - 저시력 시각장애인 사용자 및 복지관 직원 대상 앱 시연
-- 신호등·횡단보도 구분 안내, 장애물 거리 정보, 공ㄷ중 장애물 탐지 등 개선 방향 도출
+- 신호등·횡단보도 구분 안내, 장애물 거리 정보, 공중 장애물 탐지 등 개선 방향 도출
 - TalkBack 연동 및 사용자 맞춤 접근성 설정 필요성 확인
 
 ## ✨ 주요 기능
@@ -157,24 +157,24 @@
   <table>
     <tr>
       <td align="center" width="33%">
-        <img src="docs/assets/images/testguide1.png" alt="시작 화면 & 홈 화면" width="100%">
+        <img src="docs/assets/images/guide/testguide1.png" alt="시작 화면 & 홈 화면" width="100%">
       </td>
       <td align="center" width="33%">
-        <img src="docs/assets/images/testguide2.png" alt="장애물 탐지 화면" width="100%">
+        <img src="docs/assets/images/guide/testguide2.png" alt="장애물 탐지 화면" width="100%">
       </td>
       <td align="center" width="33%">
-        <img src="docs/assets/images/testguide3.png" alt="길찾기 화면" width="100%">
+        <img src="docs/assets/images/guide/testguide3.png" alt="길찾기 화면" width="100%">
       </td>
     </tr>
     <tr>
       <td align="center" width="33%">
-        <img src="docs/assets/images/testguide4.png" alt="저장된 장소 관리" width="100%">
+        <img src="docs/assets/images/guide/testguide4.png" alt="저장된 장소 관리" width="100%">
       </td>
       <td align="center" width="33%">
-        <img src="docs/assets/images/testguide5.png" alt="길찾기 중 & 설정 화면" width="100%">
+        <img src="docs/assets/images/guide/testguide5.png" alt="길찾기 중 & 설정 화면" width="100%">
       </td>
       <td align="center" width="33%">
-        <img src="docs/assets/images/testguide6.png" alt="설정 & 계정 화면" width="100%">
+        <img src="docs/assets/images/guide/testguide6.png" alt="설정 & 계정 화면" width="100%">
       </td>
     </tr>
   </table>
