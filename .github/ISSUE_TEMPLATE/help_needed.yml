@@ -1,0 +1,63 @@
+name: 도움 요청 (Help Needed)
+description: 구현 중 문제를 겪고 있다면 여기에 질문을 남겨주세요.
+title: "[HELP] "
+labels: [help wanted]
+assignees: []
+
+body:
+  - type: dropdown
+    id: layer
+    attributes:
+      label: 🗂️ 관련 레이어
+      options:
+        - Frontend (Flutter / Dart)
+        - Server (Spring Boot / Java)
+        - AI (FastAPI / Python)
+        - 전체 연동 (E2E)
+        - 기타
+    validations:
+      required: true
+
+  - type: textarea
+    id: help-question
+    attributes:
+      label: ❓ 문제 상황
+      description: 겪고 있는 문제나 궁금한 점을 구체적으로 작성해주세요.
+      placeholder: 예) Flutter에서 STOMP 연결은 되는데 서버에서 보낸 guide 이벤트 메시지가 수신되지 않습니다.
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-message
+    attributes:
+      label: 🪵 에러 메시지 / 로그
+      description: Flutter 콘솔, Spring Boot 로그, FastAPI 로그 등 관련 에러를 붙여넣어 주세요.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: relevant-code
+    attributes:
+      label: 💻 관련 코드
+      description: 문제와 관련된 코드가 있다면 작성해주세요.
+      render: dart
+    validations:
+      required: false
+
+  - type: textarea
+    id: tried-methods
+    attributes:
+      label: 🧪 시도해본 방법
+      description: 해결을 위해 시도해본 방법이 있다면 작성해주세요.
+      placeholder: 예) STOMP destination 경로를 /topic/guide에서 /queue/guide로 바꿔봤지만 동일했습니다.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 💬 추가 내용
+      description: API 응답, 네트워크 로그, 관련 파일 경로 등 도움이 될 정보를 자유롭게 작성해주세요.
+    validations:
+      required: false

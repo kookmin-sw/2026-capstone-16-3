@@ -14,7 +14,7 @@ import java.util.List;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    //400 - Validation 에러
+    // 400 - Validation 에러
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException e) {
         List<ErrorDetail> details = e.getBindingResult().getFieldErrors().stream()
@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail(error));
     }
 
-    //Business Exception
+    // Business Exception
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiResponse<Void>> handleBusiness(BusinessException e) {
         ApiError error = new ApiError(
@@ -42,11 +42,11 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+                .status(e.getStatus())
                 .body(ApiResponse.fail(error));
     }
 
-    //나머지 서버 에러
+    // 나머지 서버 에러
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
         ApiError error = new ApiError(

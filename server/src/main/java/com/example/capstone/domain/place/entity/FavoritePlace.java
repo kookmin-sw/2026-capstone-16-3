@@ -45,4 +45,8 @@ public class FavoritePlace extends BaseEntity {
 
     @Column(name = "lng", nullable = false)
     private Double longitude;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", nullable = false, length = 50)
+    private FavoritePlaceCategory category;
 }

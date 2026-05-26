@@ -21,6 +21,7 @@ import 'package:safepath/service/navigation_service.dart';
 import 'package:safepath/service/navigation_tts_service.dart';
 import 'package:safepath/service/sound_effect_service.dart';
 import 'package:safepath/service/tts_service.dart';
+import 'package:safepath/service/user_settings_service.dart';
 import 'package:safepath/service/vibration_service.dart';
 import 'dart:ui' show DisplayFeatureType;
 import 'package:flutter/services.dart';
@@ -72,6 +73,8 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
   Map<int, CrosswalkInfo?> _crosswalkCache = {};
   int _prefetchGeneration = 0;
 
+  bool _userInitiatedStop = false;
+
   // 장애물 탐지 (카메라 + WS)
   StreamSubscription<DetectionEvent>? _wsSub;
   Timer? _sweepTimer;
@@ -108,7 +111,18 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       if (_route != null) {
         _loadRoute(_route!);
         _startLocationTracking();
-        if (_withObstacleDetection) _startObstacleDetection();
+        if (_withObstacleDetection) {
+          _startObstacleDetection();
+        } else {
+          TtsService().speak(
+            switch (UserSettingsService().sentenceLength) {
+              MessageLength.short => '길찾기 시작',
+              MessageLength.medium || MessageLength.long => '길찾기를 시작합니다.',
+            },
+            interrupt: true,
+            channel: TtsChannel.navigation,
+          );
+        }
         _routeLoaded = true;
       }
     }
@@ -121,6 +135,42 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
     await DetectionWsService().connect();
     _wsSub = DetectionWsService().eventStream?.listen(_onObstacleEvent);
     _sweepTimer = Timer.periodic(_sweepInterval, (_) => _sweepStaleObstacles());
+    TtsService().speak(
+      switch (UserSettingsService().sentenceLength) {
+        MessageLength.short => '통합 모드 시작',
+        MessageLength.medium || MessageLength.long => '통합 모드를 시작합니다.',
+      },
+      interrupt: true,
+    );
+  }
+
+  Future<void> _handleStop() async {
+    _userInitiatedStop = true;
+    SoundEffectService().play(SoundEffect.actionStop);
+    VibrationService().vibrate(VibrationEffect.actionStop);
+    await TtsService().stop();
+    if (_withObstacleDetection) {
+      TtsService().speak(
+        switch (UserSettingsService().sentenceLength) {
+          MessageLength.short => '통합 모드 종료',
+          MessageLength.medium || MessageLength.long => '통합 모드를 종료합니다.',
+        },
+        interrupt: true,
+      );
+    } else {
+      TtsService().speak(
+        switch (UserSettingsService().sentenceLength) {
+          MessageLength.short => '길찾기 종료',
+          MessageLength.medium || MessageLength.long => '길찾기를 종료합니다.',
+        },
+        interrupt: true,
+      );
+    }
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    if (mounted) Navigator.pop(context);
   }
 
   void _onObstacleEvent(DetectionEvent event) {
@@ -534,7 +584,9 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
       CameraService().stop();
       DetectionWsService().disconnect();
     }
-    TtsService().stop();
+    if (!_userInitiatedStop) {
+      TtsService().stop();
+    }
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -590,6 +642,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                                 ? (_route!.totalTime / 60).ceil()
                                 : 0,
                             status: _routeStatus,
+                            showStatus: _withObstacleDetection,
                           ),
                         ),
                         Padding(
@@ -598,15 +651,7 @@ class _NavigationIngScreenState extends State<NavigationIngScreen> {
                             label: '안내 중지',
                             icon: Icons.stop_circle_outlined,
                             backgroundColor: ColorCollection.red,
-                            onTap: () {
-                              SoundEffectService().play(SoundEffect.actionStop);
-                              VibrationService().vibrate(VibrationEffect.actionStop);
-                              SystemChrome.setPreferredOrientations([
-                                DeviceOrientation.portraitUp,
-                                DeviceOrientation.portraitDown,
-                              ]);
-                              Navigator.pop(context);
-                            },
+                            onTap: _handleStop,
                           ),
                         ),
                       ],

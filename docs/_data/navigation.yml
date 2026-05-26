@@ -1,0 +1,25 @@
+# main links
+main:
+  - title: "소개"
+    url: "#intro"
+
+  - title: "주요 기능"
+    url: "#features"
+
+  - title: "소개 영상"
+    url: "#demo"
+
+  - title: "시스템 아키텍처"
+    url: "#architecture"
+
+  - title: "사용법"
+    url: "#guide"
+
+  - title: "폴더 구조"
+    url: "#folder-structure"
+
+  - title: "팀원 소개"
+    url: "#team"
+
+  - title: "참고 자료"
+    url: "#references"

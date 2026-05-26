@@ -1,4 +1,4 @@
-package com.example.safepath
+package com.retriever.gilbeot
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -6,6 +6,7 @@ public record RoutePointStep(
         Double longitude,
         String description,
         Integer turnType,
-        String pointType
+        String pointType,
+        String facilityType
 ) implements RouteStep {
 }
