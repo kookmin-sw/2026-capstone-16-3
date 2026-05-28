@@ -18,8 +18,8 @@ import KakaoSDKAuth
     options: [UIApplication.OpenURLOptionsKey: Any] = [:]
   ) -> Bool {
     if AuthApi.isKakaoTalkLoginUrl(url) {
-      return AuthController.handleOpenUrl(url: url)
+      _ = AuthController.handleOpenUrl(url: url)
     }
-    return false
+    return super.application(app, open: url, options: options)
   }
 }

@@ -16,7 +16,7 @@ import 'package:safepath/service/token_storage.dart';
 ///   - DetectionScreen에서 connect() / disconnect() 호출
 ///
 /// 백엔드:
-///   - endpoint  : ws://host/ws/websocket  (withSockJS() → raw WS는 /websocket 경로)
+///   - endpoint  : wss://host/ws/websocket  (withSockJS() → raw WS는 /websocket 경로)
 ///   - subscribe : /user/queue/guide
 ///   - 인증      : HTTP 업그레이드 헤더에 Authorization 전달
 /// =======================================================
@@ -50,7 +50,11 @@ class DetectionWsService {
     _onConnectedCallback = onConnected;
     _onDisconnectedCallback = onDisconnected;
 
-    final wsUrl = _baseUrl.replaceFirst(RegExp(r'^http'), 'ws') + _wsPath;
+    final wsUrl =
+        _baseUrl
+            .replaceFirst(RegExp(r'^https'), 'wss')
+            .replaceFirst(RegExp(r'^http(?!s)'), 'ws') +
+        _wsPath;
     final accessToken = await TokenStorage().accessToken;
 
     _controller = StreamController<DetectionEvent>.broadcast();
