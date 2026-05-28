@@ -123,7 +123,7 @@ class _CameraDebugOverlayState extends State<CameraDebugOverlay> {
               ),
             ),
             child: isReady
-                ? CameraPreview(controller)
+                ? _buildPreview(controller)
                 : const ColoredBox(
                     color: Colors.black,
                     child: Center(
@@ -192,6 +192,16 @@ class _CameraDebugOverlayState extends State<CameraDebugOverlay> {
         ],
       ),
     );
+  }
+
+  // iOS에서 landscape 잠금 시 CameraPreview가 90° 회전되는 문제 보정.
+  // Android는 플러그인이 자동 보정하지만 iOS는 수동 회전이 필요.
+  Widget _buildPreview(CameraController controller) {
+    final preview = CameraPreview(controller);
+    if (defaultTargetPlatform != TargetPlatform.iOS) return preview;
+    // RotatedBox는 layout constraints도 swap하므로 CameraPreview가
+    // portrait constraints를 받아 올바른 방향으로 렌더링된 뒤 90° CW 회전됨.
+    return RotatedBox(quarterTurns: 1, child: preview);
   }
 
   String _formatTime(DateTime t) =>
