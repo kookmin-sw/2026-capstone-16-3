@@ -122,7 +122,6 @@ class DetectionEvent {
     "dining table": "탁자",
     "tv": "티비",
     "모니터": "티비",
-    "labtop": "노트북",
     "laptop": "노트북",
   };
 }
