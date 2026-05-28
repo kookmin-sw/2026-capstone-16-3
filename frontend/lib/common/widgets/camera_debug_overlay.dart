@@ -201,7 +201,7 @@ class _CameraDebugOverlayState extends State<CameraDebugOverlay> {
     if (defaultTargetPlatform != TargetPlatform.iOS) return preview;
     // RotatedBox는 layout constraints도 swap하므로 CameraPreview가
     // portrait constraints를 받아 올바른 방향으로 렌더링된 뒤 90° CW 회전됨.
-    return RotatedBox(quarterTurns: 1, child: preview);
+    return RotatedBox(quarterTurns: -1, child: preview);
   }
 
   String _formatTime(DateTime t) =>
