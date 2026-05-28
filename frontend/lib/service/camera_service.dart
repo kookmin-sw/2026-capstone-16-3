@@ -223,31 +223,91 @@ class CameraService {
 
   /// CameraImage → (bytes, imageType) 변환
   ///
-  /// - jpeg  (Android): planes[0].bytes가 바로 JPEG 바이너리
-  /// - bgra8888 (iOS) : dart:ui로 PNG 인코딩 후 반환
+  /// - jpeg     (Android 일부): planes[0].bytes가 바로 JPEG 바이너리
+  /// - yuv420   (Android 다수): BT.601 정수 연산으로 RGBA 변환 후 PNG 인코딩
+  /// - bgra8888 (iOS)         : dart:ui로 PNG 인코딩 후 반환
   Future<(Uint8List, String)?> _cameraImageToBytes(CameraImage image) async {
     if (image.format.group == ImageFormatGroup.jpeg) {
       return (image.planes[0].bytes, 'jpeg');
     }
 
+    if (image.format.group == ImageFormatGroup.yuv420) {
+      return _yuv420ToPng(image);
+    }
+
     if (image.format.group == ImageFormatGroup.bgra8888) {
-      final completer = Completer<ui.Image>();
-      ui.decodeImageFromPixels(
+      return _rawPixelsToPng(
         image.planes[0].bytes,
         image.width,
         image.height,
         ui.PixelFormat.bgra8888,
-        completer.complete,
       );
-      final uiImage = await completer.future;
-      final byteData = await uiImage.toByteData(format: ui.ImageByteFormat.png);
-      uiImage.dispose();
-      if (byteData == null) return null;
-      return (byteData.buffer.asUint8List(), 'png');
     }
 
     debugPrint('🔴 [Camera] 지원하지 않는 이미지 포맷: ${image.format.group}');
     return null;
+  }
+
+  /// YUV420(YUV_420_888) → RGBA → PNG
+  ///
+  /// Android에서 JPEG 스트리밍이 지원되지 않을 때 yuv420으로 fallback됨.
+  /// BT.601 정수 연산(비트 시프트)으로 float 대비 성능을 높임.
+  Future<(Uint8List, String)?> _yuv420ToPng(CameraImage image) async {
+    final int width = image.width;
+    final int height = image.height;
+
+    final yPlane = image.planes[0];
+    final uPlane = image.planes[1];
+    final vPlane = image.planes[2];
+
+    final yBytes = yPlane.bytes;
+    final uBytes = uPlane.bytes;
+    final vBytes = vPlane.bytes;
+
+    final int yRowStride = yPlane.bytesPerRow;
+    final int uvRowStride = uPlane.bytesPerRow;
+    // pixelStride=1 → I420(planar), pixelStride=2 → NV12/NV21(semi-planar)
+    final int uvPixelStride = uPlane.bytesPerPixel ?? 1;
+
+    final rgba = Uint8List(width * height * 4);
+
+    for (int row = 0; row < height; row++) {
+      for (int col = 0; col < width; col++) {
+        final yVal = yBytes[row * yRowStride + col] & 0xFF;
+        final uvIdx = (row ~/ 2) * uvRowStride + (col ~/ 2) * uvPixelStride;
+        final uVal = uBytes[uvIdx] & 0xFF;
+        final vVal = vBytes[uvIdx] & 0xFF;
+
+        // BT.601 YCbCr → RGB (정수 연산)
+        final c = yVal - 16;
+        final d = uVal - 128;
+        final e = vVal - 128;
+
+        final pIdx = (row * width + col) * 4;
+        rgba[pIdx]     = ((298 * c + 409 * e + 128) >> 8).clamp(0, 255);
+        rgba[pIdx + 1] = ((298 * c - 100 * d - 208 * e + 128) >> 8).clamp(0, 255);
+        rgba[pIdx + 2] = ((298 * c + 516 * d + 128) >> 8).clamp(0, 255);
+        rgba[pIdx + 3] = 255;
+      }
+    }
+
+    return _rawPixelsToPng(rgba, width, height, ui.PixelFormat.rgba8888);
+  }
+
+  /// 원시 픽셀 버퍼 → PNG (dart:ui 경유)
+  Future<(Uint8List, String)?> _rawPixelsToPng(
+    Uint8List pixels,
+    int width,
+    int height,
+    ui.PixelFormat format,
+  ) async {
+    final completer = Completer<ui.Image>();
+    ui.decodeImageFromPixels(pixels, width, height, format, completer.complete);
+    final uiImage = await completer.future;
+    final byteData = await uiImage.toByteData(format: ui.ImageByteFormat.png);
+    uiImage.dispose();
+    if (byteData == null) return null;
+    return (byteData.buffer.asUint8List(), 'png');
   }
 
   // ─── 프레임 전송 ──────────────────────────────────────────────────────────
