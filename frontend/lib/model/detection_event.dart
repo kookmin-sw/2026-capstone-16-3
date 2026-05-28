@@ -120,7 +120,8 @@ class DetectionEvent {
     "handbag": "가방",
     "bottle": "병",
     "dining table": "탁자",
-    "tv": "모니터",
+    "tv": "티비",
+    "모니터": "티비",
     "laptop": "노트북",
   };
 }
